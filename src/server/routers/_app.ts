@@ -1,4 +1,4 @@
-import { createTRPCRouter } from '@/server/trpc'
+import { createTRPCRouter, createCallerFactory } from '@/server/trpc'
 import { applicationRouter } from './application'
 import { judgingRouter } from './judging'
 import { scheduleRouter } from './schedule'
@@ -12,3 +12,4 @@ export const appRouter = createTRPCRouter({
 })
 
 export type AppRouter = typeof appRouter
+export const createCaller = createCallerFactory(appRouter)

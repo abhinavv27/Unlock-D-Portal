@@ -2,12 +2,14 @@ import { auth } from '@/server/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+import { api } from '@/trpc/server'
+
 export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  // Mock data for static render — will be replaced with tRPC calls
-  const status = 'PENDING'
+  const application = await api.application.getMine()
+  const status = application?.status ?? 'PENDING'
 
   const statusConfig = {
     PENDING: { label: 'Under Review', color: 'badge-pending', icon: '⏳', message: 'Your application is queued for review. We\'ll notify you via email.' },

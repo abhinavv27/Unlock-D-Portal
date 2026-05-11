@@ -2,6 +2,8 @@ import { auth } from '@/server/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+import { api } from '@/trpc/server'
+
 export const metadata = { title: 'Admin Dashboard' }
 
 export default async function AdminPage() {
@@ -9,12 +11,13 @@ export default async function AdminPage() {
   if (!session?.user) redirect('/login')
   if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role as string)) redirect('/dashboard')
 
-  // Static skeleton — will connect to tRPC in Phase 3
+  const { total, pending, accepted, rejected, under_review, waitlisted } = await api.application.pipelineStats()
+
   const stats = [
-    { label: 'Total Applications', value: '0', delta: null, color: 'var(--accent-primary)' },
-    { label: 'Accepted', value: '0', delta: null, color: 'var(--accent-success)' },
-    { label: 'Pending Review', value: '0', delta: null, color: 'var(--accent-warning)' },
-    { label: 'Rejected', value: '0', delta: null, color: 'var(--accent-danger)' },
+    { label: 'Total Applications', value: total.toString(), delta: null, color: 'var(--accent-primary)' },
+    { label: 'Accepted', value: accepted.toString(), delta: null, color: 'var(--accent-success)' },
+    { label: 'Pending Review', value: pending.toString(), delta: null, color: 'var(--accent-warning)' },
+    { label: 'Rejected', value: rejected.toString(), delta: null, color: 'var(--accent-danger)' },
   ]
 
   return (
@@ -70,11 +73,11 @@ export default async function AdminPage() {
             <h2 className="font-display font-semibold text-base text-[var(--text-primary)] mb-6">Application Pipeline</h2>
             <div className="space-y-3">
               {[
-                { stage: 'Total Received', count: 0, pct: 100, color: 'var(--accent-primary)' },
-                { stage: 'Under Review', count: 0, pct: 0, color: 'var(--accent-secondary)' },
-                { stage: 'Accepted', count: 0, pct: 0, color: 'var(--accent-success)' },
-                { stage: 'Waitlisted', count: 0, pct: 0, color: 'var(--accent-warning)' },
-                { stage: 'Rejected', count: 0, pct: 0, color: 'var(--accent-danger)' },
+                { stage: 'Total Received', count: total, pct: 100, color: 'var(--accent-primary)' },
+                { stage: 'Under Review', count: under_review, pct: total ? (under_review / total) * 100 : 0, color: 'var(--accent-secondary)' },
+                { stage: 'Accepted', count: accepted, pct: total ? (accepted / total) * 100 : 0, color: 'var(--accent-success)' },
+                { stage: 'Waitlisted', count: waitlisted, pct: total ? (waitlisted / total) * 100 : 0, color: 'var(--accent-warning)' },
+                { stage: 'Rejected', count: rejected, pct: total ? (rejected / total) * 100 : 0, color: 'var(--accent-danger)' },
               ].map(({ stage, count, pct, color }) => (
                 <div key={stage} className="flex items-center gap-4">
                   <span className="text-xs font-display text-[var(--text-muted)] w-32 flex-shrink-0">{stage}</span>
