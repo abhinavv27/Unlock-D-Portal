@@ -13,22 +13,21 @@ const BADGE_MAP: Record<string, string> = {
   WITHDRAWN: 'badge-withdrawn',
 }
 
-// Mock data — replace with tRPC query
-const MOCK_APPS = [
-  { id: '1', firstName: 'Ada', lastName: 'Lovelace', university: 'MIT', major: 'CS', status: 'PENDING', submittedAt: '2025-05-10', email: 'ada@mit.edu' },
-  { id: '2', firstName: 'Alan', lastName: 'Turing', university: 'Cambridge', major: 'Mathematics', status: 'UNDER_REVIEW', submittedAt: '2025-05-09', email: 'alan@cambridge.ac.uk' },
-  { id: '3', firstName: 'Grace', lastName: 'Hopper', university: 'Yale', major: 'CS', status: 'ACCEPTED', submittedAt: '2025-05-08', email: 'grace@yale.edu' },
-]
+import { api } from '@/trpc/react'
 
 export default function AdminApplicationsPage() {
   const [filter, setFilter] = useState<AppStatus>('ALL')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const filtered = MOCK_APPS.filter(a =>
-    (filter === 'ALL' || a.status === filter) &&
-    (search === '' || `${a.firstName} ${a.lastName} ${a.email} ${a.university}`.toLowerCase().includes(search.toLowerCase()))
-  )
+  const { data, isLoading } = api.application.getAll.useQuery({
+    status: filter,
+    search: search,
+    page: 1,
+    limit: 50
+  })
+
+  const filtered = data?.applications ?? []
 
   const toggleAll = () => {
     if (selected.size === filtered.length) setSelected(new Set())
@@ -68,7 +67,7 @@ export default function AdminApplicationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="section-title">Applications</h1>
-            <p className="section-sub">{MOCK_APPS.length} total applications</p>
+            <p className="section-sub">{data?.total ?? 0} total applications</p>
           </div>
           {selected.size > 0 && (
             <div className="flex items-center gap-3">
@@ -127,40 +126,44 @@ export default function AdminApplicationsPage() {
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-[var(--text-muted)]">
-                    No applications match your filters
-                  </td>
-                </tr>
+            <tbody className="divide-y divide-[var(--border)]/30">
+              {isLoading ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--text-muted)] text-sm">Loading applications...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--text-muted)] text-sm">No applications found.</td></tr>
               ) : filtered.map(app => (
-                <tr key={app.id}>
-                  <td className="text-center">
-                    <input
-                      type="checkbox"
+                <tr key={app.id} className="hover:bg-[var(--bg-elevated)]/50 transition-colors group">
+                  <td className="px-4 py-3 text-center">
+                    <input 
+                      type="checkbox" 
                       checked={selected.has(app.id)}
                       onChange={() => toggle(app.id)}
-                      className="rounded accent-[var(--accent-primary)]"
+                      className="rounded-[4px] border-[var(--border)] bg-transparent text-[var(--accent-primary)] focus:ring-[var(--accent-primary)]/20 focus:ring-offset-0" 
                     />
                   </td>
-                  <td>
-                    <div>
-                      <p className="font-medium text-[var(--text-primary)] text-sm">{app.firstName} {app.lastName}</p>
-                      <p className="text-xs text-[var(--text-muted)] font-mono">{app.email}</p>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">{app.firstName} {app.lastName}</span>
+                      <span className="text-xs text-[var(--text-muted)] font-mono">{app.user?.email}</span>
                     </div>
                   </td>
-                  <td className="text-sm">{app.university}</td>
-                  <td className="text-sm">{app.major}</td>
-                  <td>
-                    <span className={`badge ${BADGE_MAP[app.status]}`}>{app.status.replace('_', ' ')}</span>
+                  <td className="px-4 py-3 text-sm">{app.university}</td>
+                  <td className="px-4 py-3 text-sm">{app.major}</td>
+                  <td className="px-4 py-3">
+                    <span className={`badge ${BADGE_MAP[app.status] || 'bg-gray-500/10 text-gray-400'}`}>
+                      {app.status.replace('_', ' ')}
+                    </span>
                   </td>
-                  <td className="font-mono text-xs">{app.submittedAt}</td>
-                  <td className="text-right">
+                  <td className="px-4 py-3 font-mono text-xs text-[var(--text-muted)]">
+                    {new Date(app.submittedAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="btn-ghost text-xs py-1 px-2">View</button>
+                      <button className="text-[var(--text-muted)] text-xs hover:text-[var(--accent-primary)] transition-colors opacity-0 group-hover:opacity-100">
+                        View
+                      </button>
                       <select
-                        className="input text-xs py-1 px-2 w-32"
+                        className="input text-xs py-1 px-2 w-32 opacity-0 group-hover:opacity-100 transition-opacity"
                         defaultValue={app.status}
                         onChange={e => console.log('Update status', app.id, e.target.value)}
                       >

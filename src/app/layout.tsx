@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { TRPCReactProvider } from '@/trpc/react'
+
 export default function RootLayout({
   children,
 }: {
@@ -31,7 +33,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[var(--bg-base)] text-[var(--text-primary)] font-body antialiased">
-        {children}
+        <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>
   )

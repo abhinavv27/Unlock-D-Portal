@@ -71,6 +71,7 @@ const isStaff = t.middleware(({ ctx, next }) => {
 
 // ─── Exports ──────────────────────────────────────────────────────────────
 export const createTRPCRouter = t.router
+export const createCallerFactory = t.createCallerFactory
 export const publicProcedure = t.procedure
 export const protectedProcedure = t.procedure.use(isAuthed)
 export const adminProcedure = t.procedure.use(isAuthed).use(isAdmin)
