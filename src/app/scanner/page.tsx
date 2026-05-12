@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 
 type ScanResult = {
   success: boolean
@@ -12,13 +12,13 @@ type ScanResult = {
 type ScanAction = 'CHECK_IN' | 'MEAL_FRIDAY_DINNER' | 'MEAL_SATURDAY_BREAKFAST' | 'MEAL_SATURDAY_LUNCH' | 'MEAL_SATURDAY_DINNER' | 'MEAL_SUNDAY_BREAKFAST' | 'MEAL_SUNDAY_LUNCH'
 
 const ACTIONS: { value: ScanAction; label: string }[] = [
-  { value: 'CHECK_IN', label: '🚪 Check In' },
-  { value: 'MEAL_FRIDAY_DINNER', label: '🍽️ Fri Dinner' },
-  { value: 'MEAL_SATURDAY_BREAKFAST', label: '🥞 Sat Breakfast' },
-  { value: 'MEAL_SATURDAY_LUNCH', label: '🥗 Sat Lunch' },
-  { value: 'MEAL_SATURDAY_DINNER', label: '🍕 Sat Dinner' },
-  { value: 'MEAL_SUNDAY_BREAKFAST', label: '☕ Sun Breakfast' },
-  { value: 'MEAL_SUNDAY_LUNCH', label: '🥙 Sun Lunch' },
+  { value: 'CHECK_IN', label: 'Check In' },
+  { value: 'MEAL_FRIDAY_DINNER', label: 'Fri Dinner' },
+  { value: 'MEAL_SATURDAY_BREAKFAST', label: 'Sat Breakfast' },
+  { value: 'MEAL_SATURDAY_LUNCH', label: 'Sat Lunch' },
+  { value: 'MEAL_SATURDAY_DINNER', label: 'Sat Dinner' },
+  { value: 'MEAL_SUNDAY_BREAKFAST', label: 'Sun Breakfast' },
+  { value: 'MEAL_SUNDAY_LUNCH', label: 'Sun Lunch' },
 ]
 
 export default function ScannerPage() {
@@ -36,7 +36,7 @@ export default function ScannerPage() {
     await new Promise(r => setTimeout(r, 600))
     const result: ScanResult = {
       success: true,
-      message: `✓ ${action.replace('_', ' ')} for code ${code.slice(0, 8)}...`,
+      message: `${action.replace(/_/g, ' ')} successful for ${code.slice(0, 8)}`,
       attendee: { firstName: 'Test', lastName: 'User' },
       timestamp: new Date(),
     }
@@ -47,78 +47,90 @@ export default function ScannerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--bg-base)] p-5">
-      <div className="max-w-lg mx-auto space-y-5">
+    <main className="min-h-screen bg-[var(--bg-base)] p-6 md:p-10 font-sans">
+      <div className="max-w-xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-[6px] bg-gradient-purple flex items-center justify-center">
-            <span className="font-display font-bold text-white text-sm">R</span>
+        <header className="flex items-center justify-between border-b border-[var(--border)] pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
+              <span className="font-display font-black text-black text-xs">RA</span>
+            </div>
+            <div>
+              <h1 className="font-display font-bold text-xl text-[var(--text-primary)]">Scanner</h1>
+              <p className="text-sm text-[var(--text-secondary)]">Staff Portal</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-display font-bold text-lg text-[var(--text-primary)]">QR Scanner</h1>
-            <p className="text-xs text-[var(--text-muted)] font-mono">Staff Mode</p>
-          </div>
-        </div>
+        </header>
 
         {/* Action selector */}
-        <div className="card">
-          <p className="text-xs font-display font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">Scan For</p>
-          <div className="flex flex-wrap gap-2">
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Select Action</h2>
+          <div className="flex flex-wrap gap-3">
             {ACTIONS.map(({ value, label }) => (
               <button
                 key={value}
                 id={`btn-action-${value.toLowerCase()}`}
                 onClick={() => setAction(value)}
-                className={`px-3 py-2 rounded-[6px] text-xs font-display font-semibold transition-all border ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
                   action === value
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]'
-                    : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                    ? 'border-white bg-white text-black shadow-lg shadow-white/10'
+                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white hover:border-white/50'
                 }`}
               >
                 {label}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* Camera scanner frame */}
-        <div className="scanner-frame aspect-square bg-[var(--bg-elevated)] flex items-center justify-center relative">
-          <div className="scanner-line" />
+        <div className="aspect-square bg-[var(--bg-elevated)] rounded-2xl flex items-center justify-center relative border border-[var(--border)] overflow-hidden shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 pointer-events-none" />
+          
           {/* Corner guides */}
-          {['top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3'].map(pos => (
-            <div key={pos} className={`absolute ${pos} w-8 h-8 border-2 border-[var(--accent-primary)]`}
+          {['top-6 left-6', 'top-6 right-6', 'bottom-6 left-6', 'bottom-6 right-6'].map(pos => (
+            <div key={pos} className={`absolute ${pos} w-12 h-12 border-2 border-white/50 rounded-lg`}
               style={{
-                borderRight: pos.includes('right') ? `2px solid var(--accent-primary)` : 'none',
-                borderLeft: pos.includes('left') ? `2px solid var(--accent-primary)` : 'none',
-                borderTop: pos.includes('top') ? `2px solid var(--accent-primary)` : 'none',
-                borderBottom: pos.includes('bottom') ? `2px solid var(--accent-primary)` : 'none',
+                borderRight: pos.includes('right') ? `2px solid rgba(255,255,255,0.5)` : 'none',
+                borderLeft: pos.includes('left') ? `2px solid rgba(255,255,255,0.5)` : 'none',
+                borderTop: pos.includes('top') ? `2px solid rgba(255,255,255,0.5)` : 'none',
+                borderBottom: pos.includes('bottom') ? `2px solid rgba(255,255,255,0.5)` : 'none',
               }}
             />
           ))}
-          <div ref={scannerRef} className="text-center">
-            <div className="text-5xl mb-3 opacity-30">📷</div>
-            <p className="text-xs text-[var(--text-muted)] font-mono">Camera scan coming soon</p>
-            <p className="text-xs text-[var(--text-muted)] font-mono">Use manual entry below</p>
+          <div ref={scannerRef} className="text-center z-10 p-6">
+            <svg className="w-12 h-12 mx-auto mb-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Camera scanning disabled</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Use manual entry below</p>
           </div>
         </div>
 
         {/* Last scan result */}
         {lastResult && (
-          <div className={`card ${lastResult.success ? 'card-accepted' : 'card-rejected'} text-center py-6`}>
-            <div className="text-3xl mb-2">{lastResult.success ? '✅' : '❌'}</div>
-            <p className="font-display font-semibold text-[var(--text-primary)]">{lastResult.message}</p>
-            <p className="text-xs text-[var(--text-muted)] font-mono mt-2">{lastResult.timestamp.toLocaleTimeString()}</p>
+          <div className={`rounded-xl p-6 flex flex-col items-center justify-center text-center border transition-all duration-300 ${lastResult.success ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${lastResult.success ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+              {lastResult.success ? (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              )}
+            </div>
+            <p className="font-display font-semibold text-lg text-[var(--text-primary)] mb-1">{lastResult.message}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{lastResult.timestamp.toLocaleTimeString()}</p>
           </div>
         )}
 
         {/* Manual entry */}
-        <div className="card">
-          <p className="text-xs font-display font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">Manual Entry</p>
+        <div className="space-y-4">
+          <label className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Manual Code Entry</label>
           <div className="flex gap-3">
             <input
               id="input-qr-code"
-              className="input flex-1 font-mono text-sm"
-              placeholder="Paste or type QR code..."
+              className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 transition-all placeholder:text-[var(--text-muted)]"
+              placeholder="Enter participant code..."
               value={manualCode}
               onChange={e => setManualCode(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleScan(manualCode)}
@@ -127,27 +139,29 @@ export default function ScannerPage() {
               id="btn-manual-scan"
               onClick={() => handleScan(manualCode)}
               disabled={!manualCode || scanning}
-              className="btn-primary px-4 flex-shrink-0"
+              className="bg-white text-black hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-xl font-semibold text-sm transition-colors"
             >
-              {scanning ? '...' : 'Scan'}
+              {scanning ? 'Scanning...' : 'Submit'}
             </button>
           </div>
         </div>
 
         {/* Scan log */}
         {results.length > 0 && (
-          <div className="card p-0 overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--border)]">
-              <p className="text-xs font-display font-semibold text-[var(--text-muted)] uppercase tracking-widest">Recent Scans</p>
+          <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--bg-elevated)]">
+            <div className="px-5 py-4 border-b border-[var(--border)] bg-white/5">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Recent History</h3>
             </div>
-            <div className="divide-y divide-[var(--border)]/50">
+            <div className="divide-y divide-[var(--border)]">
               {results.map((r, i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span>{r.success ? '✅' : '❌'}</span>
-                    <span className="text-sm text-[var(--text-secondary)]">{r.message}</span>
+                <div key={i} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-center gap-4">
+                    <span className={r.success ? 'text-emerald-400' : 'text-red-400'}>
+                      {r.success ? '✓' : '✕'}
+                    </span>
+                    <span className="text-sm font-medium text-[var(--text-secondary)]">{r.message}</span>
                   </div>
-                  <span className="text-xs text-[var(--text-muted)] font-mono">{r.timestamp.toLocaleTimeString()}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{r.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                 </div>
               ))}
             </div>

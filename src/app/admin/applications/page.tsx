@@ -1,16 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 
 type AppStatus = 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'WAITLISTED' | 'REJECTED' | 'ALL'
 
 const BADGE_MAP: Record<string, string> = {
-  PENDING: 'badge-pending',
-  UNDER_REVIEW: 'badge-review',
-  ACCEPTED: 'badge-accepted',
-  WAITLISTED: 'badge-waitlisted',
-  REJECTED: 'badge-rejected',
-  WITHDRAWN: 'badge-withdrawn',
+  PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  UNDER_REVIEW: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  ACCEPTED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  WAITLISTED: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
 }
 
 import { api } from '@/trpc/react'
@@ -41,146 +42,255 @@ export default function AdminApplicationsPage() {
   }
 
   return (
-    <main className="min-h-screen flex bg-[var(--bg-base)]">
-      {/* Sidebar (reuse pattern) */}
-      <aside className="w-56 border-r border-[var(--border)]/50 flex flex-col py-5 px-3 flex-shrink-0">
-        <div className="flex items-center gap-2 px-3 mb-8">
-          <div className="w-7 h-7 rounded-[5px] bg-gradient-purple flex items-center justify-center">
-            <span className="font-display font-bold text-white text-xs">R</span>
-          </div>
-          <span className="font-display font-semibold text-sm text-[var(--text-primary)]">Admin</span>
+    <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-hidden">
+      {/* Background Parallax Elements */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
+        <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.03]" />
+        
+        {/* Animated Blobs */}
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.1, 0.2, 0.1],
+            x: [0, 50, 0],
+            y: [0, -50, 0]
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-primary/20 blur-[120px] rounded-full" 
+        />
+      </div>
+
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-white/5 bg-black/40 backdrop-blur-2xl flex flex-col z-10 sticky top-0 h-screen">
+        <div className="p-8 border-b border-white/5">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="text-black font-display font-black text-[10px]">RA</span>
+            </div>
+            <span className="font-display font-black text-[10px] tracking-[0.2em] text-white/40 group-hover:text-white transition-colors uppercase">Admin_Hub</span>
+          </Link>
         </div>
-        <nav className="flex flex-col gap-1">
+
+        <nav className="flex-1 p-4 space-y-1 mt-4">
           {[
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋', active: true },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
+            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
           ].map(({ href, label, icon, active }) => (
-            <a key={href} href={href} className={`nav-link ${active ? 'active' : ''}`}>
-              <span>{icon}</span><span>{label}</span>
-            </a>
+            <Link 
+              key={href} 
+              href={href} 
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                active 
+                  ? 'bg-white text-black shadow-lg shadow-white/10' 
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="text-sm">{icon}</span>
+              {label}
+            </Link>
           ))}
         </nav>
+
+        <div className="p-6 border-t border-white/5 text-center">
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">IEEE_RAS_2026</p>
+        </div>
       </aside>
 
-      <div className="flex-1 overflow-auto px-8 py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="section-title">Applications</h1>
-            <p className="section-sub">{data?.total ?? 0} total applications</p>
-          </div>
-          {selected.size > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--text-muted)] font-mono">{selected.size} selected</span>
-              <button className="btn-secondary text-sm">Accept Selected</button>
-              <button className="btn-danger text-sm">Reject Selected</button>
+      {/* Content Container */}
+      <div className="flex-1 relative z-10 overflow-auto">
+        <div className="max-w-7xl mx-auto p-12 space-y-12">
+          {/* Header */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-4">
+              <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
+                Database_Registry
+              </div>
+              <h1 className="text-5xl font-display font-black tracking-tighter uppercase italic leading-[0.9]">
+                Applicant <br />
+                <span className="text-white/20">Directory.</span>
+              </h1>
             </div>
-          )}
-        </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3">
-          <input
-            id="admin-search"
-            className="input max-w-xs text-sm"
-            placeholder="Search name, email, university..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <div className="flex gap-2 flex-wrap">
-            {(['ALL', 'PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED'] as AppStatus[]).map(s => (
-              <button
-                key={s}
-                id={`filter-${s.toLowerCase()}`}
-                onClick={() => setFilter(s)}
-                className={`px-3 py-1.5 rounded-[6px] text-xs font-display font-semibold uppercase tracking-wide transition-all border ${
-                  filter === s
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]'
-                    : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-                }`}
-              >
-                {s.replace('_', ' ')}
-              </button>
-            ))}
-          </div>
-        </div>
+            <AnimatePresence>
+              {selected.size > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="flex items-center gap-3 p-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl"
+                >
+                  <span className="px-4 text-[10px] font-black text-white/40 uppercase tracking-widest">{selected.size} SELECTED</span>
+                  <button className="px-6 py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-colors">ACCEPT</button>
+                  <button className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-400 transition-colors">REJECT</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </header>
 
-        {/* Table */}
-        <div className="card p-0 overflow-hidden">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="w-10 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selected.size === filtered.length && filtered.length > 0}
-                    onChange={toggleAll}
-                    className="rounded accent-[var(--accent-primary)]"
-                  />
-                </th>
-                <th>Applicant</th>
-                <th>University</th>
-                <th>Major</th>
-                <th>Status</th>
-                <th>Submitted</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border)]/30">
-              {isLoading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--text-muted)] text-sm">Loading applications...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--text-muted)] text-sm">No applications found.</td></tr>
-              ) : filtered.map(app => (
-                <tr key={app.id} className="hover:bg-[var(--bg-elevated)]/50 transition-colors group">
-                  <td className="px-4 py-3 text-center">
-                    <input 
-                      type="checkbox" 
-                      checked={selected.has(app.id)}
-                      onChange={() => toggle(app.id)}
-                      className="rounded-[4px] border-[var(--border)] bg-transparent text-[var(--accent-primary)] focus:ring-[var(--accent-primary)]/20 focus:ring-offset-0" 
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-[var(--text-primary)]">{app.firstName} {app.lastName}</span>
-                      <span className="text-xs text-[var(--text-muted)] font-mono">{app.user?.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm">{app.university}</td>
-                  <td className="px-4 py-3 text-sm">{app.major}</td>
-                  <td className="px-4 py-3">
-                    <span className={`badge ${BADGE_MAP[app.status] || 'bg-gray-500/10 text-gray-400'}`}>
-                      {app.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--text-muted)]">
-                    {new Date(app.submittedAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="text-[var(--text-muted)] text-xs hover:text-[var(--accent-primary)] transition-colors opacity-0 group-hover:opacity-100">
-                        View
-                      </button>
-                      <select
-                        className="input text-xs py-1 px-2 w-32 opacity-0 group-hover:opacity-100 transition-opacity"
-                        defaultValue={app.status}
-                        onChange={e => console.log('Update status', app.id, e.target.value)}
-                      >
-                        <option value="PENDING">Pending</option>
-                        <option value="UNDER_REVIEW">Under Review</option>
-                        <option value="ACCEPTED">Accept</option>
-                        <option value="WAITLISTED">Waitlist</option>
-                        <option value="REJECTED">Reject</option>
-                      </select>
-                    </div>
-                  </td>
-                </tr>
+          {/* Controls Bar */}
+          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+            <div className="relative w-full lg:w-96 group">
+              <input
+                id="admin-search"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-white/20"
+                placeholder="Search name, email, university..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-primary transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(['ALL', 'PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED'] as AppStatus[]).map(s => (
+                <button
+                  key={s}
+                  id={`filter-${s.toLowerCase()}`}
+                  onClick={() => setFilter(s)}
+                  className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                    filter === s
+                      ? 'border-primary bg-primary text-black shadow-lg shadow-primary/20'
+                      : 'border-white/5 bg-white/5 text-white/40 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  {s.replace('_', ' ')}
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {/* Table Card */}
+          <div className="glass-premium rounded-3xl border-white/5 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/[0.02]">
+                    <th className="p-6 w-16">
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={selected.size === filtered.length && filtered.length > 0}
+                          onChange={toggleAll}
+                          className="w-5 h-5 rounded-lg bg-white/5 border-white/10 text-primary focus:ring-primary focus:ring-offset-0 transition-all cursor-pointer"
+                        />
+                      </div>
+                    </th>
+                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Applicant</th>
+                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">University</th>
+                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Major</th>
+                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Status</th>
+                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Submitted</th>
+                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em] text-right">Operations</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={7} className="p-20 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Synching_Records...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-20 text-center">
+                        <div className="flex flex-col items-center gap-2 opacity-20">
+                          <span className="text-4xl">📁</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em]">No_Matching_Entries</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filtered.map((app, idx) => (
+                    <motion.tr 
+                      key={app.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="group hover:bg-white/[0.03] transition-colors"
+                    >
+                      <td className="p-6">
+                        <div className="flex justify-center">
+                          <input 
+                            type="checkbox" 
+                            checked={selected.has(app.id)}
+                            onChange={() => toggle(app.id)}
+                            className="w-5 h-5 rounded-lg bg-white/5 border-white/10 text-primary focus:ring-primary transition-all cursor-pointer" 
+                          />
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-black text-white group-hover:text-primary transition-colors">{app.firstName} {app.lastName}</span>
+                          <span className="text-[10px] font-medium text-white/20 font-mono tracking-tighter">{app.user?.email}</span>
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-xs font-bold text-white/60 tracking-tight">{app.university}</span>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-xs font-bold text-white/60 tracking-tight">{app.major}</span>
+                      </td>
+                      <td className="p-6">
+                        <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${BADGE_MAP[app.status] || 'border-white/10 text-white/40'}`}>
+                          {app.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-[10px] font-black text-white/20 font-mono tracking-widest">
+                          {new Date(app.submittedAt).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="p-6 text-right">
+                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link 
+                            href={`/admin/applications/${app.id}`}
+                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors"
+                          >
+                            View_Profile
+                          </Link>
+                          <select
+                            className="bg-black/60 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 py-1.5 focus:outline-none focus:border-primary transition-all cursor-pointer"
+                            defaultValue={app.status}
+                            onChange={e => console.log('Update status', app.id, e.target.value)}
+                          >
+                            <option value="PENDING">Pending</option>
+                            <option value="UNDER_REVIEW">Reviewing</option>
+                            <option value="ACCEPTED">Accept</option>
+                            <option value="WAITLISTED">Waitlist</option>
+                            <option value="REJECTED">Reject</option>
+                          </select>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Footer Pagination Stats */}
+            <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
+                Showing <span className="text-white/40">{filtered.length}</span> of <span className="text-white/40">{data?.total ?? 0}</span> Entries
+              </p>
+              <div className="flex gap-2">
+                <button className="p-2 glass-premium rounded-lg border-white/5 opacity-50 cursor-not-allowed">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button className="p-2 glass-premium rounded-lg border-white/5 hover:border-white/20 transition-all">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
   )
 }
+

@@ -4,6 +4,7 @@ import GitHub from 'next-auth/providers/github'
 import Resend from 'next-auth/providers/resend'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from '@/server/db'
+import { Role } from '@prisma/client'
 
 export const { handlers, signIn, signOut, auth: actualAuth } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -23,8 +24,10 @@ export const { handlers, signIn, signOut, auth: actualAuth } = NextAuth({
   ],
   callbacks: {
     session({ session, user }) {
-      session.user.id = user.id
-      session.user.role = (user as { role: string }).role
+      if (session.user) {
+        session.user.id = user.id
+        session.user.role = (user as any).role as Role
+      }
       return session
     },
   },
@@ -40,7 +43,8 @@ export const auth = async () => {
       id: "mock-admin-id",
       name: "Mock Admin",
       email: "admin@ras.test",
-      role: "SUPER_ADMIN",
+      role: "SUPER_ADMIN" as Role,
+      image: "https://github.com/shadcn.png", // Added for UI consistency
     },
     expires: "9999-12-31T23:59:59.999Z",
   }
