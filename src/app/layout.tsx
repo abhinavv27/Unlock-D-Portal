@@ -16,6 +16,11 @@ export const metadata: Metadata = {
 }
 
 import { TRPCReactProvider } from '@/trpc/react'
+import { Geist } from 'next/font/google'
+import { cn } from '@/lib/utils'
+import GlobalBackground from '@/components/GlobalBackground'
+
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
 export default function RootLayout({
   children,
@@ -23,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={cn('dark', 'font-sans', geist.variable)} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -32,7 +37,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[var(--bg-base)] text-[var(--text-primary)] font-body antialiased">
+      <body className="bg-[var(--bg-base)] text-[var(--text-primary)] font-body antialiased" suppressHydrationWarning>
+        <GlobalBackground />
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>

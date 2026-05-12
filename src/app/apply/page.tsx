@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
-const STEPS = ['Personal', 'Academic', 'Hackathon', 'Links', 'Review'] as const
-
+const STEPS = ['Personal', 'Academic', 'Experience', 'Links', 'Review'] as const
 type Step = typeof STEPS[number]
 
 interface FormData {
@@ -21,11 +23,18 @@ const initialData: FormData = {
 }
 
 export default function ApplyPage() {
+  const router = useRouter()
   const [step, setStep] = useState(0)
   const [data, setData] = useState<FormData>(initialData)
   const [universities, setUniversities] = useState<string[]>([])
   const [uniQuery, setUniQuery] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const update = (field: keyof FormData, value: string | boolean) =>
     setData(prev => ({ ...prev, [field]: value }))
@@ -35,156 +44,191 @@ export default function ApplyPage() {
     update('university', query)
     if (query.length < 3) { setUniversities([]); return }
     try {
-      const res = await fetch(`http://universities.hipolabs.com/search?name=${encodeURIComponent(query)}&limit=8`)
-      const data = await res.json()
-      setUniversities(data.map((u: { name: string }) => u.name))
+      const res = await fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(query)}&limit=8`)
+      const result = await res.json()
+      setUniversities(result.map((u: { name: string }) => u.name))
     } catch { setUniversities([]) }
+  }
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 1500))
+    setSubmitted(true)
+    setLoading(false)
   }
 
   const progress = ((step + 1) / STEPS.length) * 100
 
+  if (!mounted) return <div className="min-h-screen bg-[hsl(var(--bg-base))]" />
+
   if (submitted) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="card max-w-md w-full text-center py-12">
-          <div className="text-5xl mb-4">🎉</div>
-          <h1 className="font-display font-bold text-2xl text-[var(--text-primary)] mb-2">Application Submitted!</h1>
-          <p className="text-sm text-[var(--text-secondary)] mb-6">
-            We&apos;ll review your application and get back to you via email. Check your dashboard for updates.
+      <main className="min-h-screen bg-[hsl(var(--bg-base))] text-white flex items-center justify-center px-4 relative font-sans">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full text-center relative z-10"
+        >
+          <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-8">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-display font-medium tracking-tight mb-4 text-white">Application Received</h1>
+          <p className="text-[hsl(var(--text-secondary))] text-sm leading-relaxed mb-10 font-light">
+            Thank you for applying. We are reviewing your submission and will be in touch shortly.
           </p>
-          <a href="/dashboard" className="btn-primary inline-block">Go to Dashboard →</a>
-        </div>
+          <Link href="/dashboard" className="btn-ghost w-full py-4 text-center block">
+            RETURN TO DASHBOARD
+          </Link>
+        </motion.div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12 relative">
-      <div className="absolute inset-0 grid-bg opacity-10 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] rounded-full bg-[var(--accent-primary)] opacity-[0.05] blur-[100px] pointer-events-none" />
-
-      <div className="w-full max-w-xl relative z-10">
-        {/* Header */}
-        <div className="mb-8">
-          <a href="/" className="text-xs text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors font-display">← Back to home</a>
-          <h1 className="font-display font-bold text-3xl text-[var(--text-primary)] mt-3 tracking-tight">Apply to RAS Hackathon</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">Step {step + 1} of {STEPS.length} — {STEPS[step]}</p>
-        </div>
-
-        {/* Progress bar */}
-        <div className="h-1 bg-[var(--border)] rounded-full mb-8 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: 'linear-gradient(90deg, hsl(270,87%,67%), hsl(186,90%,52%))' }}
-          />
-        </div>
-
-        {/* Step circles */}
-        <div className="flex items-center justify-between mb-8">
-          {STEPS.map((s, i) => (
-            <div key={s} className="flex flex-col items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-display font-bold transition-all ${
-                i < step ? 'bg-[var(--accent-success)] text-white' :
-                i === step ? 'bg-[var(--accent-primary)] text-white glow-purple' :
-                'bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border)]'
-              }`}>
-                {i < step ? '✓' : i + 1}
+    <main className="min-h-screen bg-[hsl(var(--bg-base))] text-white selection:bg-white/20 overflow-x-hidden relative font-sans">
+      <AnimatePresence>
+        <motion.div
+          key="content"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <nav className="fixed top-0 left-0 w-full z-50 p-8">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <Link href="/" className="text-sm font-display font-medium text-white/50 hover:text-white transition-colors">
+                ← Back
+              </Link>
+              <div className="flex items-center gap-6">
+                <div className="hidden md:flex items-center gap-2">
+                  {STEPS.map((s, i) => (
+                    <div key={s} className="flex items-center gap-2">
+                      <div className={`w-1 h-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-white' : 'bg-white/20'}`} />
+                      {i === step && (
+                        <span className="text-xs font-medium text-white mr-2">{s}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="h-4 w-[1px] bg-white/10 hidden md:block" />
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-medium text-white/50">{Math.round(progress)}%</span>
+                  <div className="w-24 h-[2px] bg-white/10 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      className="h-full bg-white"
+                    />
+                  </div>
+                </div>
               </div>
-              <span className="text-[10px] text-[var(--text-muted)] font-display hidden sm:block">{s}</span>
             </div>
-          ))}
-        </div>
+          </nav>
 
-        {/* Form card */}
-        <div className="card gap-6 flex flex-col">
-          {step === 0 && (
-            <StepPersonal data={data} update={update} />
-          )}
-          {step === 1 && (
-            <StepAcademic data={data} update={update} universities={universities} uniQuery={uniQuery} searchUniversities={searchUniversities} setUniversities={setUniversities} />
-          )}
-          {step === 2 && (
-            <StepHackathon data={data} update={update} />
-          )}
-          {step === 3 && (
-            <StepLinks data={data} update={update} />
-          )}
-          {step === 4 && (
-            <StepReview data={data} onSubmit={() => setSubmitted(true)} />
-          )}
-
-          {/* Navigation */}
-          <div className="flex justify-between pt-2 border-t border-[var(--border)]">
-            <button
-              onClick={() => setStep(s => Math.max(0, s - 1))}
-              disabled={step === 0}
-              className="btn-ghost disabled:opacity-30"
+          <div className="max-w-2xl mx-auto px-6 pt-40 pb-32 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
             >
-              ← Previous
-            </button>
-            {step < STEPS.length - 1 ? (
-              <button onClick={() => setStep(s => s + 1)} className="btn-primary">
-                Next →
-              </button>
-            ) : null}
+              <div className="mb-12">
+                <h1 className="text-4xl md:text-5xl font-display font-medium tracking-tight mb-4 text-white">
+                  {STEPS[step]}
+                </h1>
+                <p className="text-[hsl(var(--text-secondary))] font-light">
+                  Please provide your details below.
+                </p>
+              </div>
+
+              <div className="relative min-h-[400px] flex flex-col">
+                <div className="flex-1">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={step}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      {step === 0 && <StepPersonal data={data} update={update} />}
+                      {step === 1 && <StepAcademic data={data} update={update} universities={universities} uniQuery={uniQuery} searchUniversities={searchUniversities} setUniversities={setUniversities} />}
+                      {step === 2 && <StepHackathon data={data} update={update} />}
+                      {step === 3 && <StepLinks data={data} update={update} />}
+                      {step === 4 && <StepReview data={data} onSubmit={handleSubmit} loading={loading} />}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                <div className="mt-16 pt-8 border-t border-white/5 flex justify-between items-center">
+                  <button
+                    onClick={() => setStep(s => Math.max(0, s - 1))}
+                    disabled={step === 0 || loading}
+                    className={`text-sm font-medium transition-colors ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-white/50 hover:text-white'}`}
+                  >
+                    Previous
+                  </button>
+                  
+                  {step < STEPS.length - 1 && (
+                    <button 
+                      onClick={() => setStep(s => s + 1)}
+                      className="btn-vibrant !py-3 !px-8 text-sm"
+                    >
+                      Continue
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </AnimatePresence>
     </main>
   )
 }
 
-// ─── Step Components ──────────────────────────────────────────────────────
-
 function StepPersonal({ data, update }: { data: FormData; update: (f: keyof FormData, v: string | boolean) => void }) {
   return (
-    <>
-      <h2 className="font-display font-semibold text-lg text-[var(--text-primary)]">Personal Information</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">First Name *</label>
-          <input id="input-first-name" className="input" placeholder="Ada" value={data.firstName} onChange={e => update('firstName', e.target.value)} required />
+    <div className="space-y-8">
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-white/70">First Name</label>
+          <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="Jane" value={data.firstName} onChange={e => update('firstName', e.target.value)} required />
         </div>
-        <div>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Last Name *</label>
-          <input id="input-last-name" className="input" placeholder="Lovelace" value={data.lastName} onChange={e => update('lastName', e.target.value)} required />
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-white/70">Last Name</label>
+          <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="Doe" value={data.lastName} onChange={e => update('lastName', e.target.value)} required />
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Email</label>
-        <input id="input-phone" className="input" placeholder="+1 (555) 000-0000" value={data.phone} onChange={e => update('phone', e.target.value)} />
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-white/70">Phone Number</label>
+        <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="+1 (555) 000-0000" value={data.phone} onChange={e => update('phone', e.target.value)} />
       </div>
-      <div>
-        <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Country</label>
-        <input id="input-country" className="input" placeholder="India" value={data.country} onChange={e => update('country', e.target.value)} />
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-white/70">Country of Residence</label>
+        <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="United States" value={data.country} onChange={e => update('country', e.target.value)} />
       </div>
-    </>
+    </div>
   )
 }
 
-function StepAcademic({ data, update, universities, uniQuery, searchUniversities, setUniversities }: {
-  data: FormData; update: (f: keyof FormData, v: string | boolean) => void
-  universities: string[]; uniQuery: string
-  searchUniversities: (q: string) => void; setUniversities: (u: string[]) => void
-}) {
+function StepAcademic({ data, update, universities, uniQuery, searchUniversities, setUniversities }: any) {
   return (
-    <>
-      <h2 className="font-display font-semibold text-lg text-[var(--text-primary)]">Academic Background</h2>
-      <div className="relative">
-        <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">University *</label>
+    <div className="space-y-8">
+      <div className="relative space-y-2">
+        <label className="text-xs font-medium text-white/70">University</label>
         <input
-          id="input-university"
-          className="input"
-          placeholder="Search your university..."
+          className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors"
+          placeholder="Search university..."
           value={uniQuery || data.university}
           onChange={e => searchUniversities(e.target.value)}
         />
         {universities.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[8px] overflow-hidden z-20">
-            {universities.map(u => (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-[#121214] border border-white/10 rounded-lg overflow-hidden z-20 shadow-2xl">
+            {universities.map((u: string) => (
               <button
                 key={u}
-                className="w-full text-left px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-overlay)] hover:text-[var(--text-primary)] transition-colors"
+                className="w-full text-left px-4 py-3 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                 onClick={() => { update('university', u); setUniversities([]) }}
               >
                 {u}
@@ -193,42 +237,40 @@ function StepAcademic({ data, update, universities, uniQuery, searchUniversities
           </div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Major *</label>
-          <input id="input-major" className="input" placeholder="Computer Science" value={data.major} onChange={e => update('major', e.target.value)} />
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-white/70">Major</label>
+          <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="Computer Science" value={data.major} onChange={e => update('major', e.target.value)} />
         </div>
-        <div>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Graduation Year *</label>
-          <select id="select-grad-year" className="input" value={data.graduationYear} onChange={e => update('graduationYear', e.target.value)}>
-            <option value="">Select year</option>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-white/70">Graduation Year</label>
+          <select className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors appearance-none" value={data.graduationYear} onChange={e => update('graduationYear', e.target.value)}>
+            <option value="" className="bg-[#121214]">Select Year</option>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y} className="bg-[#121214]">{y}</option>
             ))}
           </select>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
 function StepHackathon({ data, update }: { data: FormData; update: (f: keyof FormData, v: string | boolean) => void }) {
   return (
-    <>
-      <h2 className="font-display font-semibold text-lg text-[var(--text-primary)]">Hackathon Details</h2>
-      <div>
-        <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-2">Experience Level *</label>
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <label className="text-xs font-medium text-white/70">Experience Level</label>
         <div className="grid grid-cols-3 gap-3">
-          {['beginner', 'intermediate', 'advanced'].map(level => (
+          {['Beginner', 'Intermediate', 'Advanced'].map(level => (
             <button
               key={level}
-              id={`btn-exp-${level}`}
               type="button"
-              onClick={() => update('experience', level)}
-              className={`px-3 py-3 rounded-[8px] text-sm font-display font-medium capitalize border transition-all ${
-                data.experience === level
-                  ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'
-                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50'
+              onClick={() => update('experience', level.toLowerCase())}
+              className={`py-3 rounded-lg text-sm font-medium transition-all border ${
+                data.experience === level.toLowerCase()
+                  ? 'bg-white text-black border-white'
+                  : 'bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white'
               }`}
             >
               {level}
@@ -236,19 +278,18 @@ function StepHackathon({ data, update }: { data: FormData; update: (f: keyof For
           ))}
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-2">Team Preference *</label>
+      <div className="space-y-3">
+        <label className="text-xs font-medium text-white/70">Team Status</label>
         <div className="grid grid-cols-3 gap-3">
           {[{ v: 'solo', l: 'Solo' }, { v: 'have-team', l: 'Have Team' }, { v: 'looking', l: 'Looking' }].map(({ v, l }) => (
             <button
               key={v}
-              id={`btn-team-${v}`}
               type="button"
               onClick={() => update('teamPreference', v)}
-              className={`px-3 py-3 rounded-[8px] text-sm font-display font-medium border transition-all ${
+              className={`py-3 rounded-lg text-sm font-medium transition-all border ${
                 data.teamPreference === v
-                  ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'
-                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50'
+                  ? 'bg-white text-black border-white'
+                  : 'bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white'
               }`}
             >
               {l}
@@ -256,96 +297,71 @@ function StepHackathon({ data, update }: { data: FormData; update: (f: keyof For
           ))}
         </div>
       </div>
-      <div>
-        <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Project Idea (optional)</label>
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-white/70">What are you hoping to build?</label>
         <textarea
-          id="input-project-idea"
-          className="input min-h-[80px] resize-none"
-          placeholder="What do you want to build? (or leave blank)"
+          className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors min-h-[120px] resize-none"
+          placeholder="Briefly describe your idea..."
           value={data.projectIdea}
           onChange={e => update('projectIdea', e.target.value)}
           maxLength={2000}
         />
-        <p className="text-xs text-[var(--text-muted)] text-right mt-1">{data.projectIdea.length}/2000</p>
+        <p className="text-xs text-white/30 text-right">{data.projectIdea.length}/2000</p>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">T-Shirt Size</label>
-          <select id="select-tshirt" className="input" value={data.tShirtSize} onChange={e => update('tShirtSize', e.target.value)}>
-            <option value="">Select size</option>
-            {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Dietary Restrictions</label>
-          <input id="input-dietary" className="input" placeholder="Vegetarian, Vegan, etc." value={data.dietaryRestrictions} onChange={e => update('dietaryRestrictions', e.target.value)} />
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <input
-          id="checkbox-hardware"
-          type="checkbox"
-          checked={data.needsHardware}
-          onChange={e => update('needsHardware', e.target.checked)}
-          className="w-4 h-4 rounded accent-[var(--accent-primary)]"
-        />
-        <label htmlFor="checkbox-hardware" className="text-sm text-[var(--text-secondary)]">
-          I need hardware components for my project
-        </label>
-      </div>
-    </>
+    </div>
   )
 }
 
 function StepLinks({ data, update }: { data: FormData; update: (f: keyof FormData, v: string | boolean) => void }) {
   return (
-    <>
-      <h2 className="font-display font-semibold text-lg text-[var(--text-primary)]">Links & Resume</h2>
-      <p className="text-sm text-[var(--text-secondary)] -mt-2">All fields are optional but help strengthen your application.</p>
+    <div className="space-y-6">
       {[
-        { field: 'githubUrl' as const, label: 'GitHub URL', placeholder: 'https://github.com/yourusername', id: 'input-github' },
-        { field: 'linkedinUrl' as const, label: 'LinkedIn URL', placeholder: 'https://linkedin.com/in/yourname', id: 'input-linkedin' },
-        { field: 'portfolioUrl' as const, label: 'Portfolio URL', placeholder: 'https://yourportfolio.com', id: 'input-portfolio' },
-        { field: 'resumeUrl' as const, label: 'Resume URL', placeholder: 'https://drive.google.com/...', id: 'input-resume' },
-      ].map(({ field, label, placeholder, id }) => (
-        <div key={field}>
-          <label className="block text-xs font-display font-medium text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">{label}</label>
-          <input id={id} className="input font-mono text-sm" placeholder={placeholder} value={data[field] as string} onChange={e => update(field, e.target.value)} />
+        { field: 'githubUrl' as const, label: 'GitHub URL', placeholder: 'https://github.com/username' },
+        { field: 'linkedinUrl' as const, label: 'LinkedIn URL', placeholder: 'https://linkedin.com/in/username' },
+        { field: 'portfolioUrl' as const, label: 'Portfolio URL', placeholder: 'https://yourwebsite.com' },
+        { field: 'resumeUrl' as const, label: 'Resume Link', placeholder: 'https://drive.google.com/...' },
+      ].map(({ field, label, placeholder }) => (
+        <div key={field} className="space-y-2">
+          <label className="text-xs font-medium text-white/70">{label}</label>
+          <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors" placeholder={placeholder} value={data[field] as string} onChange={e => update(field, e.target.value)} />
         </div>
       ))}
-    </>
+    </div>
   )
 }
 
-function StepReview({ data, onSubmit }: { data: FormData; onSubmit: () => void }) {
+function StepReview({ data, onSubmit, loading }: { data: FormData; onSubmit: () => void; loading: boolean }) {
   const rows = [
     ['Name', `${data.firstName} ${data.lastName}`],
     ['University', data.university],
     ['Major', data.major],
     ['Graduation', data.graduationYear],
     ['Experience', data.experience],
-    ['Team', data.teamPreference],
-    ['T-Shirt', data.tShirtSize || '—'],
-    ['Dietary', data.dietaryRestrictions || '—'],
-    ['GitHub', data.githubUrl || '—'],
+    ['Team Status', data.teamPreference],
   ]
   return (
-    <>
-      <h2 className="font-display font-semibold text-lg text-[var(--text-primary)]">Review Your Application</h2>
-      <div className="rounded-[8px] border border-[var(--border)] overflow-hidden">
+    <div className="space-y-8">
+      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
         {rows.map(([label, value], i) => (
-          <div key={label} className={`flex items-center justify-between px-4 py-2.5 ${i % 2 === 0 ? 'bg-[var(--bg-elevated)]' : ''}`}>
-            <span className="text-xs font-display font-medium text-[var(--text-muted)] uppercase tracking-wide">{label}</span>
-            <span className="text-sm text-[var(--text-primary)] font-mono">{value}</span>
+          <div key={label} className={`flex items-center justify-between px-6 py-4 border-b border-white/5 last:border-0`}>
+            <span className="text-sm font-medium text-white/50">{label}</span>
+            <span className="text-sm text-white font-medium text-right max-w-[200px] truncate">{value || '—'}</span>
           </div>
         ))}
       </div>
-      <button id="btn-submit-application" onClick={onSubmit} className="btn-primary py-3 text-base">
-        Submit Application 🚀
+      <button 
+        onClick={onSubmit} 
+        disabled={loading}
+        className="btn-vibrant w-full !py-4 text-sm relative overflow-hidden flex items-center justify-center"
+      >
+        <span className={loading ? 'opacity-0' : 'opacity-100'}>Submit Application</span>
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
       </button>
-      <p className="text-xs text-[var(--text-muted)] text-center">
-        You can&apos;t edit your application after submission. Double-check everything above.
-      </p>
-    </>
+    </div>
   )
 }
+
