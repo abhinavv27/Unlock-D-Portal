@@ -88,8 +88,8 @@ export default function ScannerPage() {
         {/* Header */}
         <header className="flex items-center justify-between border-b border-white/5 pb-10">
           <div className="flex items-center gap-6">
-            <Link href="/" className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center hover:scale-110 transition-transform shadow-2xl shadow-white/5">
-              <span className="text-black font-serif italic font-black text-sm">RA</span>
+            <Link href="/" className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center hover:scale-110 transition-transform shadow-2xl shadow-white/5 border border-white/10">
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
             </Link>
             <div>
               <h1 className="text-4xl text-hero text-white !normal-case leading-none">Security_Scanner</h1>
