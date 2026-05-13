@@ -70,7 +70,7 @@ export default function AdminSchedulePage() {
         <div className="p-8 border-b border-white/5">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform border border-white/10">
-              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-label-caps !text-white/40 group-hover:!text-white transition-colors">Admin_Hub</span>
           </Link>

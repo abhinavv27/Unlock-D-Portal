@@ -197,7 +197,7 @@ export default function SponsorPage() {
       <footer className="max-w-7xl mx-auto px-8 py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-white/10">
-            <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+            <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
           </div>
           <span className="text-label-caps !text-white/60">IEEE RAS 2026</span>
         </div>

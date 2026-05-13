@@ -36,7 +36,7 @@ export function Navbar({ session }: NavbarProps) {
             whileHover={{ rotate: 12, scale: 1.1 }}
             className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-lg shrink-0 border border-white/10"
           >
-            <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+            <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
           </motion.div>
           <span className="text-label-caps !text-white !text-[10px] !tracking-[0.2em] hidden lg:block opacity-80 whitespace-nowrap">IEEE RAS 2026</span>
         </Link>
