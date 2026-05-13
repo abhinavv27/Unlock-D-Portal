@@ -49,16 +49,16 @@ export default async function AdminPage() {
 
         <nav className="flex-1 p-6 space-y-2 mt-6">
           {[
-            { href: '/admin', label: 'Overview', icon: '📊', active: true },
+            { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/projects', label: 'Projects', icon: '🚀' },
-          ].map(({ href, label, icon, active }) => (
+          ].map(({ href, label, icon }) => (
             <Link 
               key={href} 
               href={href} 
               className={`flex items-center gap-4 px-6 py-4 rounded-2xl text-label-caps !text-[10px] transition-all ${
-                active 
+                href === '/admin' 
                   ? 'bg-white text-black shadow-2xl shadow-white/10 scale-[1.02]' 
                   : 'text-white/30 hover:text-white hover:bg-white/5'
               }`}

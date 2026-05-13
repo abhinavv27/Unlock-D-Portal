@@ -3,16 +3,18 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { api } from '@/trpc/react'
 
 export default function AdminProjectsPage() {
+  const pathname = usePathname()
   const [search, setSearch] = useState('')
 
   const { data: projects, isLoading } = api.judging.leaderboard.useQuery()
 
   const filtered = projects?.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.tableNumber?.toLowerCase().includes(search.toLowerCase())
+    p.tableNumber?.toString().toLowerCase().includes(search.toLowerCase())
   ) ?? []
 
   return (
@@ -51,21 +53,24 @@ export default function AdminProjectsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀', active: true },
-          ].map(({ href, label, icon, active }) => (
-            <Link 
-              key={href} 
-              href={href} 
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
-                active 
-                  ? 'bg-white !text-black shadow-lg shadow-white/10' 
-                  : '!text-white/40 hover:!text-white hover:bg-white/5'
-              }`}
-            >
-              <span className="text-sm">{icon}</span>
-              {label}
-            </Link>
-          ))}
+            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+          ].map(({ href, label, icon }) => {
+            const isActive = pathname === href
+            return (
+              <Link 
+                key={href} 
+                href={href} 
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
+                  isActive 
+                    ? 'bg-white !text-black shadow-lg shadow-white/10' 
+                    : '!text-white/40 hover:!text-white hover:bg-white/5'
+                }`}
+              >
+                <span className="text-sm">{icon}</span>
+                {label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-6 border-t border-white/5 text-center">
@@ -148,7 +153,7 @@ export default function AdminProjectsPage() {
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{project.name}</span>
-                          <span className="text-value-mono !text-white/20 !text-[9px]">{project.tagline || 'No tagline'}</span>
+                          <span className="text-value-mono !text-white/20 !text-[9px]">{project.description || 'No description'}</span>
                         </div>
                       </td>
                       <td className="p-6">
