@@ -99,7 +99,7 @@ export const applicationRouter = createTRPCRouter({
   bulkUpdateStatus: adminProcedure
     .input(z.object({
       ids: z.array(z.string()).min(1),
-      status: z.enum(['PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED']),
+      status: z.enum(['PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN']),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.application.updateMany({

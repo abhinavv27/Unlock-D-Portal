@@ -26,6 +26,9 @@ export default function AdminSchedulePage() {
       setFormData({ title: '', description: '', location: '', startTime: '', endTime: '', type: 'GENERAL', isPublic: true, color: '' })
       refetch()
     },
+    onError: (err) => {
+      alert(`Error creating event: ${err.message}`)
+    }
   })
 
   const handleChange = (field: string, value: string | boolean) => {

@@ -31,12 +31,14 @@ export default function AdminApplicationsPage() {
 
   const updateStatusMutation = api.application.updateStatus.useMutation({
     onSuccess: () => refetch(),
+    onError: (err) => alert(`Error updating status: ${err.message}`),
   })
   const bulkUpdateMutation = api.application.bulkUpdateStatus.useMutation({
     onSuccess: () => {
       setSelected(new Set())
       refetch()
     },
+    onError: (err) => alert(`Error performing bulk update: ${err.message}`),
   })
 
   const filtered = data?.applications ?? []
