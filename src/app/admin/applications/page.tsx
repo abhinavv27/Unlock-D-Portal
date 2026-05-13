@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { api } from '@/trpc/react'
 
-type AppStatus = 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'WAITLISTED' | 'REJECTED' | 'ALL'
+type AppStatus = 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'WAITLISTED' | 'REJECTED' | 'WITHDRAWN' | 'ALL'
 
 const BADGE_MAP: Record<string, string> = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -16,6 +17,7 @@ const BADGE_MAP: Record<string, string> = {
 }
 
 export default function AdminApplicationsPage() {
+  const pathname = usePathname()
   const [filter, setFilter] = useState<AppStatus>('ALL')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -84,23 +86,26 @@ export default function AdminApplicationsPage() {
         <nav className="flex-1 p-4 space-y-1 mt-4">
           {[
             { href: '/admin', label: 'Overview', icon: '📊' },
-            { href: '/admin/applications', label: 'Applications', icon: '📋', active: true },
+            { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/projects', label: 'Projects', icon: '🚀' },
-          ].map(({ href, label, icon, active }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
-                active
-                  ? 'bg-white !text-black shadow-lg shadow-white/10'
-                  : '!text-white/40 hover:!text-white hover:bg-white/5'
-              }`}
-            >
-              <span className="text-sm">{icon}</span>
-              {label}
-            </Link>
-          ))}
+          ].map(({ href, label, icon }) => {
+            const isActive = pathname === href
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
+                  isActive
+                    ? 'bg-white !text-black shadow-lg shadow-white/10'
+                    : '!text-white/40 hover:!text-white hover:bg-white/5'
+                }`}
+              >
+                <span className="text-sm">{icon}</span>
+                {label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-6 border-t border-white/5 text-center">
@@ -163,7 +168,7 @@ export default function AdminApplicationsPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {(['ALL', 'PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED'] as AppStatus[]).map(s => (
+              {(['ALL', 'PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'] as AppStatus[]).map(s => (
                 <button
                   key={s}
                   id={`filter-${s.toLowerCase()}`}
@@ -265,31 +270,25 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <select
+                            value={app.status}
+                            onChange={(e) => updateStatusMutation.mutate({ 
+                              id: app.id, 
+                              status: e.target.value as Exclude<AppStatus, 'ALL'> 
+                            })}
+                            disabled={updateStatusMutation.isPending}
+                            className="bg-transparent border-none text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest cursor-pointer focus:ring-0 p-0 h-auto w-auto"
+                          >
+                            {['PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'].map(s => (
+                              <option key={s} value={s} className="bg-[#050505] text-white">{s.replace('_', ' ')}</option>
+                            ))}
+                          </select>
                           <Link
                             href={`/admin/applications/${app.id}`}
-                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors"
+                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors border-l border-white/10 pl-3"
                           >
                             View_Profile
                           </Link>
-                          <select
-                            className="bg-black/60 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 py-1.5 focus:outline-none focus:border-primary transition-all cursor-pointer"
-                            value={app.status}
-                            onChange={e => {
-                              const newStatus = e.target.value as AppStatus
-                              if (newStatus !== app.status) {
-                                updateStatusMutation.mutate({
-                                  id: app.id,
-                                  status: newStatus,
-                                })
-                              }
-                            }}
-                          >
-                            <option value="PENDING">Pending</option>
-                            <option value="UNDER_REVIEW">Reviewing</option>
-                            <option value="ACCEPTED">Accept</option>
-                            <option value="WAITLISTED">Waitlist</option>
-                            <option value="REJECTED">Reject</option>
-                          </select>
                         </div>
                       </td>
                     </motion.tr>

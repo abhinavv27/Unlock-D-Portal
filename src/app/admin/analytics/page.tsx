@@ -2,8 +2,10 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export default function AdminAnalyticsPage() {
+  const pathname = usePathname()
   return (
     <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-hidden">
       {/* Background Parallax Elements */}
@@ -41,20 +43,23 @@ export default function AdminAnalyticsPage() {
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/projects', label: 'Projects', icon: '🚀' },
-          ].map(({ href, label, icon, active }) => (
-            <Link 
-              key={href} 
-              href={href} 
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
-                active 
-                  ? 'bg-white !text-black shadow-lg shadow-white/10' 
-                  : '!text-white/40 hover:!text-white hover:bg-white/5'
-              }`}
-            >
-              <span className="text-sm">{icon}</span>
-              {label}
-            </Link>
-          ))}
+          ].map(({ href, label, icon }) => {
+            const isActive = pathname === href
+            return (
+              <Link 
+                key={href} 
+                href={href} 
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
+                  isActive 
+                    ? 'bg-white !text-black shadow-lg shadow-white/10' 
+                    : '!text-white/40 hover:!text-white hover:bg-white/5'
+                }`}
+              >
+                <span className="text-sm">{icon}</span>
+                {label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-6 border-t border-white/5 text-center">
