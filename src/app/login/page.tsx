@@ -60,7 +60,7 @@ export default function LoginPage() {
               whileHover={{ scale: 1.05, rotate: 5 }}
               className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center mb-10 shadow-2xl shadow-white/10 border border-white/10"
             >
-              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </motion.div>
             <h1 className="text-4xl text-headline mb-3 !normal-case">Portal Access</h1>
             <p className="text-editorial text-white/40">Initialize your session to continue.</p>
