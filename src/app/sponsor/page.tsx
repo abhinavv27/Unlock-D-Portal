@@ -3,8 +3,11 @@
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { Navbar } from '@/components/Navbar'
+import { useSession } from 'next-auth/react'
 
 export default function SponsorPage() {
+  const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   
@@ -43,7 +46,7 @@ export default function SponsorPage() {
     { 
       name: 'Silver', 
       price: '$2,500+',
-      accent: 'oklch(0.7 0.2 174)',
+      accent: 'oklch(0.7 0.15 300)',
       benefits: ['Branding in Portal', 'Mailing List inclusion', 'Logo Tier 3'] 
     },
     { 
@@ -66,7 +69,7 @@ export default function SponsorPage() {
       >
         <div className="mesh-gradient !opacity-20">
           <div className="mesh-blob w-[1200px] h-[1200px] bg-primary top-[-10%] left-[-10%]" />
-          <div className="mesh-blob w-[1000px] h-[1000px] bg-[oklch(0.7_0.2_174)] bottom-[-10%] right-[-10%]" />
+          <div className="mesh-blob w-[1000px] h-[1000px] bg-primary/20 bottom-[-10%] right-[-10%]" />
         </div>
         <div className="absolute inset-0 neural-grid opacity-[0.03]" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05]" />
@@ -78,33 +81,7 @@ export default function SponsorPage() {
         style={{ scaleX }}
       />
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 p-8 flex justify-center">
-        <motion.div 
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="max-w-7xl w-full flex items-center justify-between glass-premium rounded-full px-10 py-5 border-white/10"
-        >
-          <Link href="/" className="flex items-center gap-4 group">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center transition-transform group-hover:rotate-12">
-              <span className="text-black font-display font-black text-xs">RA</span>
-            </div>
-            <span className="font-display font-black text-sm tracking-tighter uppercase italic">IEE_RAS_2026</span>
-          </Link>
-
-          <div className="flex items-center gap-10">
-            <div className="hidden lg:flex items-center gap-12 text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
-              <Link href="/schedule" className="hover:text-white transition-all">Schedule</Link>
-              <Link href="/sponsor" className="text-white border-b border-primary pb-1">Sponsors</Link>
-              <Link href="/login" className="hover:text-white transition-all">Sign In</Link>
-            </div>
-            <div className="h-6 w-px bg-white/10 hidden lg:block" />
-            <Link href="/login" className="btn-accent !py-2.5 !px-10 !text-[9px]">
-              ACCESS PORTAL
-            </Link>
-          </div>
-        </motion.div>
-      </nav>
+      <Navbar session={session as any} />
 
       <div className="max-w-7xl mx-auto px-8 pt-60 pb-40 relative z-10">
         {/* Hero Section */}
@@ -112,14 +89,14 @@ export default function SponsorPage() {
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] as any }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as any }}
           >
             <div className="premium-sticker mb-12 inline-block">PARTNERSHIP_RESOURCES_v2.0</div>
-            <h1 className="text-8xl md:text-[180px] font-display font-black italic uppercase leading-[0.8] tracking-[-0.04em] mb-12">
+            <h1 className="text-8xl md:text-[180px] text-hero leading-[0.8] mb-12">
               ELITE <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">PARTNERS.</span>
             </h1>
-            <p className="text-2xl md:text-3xl text-white/50 max-w-3xl font-medium leading-tight italic">
+            <p className="text-2xl md:text-3xl text-white/50 max-w-3xl text-editorial leading-tight">
               Scale your impact by supporting the next generation of innovators. Unified access to talent, visibility, and breakthrough technology.
             </p>
           </motion.div>
@@ -134,14 +111,14 @@ export default function SponsorPage() {
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.05, duration: 0.5 }}
                 className="glass-premium p-12 rounded-[var(--radius)] group hover:bg-white/[0.08] transition-all duration-500"
               >
                 <div className="flex justify-between items-start mb-12">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 group-hover:text-primary transition-colors">{stat.label}</span>
+                  <span className="text-label-caps group-hover:!text-primary transition-colors">{stat.label}</span>
                   <span className="mono-tag !text-[8px] !px-3 !py-1.5">{stat.trend}</span>
                 </div>
-                <div className="text-6xl font-display font-black italic uppercase tracking-tighter group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
+                <div className="text-6xl text-stat group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
               </motion.div>
             ))}
           </div>
@@ -150,7 +127,7 @@ export default function SponsorPage() {
         {/* Tiers Section */}
         <section className="mb-56">
           <div className="flex items-center gap-6 mb-20">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40 italic">Infrastructural Tiers</h2>
+            <h2 className="text-label-caps !text-white/20 italic">Infrastructural Tiers</h2>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
@@ -161,7 +138,7 @@ export default function SponsorPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.05, duration: 0.6 }}
                 className="glass-premium p-16 rounded-[var(--radius)] relative overflow-hidden group hover:bg-white/[0.06] transition-all duration-700"
               >
                 <div 
@@ -171,26 +148,26 @@ export default function SponsorPage() {
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="flex justify-between items-start mb-16">
                     <div>
-                      <h3 className="text-6xl font-display font-black italic uppercase mb-2">{tier.name}</h3>
-                      <p className="font-mono text-[10px] font-bold text-white/30 tracking-[0.2em]">{tier.price}</p>
+                      <h3 className="text-6xl text-headline mb-2">{tier.name}</h3>
+                      <p className="text-value-mono">{tier.price}</p>
                     </div>
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-display font-black text-xs text-white/40">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-value-mono !text-white/40">
                       {String(i + 1).padStart(2, '0')}
                     </div>
                   </div>
                   
                   <ul className="space-y-4 mb-20">
                     {tier.benefits.map((benefit) => (
-                      <li key={benefit} className="flex items-center gap-4 text-lg text-white/60 font-medium italic group-hover:text-white transition-colors">
+                      <li key={benefit} className="flex items-center gap-4 text-lg text-editorial !font-medium group-hover:text-white transition-colors">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                         {benefit}
                       </li>
                     ))}
                   </ul>
 
-                  <button className="mt-auto w-full btn-ghost !py-5 !px-10 !text-[10px] group-hover:bg-white group-hover:text-black transition-all border-white/10">
-                    INITIALIZE PARTNERSHIP
-                  </button>
+                  <Link href="/login" className="mt-auto w-full btn-ghost !py-5 !px-10 !text-[10px] group-hover:bg-white group-hover:text-black transition-all border-white/10 flex items-center justify-center">
+                    Portal Access
+                  </Link>
                 </div>
               </motion.div>
             ))}
@@ -206,28 +183,28 @@ export default function SponsorPage() {
         >
           <div className="absolute inset-0 neural-grid opacity-[0.1]" />
           <div className="relative z-10">
-            <h2 className="text-7xl font-display font-black italic uppercase mb-10">Ready to <br />Scale?</h2>
-            <p className="text-2xl text-white/40 max-w-2xl mx-auto mb-16 italic font-medium leading-relaxed">
+            <h2 className="text-7xl text-headline mb-10 leading-none">Ready to <br />Scale?</h2>
+            <p className="text-2xl max-w-2xl mx-auto mb-16 text-editorial leading-relaxed">
               Join the ecosystem of elite institutions shaping the future of robotics and AI.
             </p>
-            <Link href="mailto:partners@ieee_ras.com" className="btn-accent !py-6 !px-20 !text-[12px] inline-flex">
-              CONTACT_OPERATIONS.EXE
+            <Link href="/login" className="btn-vibrant !py-6 !px-20 !text-[12px] inline-flex">
+              Portal Access
             </Link>
           </div>
         </motion.section>
       </div>
 
-      <footer className="max-w-7xl mx-auto px-8 py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12 text-white/20">
+      <footer className="max-w-7xl mx-auto px-8 py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-display font-black text-white text-xs">RA</div>
-          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/60">IEE_RAS_2026</span>
+          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-label-caps !text-white !tracking-normal">RA</div>
+          <span className="text-label-caps !text-white/60">IEEE RAS 2026</span>
         </div>
-        <div className="flex gap-12 text-[10px] font-black uppercase tracking-[0.3em]">
+        <div className="flex gap-12 text-label-caps">
           <Link href="/schedule" className="hover:text-white transition-colors">Timeline</Link>
           <Link href="/login" className="hover:text-white transition-colors">Portal</Link>
           <Link href="#" className="hover:text-white transition-colors">Legal</Link>
         </div>
-        <div className="font-mono text-[9px] font-bold text-white/10 uppercase tracking-widest">
+        <div className="text-micro">
           SPONSOR_NODE: READY // LINK_ESTABLISHED
         </div>
       </footer>

@@ -1,10 +1,18 @@
 'use client'
 
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
+import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion'
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
+import { Navbar } from '@/components/Navbar'
+import { HeroBackground } from '@/components/HeroBackground'
+import dynamic from 'next/dynamic'
+const DeepSpaceScene = dynamic(() => import('@/components/DeepSpaceScene').then(mod => mod.DeepSpaceScene), { ssr: false })
+import { RadarSweep } from '@/components/RadarSweep'
+import { useSession } from 'next-auth/react'
+import gsap from 'gsap'
 
 export default function LandingPage() {
+  const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   
@@ -21,28 +29,79 @@ export default function LandingPage() {
   const opacityHero = useTransform(scrollYProgress, [0, 0.25], [1, 0])
   const scaleHero = useTransform(scrollYProgress, [0, 0.25], [1, 0.95])
   const titleY = useTransform(scrollYProgress, [0, 0.3], [0, -100])
+
+  // Hero 3D mouse parallax
+  const heroX = useMotionValue(0)
+  const heroY = useMotionValue(0)
+  const heroRotX = useSpring(useTransform(heroY, [-1, 1], [2, -2]), { stiffness: 150, damping: 30 })
+  const heroRotY = useSpring(useTransform(heroX, [-1, 1], [-2, 2]), { stiffness: 150, damping: 30 })
+  const onHeroMove = (e: React.MouseEvent<HTMLElement>) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect()
+    heroX.set(((e.clientX - left) / width) * 2 - 1)
+    heroY.set(((e.clientY - top) / height) * 2 - 1)
+  }
+  const onHeroLeave = () => { heroX.set(0); heroY.set(0) }
   
-  // Rotating words for hero
-  const words = ["EXTRAORDINARY.", "REVOLUTIONARY.", "LIMITLESS.", "FUTURE."]
-  const [wordIndex, setWordIndex] = useState(0)
+  // Hero translation transforms (must be defined before early return)
+  const heroTranslateX = useTransform(heroX, [-1, 1], [-15, 15])
+  const heroTranslateY = useTransform(heroY, [-1, 1], [-15, 15])
+  
+  // Rotating words for hero using GSAP
+  const words = ["PORTAL.", "FOR ALL.", "ONE TRUTH.", "FOR CHANGE."]
+  const wordRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
-    const wordTimer = setInterval(() => {
-      setWordIndex((prev) => (prev + 1) % words.length)
-    }, 2500)
-    return () => clearInterval(wordTimer)
   }, [])
 
-  if (!mounted) return null
+  useEffect(() => {
+    if (!mounted) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ repeat: -1 })
+      
+      words.forEach((word, index) => {
+        // Find all characters for this word
+        const chars = `.word-char-${index}`
+        
+        tl.fromTo(chars, 
+          { y: 60, opacity: 0 }, 
+          { 
+            y: 0, 
+            opacity: 1, 
+            duration: 0.5, 
+            stagger: 0.03, 
+            ease: "power3.out"
+          }
+        )
+        
+        tl.to({}, { duration: 1.5 }) // Hold
+        
+        tl.to(chars, 
+          { 
+            y: -40, 
+            opacity: 0, 
+            duration: 0.3, 
+            stagger: 0.02, 
+            ease: "power3.in"
+          }
+        )
+      })
+    }, wordRef)
+
+    return () => ctx.revert()
+  }, [mounted])
+
+  // Removed early return to satisfy Rules of Hooks
+  // if (!mounted) return null
 
   const textRevealVariants = {
-    hidden: { y: "100%", opacity: 0 },
+    hidden: { y: 20, opacity: 0 },
     show: { 
-      y: "0%",
+      y: 0,
       opacity: 1,
       transition: {
-        duration: 1.2,
+        duration: 0.6,
         ease: [0.16, 1, 0.3, 1] as any
       }
     }
@@ -53,158 +112,111 @@ export default function LandingPage() {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.4,
+        staggerChildren: 0.04,
+        delayChildren: 0.1,
       }
     }
   }
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 40 },
+    hidden: { opacity: 0, y: 20 },
     show: { 
       opacity: 1, 
       y: 0,
       transition: {
-        duration: 1,
+        duration: 0.5,
         ease: [0.16, 1, 0.3, 1] as any
       }
     }
   }
 
   return (
-    <main ref={containerRef} className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans">
-      
+    <main ref={containerRef} className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
+      {!mounted ? (
+        <div className="fixed inset-0 bg-[oklch(var(--background))] flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : (
+        <>
       {/* Scroll Progress */}
       <motion.div 
-        className="fixed top-0 left-0 right-0 h-[3px] bg-primary z-[100] origin-left"
+        className="fixed top-0 left-0 right-0 h-[2px] bg-primary z-[100] origin-left"
         style={{ scaleX }}
       />
 
-      {/* Background Elements */}
-      <motion.div 
-        style={{ y: backgroundY }}
-        className="fixed inset-0 pointer-events-none z-0"
-      >
-        <div className="mesh-gradient">
-          <motion.div 
-            animate={{ rotate: 360, scale: [1, 1.2, 1] }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="mesh-blob w-[1200px] h-[1200px] bg-primary top-[-15%] left-[-20%] opacity-[0.15]" 
-          />
-          <motion.div 
-            animate={{ rotate: -360, scale: [1, 1.3, 1] }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            className="mesh-blob w-[1000px] h-[1000px] bg-[oklch(0.7_0.2_174)] bottom-[-20%] right-[-10%] opacity-[0.15]" 
-          />
-        </div>
-        <div className="absolute inset-0 neural-grid opacity-[0.04]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none" />
-      </motion.div>
+      {/* Deep Space Backgrounds */}
+      <DeepSpaceScene />
+      <HeroBackground />
+      <RadarSweep />
 
-      {/* Navigation */}
-      <motion.nav 
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] as any }}
-        className="fixed top-0 left-0 w-full z-50 p-8 flex items-center justify-center pointer-events-none"
-      >
-        <div className="max-w-7xl w-full flex items-center justify-between glass-premium rounded-full px-8 py-4 pointer-events-auto border-white/5">
-          <Link href="/" className="flex items-center gap-4 group">
-            <motion.div 
-              whileHover={{ rotate: 12, scale: 1.1 }}
-              className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-2xl"
-            >
-              <span className="text-black font-display font-black text-xs">RA</span>
-            </motion.div>
-            <div className="flex flex-col">
-              <span className="font-display font-black text-sm tracking-tighter text-white">IEE_RAS_2026</span>
-              <span className="text-[9px] font-mono font-bold text-white/30 uppercase tracking-[0.2em]">Innovation Hub</span>
-            </div>
-          </Link>
+      {/* Noise texture overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[3] noise-overlay opacity-[0.03]" />
 
-          <div className="flex items-center gap-8">
-            <div className="hidden md:flex items-center gap-10 text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
-              <Link href="/schedule" className="hover:text-white transition-all hover:tracking-[0.3em]">Schedule</Link>
-              <Link href="/login" className="hover:text-white transition-all hover:tracking-[0.3em]">Sign In</Link>
-            </div>
-            <div className="h-6 w-px bg-white/10 hidden md:block" />
-            <Link href="/login" className="btn-accent !py-2 !px-8 !text-[9px]">
-              ACCESS PORTAL
-            </Link>
-          </div>
-        </div>
-      </motion.nav>
+      <Navbar session={session as any} />
 
       {/* Hero Section */}
-      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-8 pt-20">
+      <section
+        className="relative z-10 min-h-screen flex flex-col items-center justify-center px-8 pt-20"
+        onMouseMove={onHeroMove}
+        onMouseLeave={onHeroLeave}
+      >
         <motion.div
           style={{ opacity: opacityHero, scale: scaleHero, y: titleY }}
           className="text-center max-w-6xl w-full"
         >
+          {/* Removed perspective rotation that caused letters to bend */}
+          <motion.div style={{ x: heroTranslateX, y: heroTranslateY }}>
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="premium-sticker inline-block mb-12"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+            className="premium-sticker inline-block mb-10 border-primary/30 text-primary/80"
           >
-            ESTABLISHED 2026
+            IEEE_RAS_2026 // HACKATHON_FOR_CHANGE
           </motion.div>
           
-          <div className="overflow-hidden">
+          <div className="overflow-hidden mb-[-2vw] md:mb-[-40px]">
             <motion.h1 
               variants={textRevealVariants}
               initial="hidden"
               animate="show"
-              className="text-[12vw] md:text-[160px] font-display font-black italic uppercase text-white leading-[0.8] tracking-[-0.05em] mb-4 drop-shadow-2xl"
+              className="text-[12vw] md:text-[160px] text-hero"
             >
-              DESIGNING
+              UNIFIED
             </motion.h1>
           </div>
 
-          <div className="h-[12vw] md:h-[160px] overflow-hidden relative w-full mb-12">
-            <AnimatePresence mode="wait">
-              <motion.h1 
-                key={words[wordIndex]}
-                initial={{ y: "100%", opacity: 0, skewY: 10 }}
-                animate={{ y: "0%", opacity: 1, skewY: 0 }}
-                exit={{ y: "-100%", opacity: 0, skewY: -10 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as any }}
-                className="text-[12vw] md:text-[160px] font-display font-black italic uppercase text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-[0.8] tracking-[-0.05em] absolute left-0 right-0"
-              >
-                {words[wordIndex]}
-              </motion.h1>
-            </AnimatePresence>
+          <div ref={wordRef} className="h-[12vw] md:h-[140px] relative w-full mb-16 flex items-center justify-center overflow-visible">
+            <div className="relative w-full flex justify-center items-center">
+              {words.map((word, index) => (
+                <div key={index} className="absolute flex items-center justify-center pointer-events-none">
+                  {word.split('').map((char, i) => (
+                    <span
+                      key={i}
+                      className={`word-char-${index} inline-block text-[10vw] md:text-[140px] text-hero !text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 px-[0.5px] leading-none whitespace-nowrap opacity-0`}
+                    >
+                      {char === ' ' ? '\u00A0' : char}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <motion.p 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 1.2 }}
-            className="text-lg md:text-2xl text-white/60 max-w-2xl mx-auto font-medium leading-relaxed mb-16"
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="flex flex-col items-center gap-6 mt-8"
           >
-            The global benchmark for engineering excellence. <br className="hidden md:block" />
-            Join IEE_RAS_2026 and redefine what's possible.
-          </motion.p>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.4, duration: 1 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-6"
-          >
-            <Link href="/apply" className="btn-vibrant w-full sm:w-auto shadow-white/20">
-              APPLY NOW
+            <Link href="/login" className="px-10 py-4 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/60 hover:shadow-[0_0_30px_rgba(109,40,217,0.3)] backdrop-blur-md transition-all duration-300 group relative overflow-hidden flex items-center justify-center">
+              <span className="relative z-10 font-display font-medium text-lg tracking-wide text-white flex items-center">
+                Portal Access
+                <span className="group-hover:translate-x-1 transition-transform inline-block ml-3">→</span>
+              </span>
             </Link>
-            <Link href="/schedule" className="btn-ghost w-full sm:w-auto group">
-              VIEW SCHEDULE
-              <motion.span 
-                animate={{ x: [0, 5, 0] }} 
-                transition={{ repeat: Infinity, duration: 1.5 }}
-                className="inline-block ml-2"
-              >
-                →
-              </motion.span>
-            </Link>
+            <span className="text-micro !text-white/30 tracking-[0.4em] font-mono mt-4">HACKERS // JUDGES // VOLUNTEERS // SPONSORS</span>
+          </motion.div>
           </motion.div>
         </motion.div>
       </section>
@@ -218,62 +230,52 @@ export default function LandingPage() {
           viewport={{ once: true, margin: "-100px" }}
           className="grid grid-cols-1 md:grid-cols-12 gap-6"
         >
-          <motion.div 
-            variants={itemVariants}
-            className="md:col-span-8 glass-premium rounded-[var(--radius)] p-12 md:p-20 relative overflow-hidden group border-white/10"
+          <Card3D variants={itemVariants} className="md:col-span-8 glass-premium rounded-[var(--radius)] p-12 md:p-20 relative overflow-hidden group border-white/10"
           >
             <div className="relative z-10">
-              <span className="mono-tag mb-8 block w-fit border-primary/30 text-primary">CORE MISSION</span>
-              <h2 className="text-5xl md:text-7xl font-display italic uppercase mb-8 leading-[0.9]">Empowering <br />Architects of <br />Tomorrow.</h2>
-              <p className="text-white/40 text-xl max-w-md leading-relaxed font-light">
-                We provide the platform, the tools, and the community. You provide the vision. Join thousands of developers worldwide.
+              <span className="text-value-mono mb-8 block w-fit border border-primary/30 text-primary px-3 py-1 rounded-full !text-[9px]">CORE_MISSION</span>
+              <h2 className="text-5xl md:text-8xl text-hero mb-8 leading-[0.8]">One Portal. <br />All Groups. <br />No Silos.</h2>
+              <p className="max-w-md text-editorial text-xl text-white/70">
+                The IEEE RAS team used to juggle separate dashboards for hackers, volunteers, judges, and sponsors. Not anymore. One unified portal. One source of truth. One cohesive experience for everyone.
               </p>
             </div>
             <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-gradient-to-br from-primary/20 to-transparent blur-[120px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-          </motion.div>
+          </Card3D>
 
-          <motion.div 
-            variants={itemVariants}
-            className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 flex flex-col justify-between group border-white/10"
+          <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 flex flex-col justify-between group border-white/10"
           >
-            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-10 transition-all duration-500 group-hover:bg-white/10 group-hover:border-white/30">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-10 transition-all duration-500 group-hover:bg-primary/20 group-hover:border-primary/40 group-hover:shadow-[0_0_20px_rgba(109,40,217,0.3)]">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
             <div>
-              <h3 className="text-3xl font-display italic uppercase mb-4">Elite <br/>Network.</h3>
-              <p className="text-white/40 leading-relaxed font-light mb-8">
-                Connect with mentors from top global tech firms and research institutions.
+              <h3 className="text-3xl text-headline mb-4">Every Role. <br/>One Home.</h3>
+              <p className="mb-8 text-editorial text-lg text-white/60">
+                Hackers, judges, volunteers, and sponsors — all managed through one unified, real-time system.
               </p>
-              <Link href="/login" className="text-[10px] font-black uppercase tracking-[0.3em] text-primary hover:text-white transition-colors flex items-center gap-2">
-                JOIN NOW <span className="text-lg">→</span>
+              <Link href="/login" className="text-label-caps text-primary hover:text-white transition-colors flex items-center gap-2">
+                ACCESS NOW <span className="text-lg">→</span>
               </Link>
             </div>
-          </motion.div>
+          </Card3D>
 
-          <motion.div 
-            variants={itemVariants}
-            className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10"
+          <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 flex flex-col justify-center items-center text-center"
           >
-            <div className="text-6xl font-display italic uppercase mb-2 text-white">48H</div>
-            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">OF INTENSE INNOVATION</div>
-          </motion.div>
+            <div className="text-8xl text-stat mb-4 text-primary drop-shadow-[0_0_15px_rgba(109,40,217,0.5)]">48H</div>
+            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">HACKATHON_DURATION</div>
+          </Card3D>
 
-          <motion.div 
-            variants={itemVariants}
-            className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10"
+          <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 flex flex-col justify-center items-center text-center"
           >
-            <div className="text-6xl font-display italic uppercase mb-2 text-white">$25K</div>
-            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">TOTAL PRIZE POOL</div>
-          </motion.div>
+            <div className="text-8xl text-stat mb-4">4</div>
+            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">PARTICIPANT_GROUPS</div>
+          </Card3D>
 
-          <motion.div 
-            variants={itemVariants}
-            className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 overflow-hidden relative group"
+          <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 overflow-hidden relative group flex flex-col justify-center items-center text-center"
           >
-            <div className="text-6xl font-display italic uppercase mb-2 text-white">100+</div>
-            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">GLOBAL SPONSORS</div>
-            <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
-          </motion.div>
+            <div className="text-8xl text-stat mb-4 group-hover:scale-110 group-hover:text-primary transition-all duration-700">1</div>
+            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">UNIFIED_PLATFORM</div>
+            <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-[0.05] transition-opacity duration-500" />
+          </Card3D>
         </motion.div>
       </section>
 
@@ -282,21 +284,67 @@ export default function LandingPage() {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 1.5 }}
-        className="relative z-10 max-w-7xl mx-auto px-8 py-24 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12 text-white/30"
+        className="relative z-10 max-w-7xl mx-auto px-8 py-24 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12"
       >
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-display font-black text-white text-xs border border-white/10">RA</div>
-          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/80">IEE_RAS_2026</span>
+          <span className="text-label-caps text-white/80">IEEE RAS 2026</span>
         </div>
-        <div className="flex gap-12 text-[10px] font-black uppercase tracking-[0.3em]">
-          <Link href="#" className="hover:text-white transition-colors">Manifesto</Link>
-          <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
-          <Link href="#" className="hover:text-white transition-colors">Support</Link>
+        <div className="flex gap-12 text-label-caps">
+          <Link href="#" className="hover:text-primary transition-colors">Manifesto</Link>
+          <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
+          <Link href="#" className="hover:text-primary transition-colors">Support</Link>
         </div>
-        <div className="font-mono text-[9px] font-bold text-white/10 uppercase tracking-widest">
-          SYSTEM_ID: 1EE_RA5_V2
+        <div className="text-micro">
+          SYSTEM_ID: IEE_RAS_V1 // UNIFIED_PORTAL
         </div>
       </motion.footer>
+        </>
+      )}
     </main>
+  )
+}
+
+function Card3D({ children, className, variants }: { children: React.ReactNode; className: string; variants?: any }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const rotX = useSpring(useTransform(y, [-0.5, 0.5], [10, -10]), { stiffness: 300, damping: 35 })
+  const rotY = useSpring(useTransform(x, [-0.5, 0.5], [-10, 10]), { stiffness: 300, damping: 35 })
+  const shine = useMotionValue('radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0%, transparent 60%)')
+
+  const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const nx = (e.clientX - rect.left) / rect.width - 0.5
+    const ny = (e.clientY - rect.top) / rect.height - 0.5
+    x.set(nx)
+    y.set(ny)
+    const px = ((e.clientX - rect.left) / rect.width) * 100
+    const py = ((e.clientY - rect.top) / rect.height) * 100
+    shine.set(`radial-gradient(circle at ${px}% ${py}%, rgba(109,40,217,0.15) 0%, transparent 65%)`)
+  }
+
+  const handleLeave = () => {
+    x.set(0)
+    y.set(0)
+    shine.set('radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0%, transparent 60%)')
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      variants={variants}
+      style={{ rotateX: rotX, rotateY: rotY, transformPerspective: 900, transformStyle: 'preserve-3d' }}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      className={`relative ${className}`}
+    >
+      <motion.div
+        style={{ background: shine }}
+        className="absolute inset-0 rounded-[inherit] pointer-events-none z-10"
+      />
+      {children}
+    </motion.div>
   )
 }

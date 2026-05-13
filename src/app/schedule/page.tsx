@@ -3,6 +3,8 @@
 import { motion, AnimatePresence, useScroll, useSpring, useTransform } from 'framer-motion'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { Navbar } from '@/components/Navbar'
+import { useSession } from 'next-auth/react'
 
 const EVENTS = [
   { time: 'Fri 6:00 PM', title: 'Registration', location: 'Main Hall', type: 'GENERAL', detail: 'Check-in and welcome package distribution.', icon: 'M15 7l-3-3m0 0l-3 3m3-3v12' },
@@ -24,11 +26,12 @@ const TYPE_CONFIG: Record<string, { color: string, bg: string, border: string }>
   GENERAL: { color: 'text-white', bg: 'bg-white/5', border: 'border-white/10' },
   CEREMONY: { color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
   MEAL: { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
-  WORKSHOP: { color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20' },
-  JUDGING: { color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/20' },
+  WORKSHOP: { color: 'text-primary/80', bg: 'bg-primary/10', border: 'border-primary/20' },
+  JUDGING: { color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20' },
 }
 
 export default function SchedulePage() {
+  const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
   const [activeDay, setActiveDay] = useState('Friday')
   const { scrollYProgress } = useScroll()
@@ -48,17 +51,17 @@ export default function SchedulePage() {
   if (!mounted) return null
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white selection:bg-primary selection:text-white overflow-x-hidden relative font-sans">
+    <main className="min-h-screen bg-[oklch(var(--background))] text-white selection:bg-primary selection:text-white overflow-x-hidden relative font-sans">
       
       {/* Background Elements */}
       <motion.div 
         style={{ y: backgroundY }}
         className="fixed inset-0 pointer-events-none z-0"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#1a1a1a,transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,oklch(var(--primary)/0.1),transparent_70%)]" />
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full" />
-        <div className="absolute inset-0 neural-grid opacity-[0.05]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute inset-0 neural-grid opacity-[0.03]" />
       </motion.div>
 
       {/* Progress Bar */}
@@ -67,29 +70,7 @@ export default function SchedulePage() {
         style={{ scaleX }}
       />
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 p-6 flex justify-center">
-        <div className="max-w-6xl w-full flex items-center justify-between glass-premium rounded-2xl px-6 py-3 border-white/5 shadow-2xl">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <span className="text-black font-display font-black text-[10px]">RA</span>
-            </div>
-            <span className="font-display font-black text-xs tracking-tighter text-white">IEE_RAS_2026</span>
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-              <Link href="/schedule" className="text-white">Schedule</Link>
-              <Link href="/sponsor" className="hover:text-white transition-colors">Sponsors</Link>
-              <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-            </div>
-            <div className="h-4 w-px bg-white/10 hidden md:block" />
-            <Link href="/login" className="text-[10px] font-black uppercase tracking-[0.2em] bg-white text-black px-6 py-2 rounded-lg hover:bg-white/90 transition-all">
-              PORTAL
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar session={session as any} />
 
       <div className="max-w-6xl mx-auto px-6 pt-40 pb-20 relative z-10">
         {/* Header */}
@@ -97,16 +78,14 @@ export default function SchedulePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.5 }}
           >
-            <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-6">
-              Timeline_2026
-            </div>
-            <h1 className="text-6xl md:text-8xl font-display font-black tracking-tighter leading-[0.9] mb-8 uppercase italic">
+            <div className="premium-sticker mb-10 inline-block">Timeline_2026</div>
+            <h1 className="text-8xl md:text-[180px] text-hero mb-12">
               The <br />
               <span className="text-white/20">Schedule.</span>
             </h1>
-            <p className="text-lg md:text-xl text-white/40 max-w-xl font-medium leading-relaxed">
+            <p className="text-2xl md:text-3xl text-white/40 max-w-2xl text-editorial leading-tight">
               Precision timing for the next generation of engineers. Explore the 48-hour mission parameters.
             </p>
           </motion.div>
@@ -119,10 +98,10 @@ export default function SchedulePage() {
               <button
                 key={day}
                 onClick={() => setActiveDay(day)}
-                className={`relative px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
+                className={`relative px-8 py-3 rounded-xl text-label-caps transition-all duration-300 ${
                   activeDay === day 
-                    ? 'text-black' 
-                    : 'text-white/40 hover:text-white'
+                    ? '!text-black' 
+                    : '!text-white/40 hover:!text-white'
                 }`}
               >
                 {activeDay === day && (
@@ -132,7 +111,7 @@ export default function SchedulePage() {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <span className="relative z-10">{day}</span>
+                <span className="relative z-10 font-semibold">{day}</span>
               </button>
             ))}
           </div>
@@ -146,7 +125,7 @@ export default function SchedulePage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as any }}
               className="space-y-4"
             >
               {EVENTS.filter(e => e.time.startsWith(activeDay.slice(0, 3))).map((event, i) => (
@@ -154,13 +133,13 @@ export default function SchedulePage() {
                   key={i}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
+                  transition={{ delay: i * 0.03 }}
                   className="glass-premium rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 group hover:bg-white/[0.04] transition-all duration-300 border-white/5"
                 >
                   <div className="flex items-start md:items-center gap-8 flex-1">
                     <div className="w-28 flex-shrink-0">
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 block mb-1">Time</span>
-                      <div className="text-xl font-display font-black text-white">
+                      <span className="text-label-caps block mb-1">Time</span>
+                      <div className="text-xl text-value-mono !text-white/80">
                         {event.time.split(' ').slice(1).join(' ')}
                       </div>
                     </div>
@@ -173,19 +152,19 @@ export default function SchedulePage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <h3 className="text-xl font-display font-bold uppercase italic text-white">{event.title}</h3>
+                          <h3 className="text-2xl text-headline">{event.title}</h3>
                           <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${TYPE_CONFIG[event.type].bg} ${TYPE_CONFIG[event.type].color} border ${TYPE_CONFIG[event.type].border}`}>
                             {event.type}
                           </span>
                         </div>
-                        <p className="text-white/40 text-sm font-medium">{event.detail}</p>
+                        <p className="text-editorial text-sm md:text-base">{event.detail}</p>
                       </div>
                     </div>
                   </div>
                   
                   <div className="text-left md:text-right md:min-w-[150px]">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 block mb-1">Location</span>
-                    <span className="font-display font-bold text-lg text-white uppercase italic">{event.location}</span>
+                    <span className="text-label-caps block mb-1">Location</span>
+                    <span className="text-xl text-stat !tracking-normal">{event.location}</span>
                   </div>
                 </motion.div>
               ))}
@@ -195,20 +174,20 @@ export default function SchedulePage() {
       </div>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 text-white/20 relative z-10">
+      <footer className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 relative z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-            <span className="font-display font-black text-[10px] text-white">RA</span>
+            <span className="text-label-caps !text-white !tracking-normal">RA</span>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">IEE_RAS_2026</span>
+          <span className="text-label-caps">IEEE RAS 2026</span>
         </div>
-        <div className="flex gap-8 text-[9px] font-black uppercase tracking-[0.2em]">
+        <div className="flex gap-8 text-label-caps">
           <Link href="#" className="hover:text-white transition-colors">Manifesto</Link>
           <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
           <Link href="#" className="hover:text-white transition-colors">Support</Link>
         </div>
-        <div className="font-mono text-[8px] text-white/10 tracking-widest uppercase">
-          Build v2.6.0
+        <div className="text-micro">
+          BUILD v2.6.0 // STK_READY
         </div>
       </footer>
     </main>
