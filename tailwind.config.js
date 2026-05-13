@@ -9,9 +9,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Space Grotesk', 'sans-serif'],
-        body: ['DM Sans', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        display: ['var(--font-display)', 'sans-serif'],
+        sans: ['var(--font-sans)', 'sans-serif'],
+        serif: ['var(--font-serif)', 'serif'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       colors: {
         bg: {
@@ -21,46 +22,46 @@ module.exports = {
           overlay: 'hsl(270, 14%, 18%)',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'oklch(var(--accent))',
+          foreground: 'oklch(var(--accent-foreground))',
           primary: 'hsl(270, 87%, 67%)',
-          secondary: 'hsl(186, 90%, 52%)',
+          secondary: 'hsl(295, 85%, 60%)',
           success: 'hsl(145, 72%, 52%)',
           warning: 'hsl(38, 95%, 62%)',
           danger: 'hsl(0, 78%, 62%)',
         },
         border: {
-          DEFAULT: 'hsl(var(--border))',
+          DEFAULT: 'oklch(var(--border))',
           active: 'hsl(270, 87%, 67%)',
         },
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        background: 'oklch(var(--background) / <alpha-value>)',
+        foreground: 'oklch(var(--foreground) / <alpha-value>)',
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: 'oklch(var(--card) / <alpha-value>)',
+          foreground: 'oklch(var(--card-foreground) / <alpha-value>)',
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT: 'oklch(var(--popover) / <alpha-value>)',
+          foreground: 'oklch(var(--popover-foreground) / <alpha-value>)',
         },
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: 'oklch(var(--primary) / <alpha-value>)',
+          foreground: 'oklch(var(--primary-foreground) / <alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: 'oklch(var(--secondary) / <alpha-value>)',
+          foreground: 'oklch(var(--secondary-foreground) / <alpha-value>)',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: 'oklch(var(--muted) / <alpha-value>)',
+          foreground: 'oklch(var(--muted-foreground) / <alpha-value>)',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: 'oklch(var(--destructive) / <alpha-value>)',
+          foreground: 'oklch(var(--destructive-foreground) / <alpha-value>)',
         },
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
+        input: 'oklch(var(--input) / <alpha-value>)',
+        ring: 'oklch(var(--ring) / <alpha-value>)',
         'chart-1': 'hsl(var(--chart-1))',
         'chart-2': 'hsl(var(--chart-2))',
         'chart-3': 'hsl(var(--chart-3))',
@@ -87,7 +88,7 @@ module.exports = {
       },
       boxShadow: {
         'glow-purple': '0 0 20px hsl(270,87%,67%,0.3)',
-        'glow-cyan': '0 0 20px hsl(186,90%,52%,0.3)',
+        'glow-deep': '0 0 20px hsl(295,85%,60%,0.3)',
         'card': '0 4px 24px hsl(270,20%,0%,0.4)',
       },
       animation: {

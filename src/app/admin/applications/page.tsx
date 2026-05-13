@@ -3,29 +3,38 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { api } from '@/trpc/react'
 
 type AppStatus = 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'WAITLISTED' | 'REJECTED' | 'ALL'
 
 const BADGE_MAP: Record<string, string> = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  UNDER_REVIEW: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  UNDER_REVIEW: 'bg-primary/10 text-primary/80 border-primary/20',
   ACCEPTED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   WAITLISTED: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
 }
-
-import { api } from '@/trpc/react'
 
 export default function AdminApplicationsPage() {
   const [filter, setFilter] = useState<AppStatus>('ALL')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const { data, isLoading } = api.application.getAll.useQuery({
+  const { data, isLoading, refetch } = api.application.getAll.useQuery({
     status: filter,
     search: search,
     page: 1,
     limit: 50
+  })
+
+  const updateStatusMutation = api.application.updateStatus.useMutation({
+    onSuccess: () => refetch(),
+  })
+  const bulkUpdateMutation = api.application.bulkUpdateStatus.useMutation({
+    onSuccess: () => {
+      setSelected(new Set())
+      refetch()
+    },
   })
 
   const filtered = data?.applications ?? []
@@ -47,17 +56,17 @@ export default function AdminApplicationsPage() {
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
         <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.03]" />
-        
+
         {/* Animated Blobs */}
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1, 1.2, 1],
             opacity: [0.1, 0.2, 0.1],
             x: [0, 50, 0],
             y: [0, -50, 0]
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-primary/20 blur-[120px] rounded-full" 
+          className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-primary/20 blur-[120px] rounded-full"
         />
       </div>
 
@@ -68,7 +77,7 @@ export default function AdminApplicationsPage() {
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="text-black font-display font-black text-[10px]">RA</span>
             </div>
-            <span className="font-display font-black text-[10px] tracking-[0.2em] text-white/40 group-hover:text-white transition-colors uppercase">Admin_Hub</span>
+            <span className="text-label-caps !text-white/40 group-hover:!text-white transition-colors">Admin_Hub</span>
           </Link>
         </div>
 
@@ -79,13 +88,13 @@ export default function AdminApplicationsPage() {
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/projects', label: 'Projects', icon: '🚀' },
           ].map(({ href, label, icon, active }) => (
-            <Link 
-              key={href} 
-              href={href} 
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
-                active 
-                  ? 'bg-white text-black shadow-lg shadow-white/10' 
-                  : 'text-white/40 hover:text-white hover:bg-white/5'
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-label-caps transition-all ${
+                active
+                  ? 'bg-white !text-black shadow-lg shadow-white/10'
+                  : '!text-white/40 hover:!text-white hover:bg-white/5'
               }`}
             >
               <span className="text-sm">{icon}</span>
@@ -95,7 +104,7 @@ export default function AdminApplicationsPage() {
         </nav>
 
         <div className="p-6 border-t border-white/5 text-center">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">IEEE_RAS_2026</p>
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">IEEE RAS 2026</p>
         </div>
       </aside>
 
@@ -105,10 +114,10 @@ export default function AdminApplicationsPage() {
           {/* Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-4">
-              <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
+              <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-label-caps !text-primary">
                 Database_Registry
               </div>
-              <h1 className="text-5xl font-display font-black tracking-tighter uppercase italic leading-[0.9]">
+              <h1 className="text-5xl text-hero leading-[0.9]">
                 Applicant <br />
                 <span className="text-white/20">Directory.</span>
               </h1>
@@ -116,15 +125,23 @@ export default function AdminApplicationsPage() {
 
             <AnimatePresence>
               {selected.size > 0 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   className="flex items-center gap-3 p-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl"
                 >
                   <span className="px-4 text-[10px] font-black text-white/40 uppercase tracking-widest">{selected.size} SELECTED</span>
-                  <button className="px-6 py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-colors">ACCEPT</button>
-                  <button className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-400 transition-colors">REJECT</button>
+                  <button
+                    className="px-6 py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), status: 'ACCEPTED' })}
+                    disabled={bulkUpdateMutation.isPending}
+                  >ACCEPT</button>
+                  <button
+                    className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), status: 'REJECTED' })}
+                    disabled={bulkUpdateMutation.isPending}
+                  >REJECT</button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -179,12 +196,12 @@ export default function AdminApplicationsPage() {
                         />
                       </div>
                     </th>
-                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Applicant</th>
-                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">University</th>
-                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Major</th>
-                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Status</th>
-                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Submitted</th>
-                    <th className="p-6 text-[10px] font-black text-white/40 uppercase tracking-[0.2em] text-right">Operations</th>
+                    <th className="p-6 text-label-caps">Applicant</th>
+                    <th className="p-6 text-label-caps">University</th>
+                    <th className="p-6 text-label-caps">Major</th>
+                    <th className="p-6 text-label-caps">Status</th>
+                    <th className="p-6 text-label-caps">Submitted</th>
+                    <th className="p-6 text-label-caps text-right">Operations</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -207,7 +224,7 @@ export default function AdminApplicationsPage() {
                       </td>
                     </tr>
                   ) : filtered.map((app, idx) => (
-                    <motion.tr 
+                    <motion.tr
                       key={app.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -216,18 +233,18 @@ export default function AdminApplicationsPage() {
                     >
                       <td className="p-6">
                         <div className="flex justify-center">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={selected.has(app.id)}
                             onChange={() => toggle(app.id)}
-                            className="w-5 h-5 rounded-lg bg-white/5 border-white/10 text-primary focus:ring-primary transition-all cursor-pointer" 
+                            className="w-5 h-5 rounded-lg bg-white/5 border-white/10 text-primary focus:ring-primary transition-all cursor-pointer"
                           />
                         </div>
                       </td>
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-black text-white group-hover:text-primary transition-colors">{app.firstName} {app.lastName}</span>
-                          <span className="text-[10px] font-medium text-white/20 font-mono tracking-tighter">{app.user?.email}</span>
+                          <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{app.firstName} {app.lastName}</span>
+                          <span className="text-value-mono !text-white/20 !text-[9px]">{app.user?.email}</span>
                         </div>
                       </td>
                       <td className="p-6">
@@ -237,18 +254,18 @@ export default function AdminApplicationsPage() {
                         <span className="text-xs font-bold text-white/60 tracking-tight">{app.major}</span>
                       </td>
                       <td className="p-6">
-                        <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${BADGE_MAP[app.status] || 'border-white/10 text-white/40'}`}>
+                        <span className={`inline-flex px-3 py-1 rounded-lg text-label-caps !text-[9px] border ${BADGE_MAP[app.status] || 'border-white/10 !text-white/40'}`}>
                           {app.status.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="p-6">
-                        <span className="text-[10px] font-black text-white/20 font-mono tracking-widest">
+                        <span className="text-value-mono !text-white/20">
                           {new Date(app.submittedAt).toLocaleDateString()}
                         </span>
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link 
+                          <Link
                             href={`/admin/applications/${app.id}`}
                             className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors"
                           >
@@ -256,8 +273,16 @@ export default function AdminApplicationsPage() {
                           </Link>
                           <select
                             className="bg-black/60 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest px-3 py-1.5 focus:outline-none focus:border-primary transition-all cursor-pointer"
-                            defaultValue={app.status}
-                            onChange={e => console.log('Update status', app.id, e.target.value)}
+                            value={app.status}
+                            onChange={e => {
+                              const newStatus = e.target.value as AppStatus
+                              if (newStatus !== app.status) {
+                                updateStatusMutation.mutate({
+                                  id: app.id,
+                                  status: newStatus,
+                                })
+                              }
+                            }}
                           >
                             <option value="PENDING">Pending</option>
                             <option value="UNDER_REVIEW">Reviewing</option>
@@ -272,20 +297,20 @@ export default function AdminApplicationsPage() {
                 </tbody>
               </table>
             </div>
-            
-            {/* Footer Pagination Stats */}
-            <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
-              <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
-                Showing <span className="text-white/40">{filtered.length}</span> of <span className="text-white/40">{data?.total ?? 0}</span> Entries
-              </p>
-              <div className="flex gap-2">
-                <button className="p-2 glass-premium rounded-lg border-white/5 opacity-50 cursor-not-allowed">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <button className="p-2 glass-premium rounded-lg border-white/5 hover:border-white/20 transition-all">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                </button>
-              </div>
+          </div>
+
+          {/* Footer Pagination Stats */}
+          <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
+              Showing <span className="text-white/40">{filtered.length}</span> of <span className="text-white/40">{data?.total ?? 0}</span> Entries
+            </p>
+            <div className="flex gap-2">
+              <button className="p-2 glass-premium rounded-lg border-white/5 opacity-50 cursor-not-allowed">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button className="p-2 glass-premium rounded-lg border-white/5 hover:border-white/20 transition-all">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -293,4 +318,3 @@ export default function AdminApplicationsPage() {
     </main>
   )
 }
-

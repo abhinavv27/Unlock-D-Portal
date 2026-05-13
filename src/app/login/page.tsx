@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { Navbar } from '@/components/Navbar'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -32,37 +33,20 @@ export default function LoginPage() {
     }
   }
 
-  if (!mounted) return <div className="min-h-screen bg-[oklch(var(--background))]" />
+  if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
   return (
-    <main className="min-h-screen bg-[oklch(var(--background))] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
+    <main className="min-h-screen bg-[oklch(var(--background))] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-primary">
       
       {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="mesh-gradient">
-          <div className="mesh-blob w-[800px] h-[800px] bg-primary top-[-10%] left-[-20%] opacity-20" />
-          <div className="mesh-blob w-[600px] h-[600px] bg-[oklch(0.7_0.2_174)] bottom-[-20%] right-[-10%] opacity-20" />
-        </div>
-        <div className="absolute inset-0 neural-grid opacity-[0.04]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,oklch(var(--primary)/0.05),transparent_70%)]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute inset-0 neural-grid opacity-[0.03]" />
       </div>
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 p-8 flex justify-center">
-        <div className="max-w-7xl w-full flex items-center justify-between glass-premium rounded-full px-8 py-4 border-white/5">
-          <Link href="/" className="flex items-center gap-4 group">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-2xl">
-              <span className="text-black font-display font-black text-xs">RA</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display font-black text-sm tracking-tighter text-white">IEE_RAS_2026</span>
-            </div>
-          </Link>
-
-          <Link href="/" className="btn-ghost !py-2 !px-6 !text-[9px]">
-            BACK TO HOME
-          </Link>
-        </div>
-      </nav>
+      <Navbar />
 
       <motion.div 
         initial={{ opacity: 0, y: 40 }}
@@ -70,29 +54,22 @@ export default function LoginPage() {
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] as any }}
         className="w-full max-w-[440px] relative z-20 mt-16"
       >
-        <div className="flex flex-col items-center mb-12 text-center">
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            className="w-20 h-20 rounded-3xl bg-white flex items-center justify-center mb-10 shadow-2xl"
-          >
-            <span className="text-3xl font-black font-display tracking-tighter text-black">RA</span>
-          </motion.div>
-          
-          <div className="premium-sticker mb-6">SECURE_GATEWAY</div>
-          
-          <h1 className="text-5xl font-display italic uppercase mb-4 text-white">
-            Access <br />Portal.
-          </h1>
-          <p className="text-white/40 font-medium">
-            Sign in to manage your 2026 application.
-          </p>
-        </div>
+        <div className="glass-premium p-10 md:p-12 rounded-[2.5rem] border-white/5 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+          <div className="flex flex-col items-center mb-12 text-center">
+            <motion.div 
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              className="w-20 h-20 rounded-3xl bg-white flex items-center justify-center mb-10 shadow-2xl shadow-white/10"
+            >
+              <span className="text-black font-serif italic font-black text-2xl">RA</span>
+            </motion.div>
+            <h1 className="text-4xl text-headline mb-3 !normal-case">Portal Access</h1>
+            <p className="text-editorial text-white/40">Initialize your session to continue.</p>
+          </div>
 
-        <div className="glass-premium rounded-[var(--radius)] p-10 shadow-2xl border-white/10">
           <AnimatePresence mode="wait">
             {emailSent ? (
               <motion.div 
-                key="sent"
+                key="success"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -103,16 +80,16 @@ export default function LoginPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-display italic uppercase mb-4">Check Email</h2>
-                <p className="text-white/40 leading-relaxed mb-10 text-sm">
+                <h2 className="text-2xl text-headline mb-4">Check Email</h2>
+                <p className="leading-relaxed mb-10 text-sm text-editorial">
                   A magic link has been sent to<br />
-                  <span className="text-white font-bold block mt-2">{email}</span>
+                  <span className="text-white font-bold block mt-2 text-value-mono !text-sm">{email}</span>
                 </p>
                 <button
                   onClick={() => setEmailSent(false)}
-                  className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors"
+                  className="text-label-caps !text-[10px] !text-white/30 hover:!text-white transition-colors"
                 >
-                  USE DIFFERENT EMAIL
+                  Use Different Email
                 </button>
               </motion.div>
             ) : (
@@ -140,13 +117,13 @@ export default function LoginPage() {
 
                 <div className="flex items-center gap-4 py-2">
                   <div className="flex-1 h-px bg-white/5" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20">OR EMAIL</span>
+                  <span className="text-label-caps !text-white/20 !text-[10px]">or Email</span>
                   <div className="flex-1 h-px bg-white/5" />
                 </div>
 
                 <form onSubmit={handleMagicLink} className="space-y-8">
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-1">
+                    <label className="text-label-caps ml-1 !text-white/40">
                       Email Address
                     </label>
                     <input
@@ -155,16 +132,16 @@ export default function LoginPage() {
                       onChange={e => setEmail(e.target.value)}
                       placeholder="name@example.com"
                       required
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10 text-value-mono !text-sm"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={!!loading || !email}
-                    className="btn-vibrant w-full !py-5"
+                    className="btn-vibrant w-full !py-4 text-xs font-semibold"
                   >
-                    {loading === 'email' ? <Spinner /> : 'SEND MAGIC LINK'}
+                    {loading === 'email' ? <Spinner /> : 'Send Magic Link'}
                   </button>
                 </form>
               </motion.div>
@@ -173,8 +150,8 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">
-            ENCRYPTED ACCESS PORTAL V2.0
+          <p className="text-micro opacity-40">
+            ENCRYPTED ACCESS PORTAL V2.0 // SSL_ACTIVE
           </p>
         </div>
       </motion.div>
@@ -192,7 +169,7 @@ function OAuthButton({ icon, label, loading, onClick }: { icon: React.ReactNode,
       <div className="w-5 h-5 flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
         {loading ? <Spinner /> : icon}
       </div>
-      <span className="text-xs font-black uppercase tracking-widest text-white/60 group-hover:text-white transition-colors">{label}</span>
+      <span className="text-label-caps !text-[10px] text-white/60 group-hover:text-white transition-colors">{label}</span>
     </button>
   )
 }
