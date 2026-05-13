@@ -176,8 +176,8 @@ export default function SchedulePage() {
       {/* Footer */}
       <footer className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 relative z-10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-            <span className="text-label-caps !text-white !tracking-normal">RA</span>
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center border border-white/10">
+            <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-label-caps">IEEE RAS 2026</span>
         </div>

@@ -34,9 +34,9 @@ export function Navbar({ session }: NavbarProps) {
         <Link href="/" className="flex items-center gap-3 pl-4 pr-2 py-2 hover:bg-white/5 rounded-full transition-colors group">
           <motion.div 
             whileHover={{ rotate: 12, scale: 1.1 }}
-            className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-lg shrink-0"
+            className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-lg shrink-0 border border-white/10"
           >
-            <span className="text-black font-serif italic font-black text-[11px]">RA</span>
+            <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
           </motion.div>
           <span className="text-label-caps !text-white !text-[10px] !tracking-[0.2em] hidden lg:block opacity-80 whitespace-nowrap">IEEE RAS 2026</span>
         </Link>

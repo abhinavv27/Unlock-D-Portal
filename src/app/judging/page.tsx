@@ -37,8 +37,8 @@ export default function JudgingPage() {
       <aside className="w-80 border-r border-white/5 bg-black/40 backdrop-blur-3xl flex flex-col z-10 sticky top-0 h-screen">
         <div className="p-10 border-b border-white/5 space-y-8">
           <Link href="/" className="flex items-center gap-4 group">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5">
-              <span className="text-black font-serif italic font-black text-[12px]">RA</span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5 border border-white/10">
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
             </div>
             <span className="text-label-caps !text-[10px] text-white/40 group-hover:text-white transition-colors">Evaluation_Hub</span>
           </Link>
