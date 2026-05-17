@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "touchdesigner": {
+      "source": "satoruhiga/claude-touchdesigner",
+      "sourceType": "github",
+      "skillPath": "touchdesigner/skills/td-guide/SKILL.md",
+      "computedHash": "d8e0a0003c1b8d845e20ea87fe8cd72b6317b6cc70bc7b0734f8e3508aa78983"
+    }
+  }
+}

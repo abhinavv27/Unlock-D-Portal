@@ -50,9 +50,16 @@ export default function LandingPage() {
   const heroTranslateX = useTransform(heroX, [-1, 1], [-15, 15])
   const heroTranslateY = useTransform(heroY, [-1, 1], [-15, 15])
   
-  // Rotating words for hero using GSAP
-  const words = ["ACCESS.", "SECURED.", "GRANTED.", "ONLINE."]
-  const wordRef = useRef<HTMLDivElement>(null)
+  // Rotating words for hero
+  const words = ["DEPLOYED.", "OVERCLOCKED.", "UNLEASHED.", "OPTIMIZED."]
+  const [currentWordIndex, setCurrentWordIndex] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentWordIndex(prev => (prev + 1) % words.length)
+    }, 1750)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -109,36 +116,8 @@ export default function LandingPage() {
     if (!mounted) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ repeat: -1 })
-      
-      words.forEach((word, index) => {
-        // Find all characters for this word
-        const chars = `.word-char-${index}`
-        
-        tl.fromTo(chars, 
-          { y: 60, opacity: 0 }, 
-          { 
-            y: 0, 
-            opacity: 1, 
-            duration: 0.5, 
-            stagger: 0.03, 
-            ease: "power3.out"
-          }
-        )
-        
-        tl.to({}, { duration: 1.5 }) // Hold
-        
-        tl.to(chars, 
-          { 
-            y: -40, 
-            opacity: 0, 
-            duration: 0.3, 
-            stagger: 0.02, 
-            ease: "power3.in"
-          }
-        )
-      })
-    }, wordRef)
+      // GSAP animations for other elements if needed
+    }, containerRef)
 
     return () => ctx.revert()
   }, [mounted])
@@ -184,7 +163,7 @@ export default function LandingPage() {
   const loadingSteps = [
     { text: 'Connecting to server...', minProgress: 0 },
     { text: 'Loading dashboard...', minProgress: 25 },
-    { text: 'Syncing data...', minProgress: 50 },
+    { text: 'Syncing event data...', minProgress: 50 },
     { text: 'Preparing workspace...', minProgress: 75 },
     { text: 'Almost ready...', minProgress: 90 }
   ]
@@ -319,7 +298,7 @@ export default function LandingPage() {
             transition={{ delay: 0.1, duration: 0.4 }}
             className="premium-sticker inline-block mb-10 border-primary/30 text-primary/80"
           >
-            SYSTEM_ACCESS_REQUIRED
+            IEEE RAS 2026
           </motion.div>
           
           <div className="overflow-hidden mb-[-2vw] md:mb-[-40px]">
@@ -333,21 +312,19 @@ export default function LandingPage() {
             </motion.h1>
           </div>
 
-          <div ref={wordRef} className="h-[12vw] md:h-[140px] relative w-full mb-16 flex items-center justify-center overflow-visible">
-            <div className="relative w-full flex justify-center items-center">
-              {words.map((word, index) => (
-                <div key={index} className="absolute flex items-center justify-center pointer-events-none">
-                  {word.split('').map((char, i) => (
-                    <span
-                      key={i}
-                      className={`word-char-${index} inline-block text-[10vw] md:text-[140px] text-hero !text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 px-[0.5px] leading-none whitespace-nowrap opacity-0`}
-                    >
-                      {char === ' ' ? '\u00A0' : char}
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
+          <div className="h-[12vw] md:h-[140px] relative w-full mb-16 flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={currentWordIndex}
+                initial={{ y: 60, opacity: 0, filter: 'blur(10px)' }}
+                animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                exit={{ y: -60, opacity: 0, filter: 'blur(10px)' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute text-[10vw] md:text-[140px] text-hero !text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 leading-none whitespace-nowrap"
+              >
+                {words[currentWordIndex]}
+              </motion.h2>
+            </AnimatePresence>
           </div>
 
           <motion.div
@@ -358,7 +335,7 @@ export default function LandingPage() {
           >
             <Link href="/login" className="px-10 py-4 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/60 hover:shadow-[0_0_30px_rgba(109,40,217,0.3)] backdrop-blur-md transition-all duration-300 group relative overflow-hidden flex items-center justify-center">
               <span className="relative z-10 font-display font-medium text-lg tracking-wide text-white flex items-center">
-                Initialize Portal Gateway
+                Enter Portal
                 <span className="group-hover:translate-x-1 transition-transform inline-block ml-3">→</span>
               </span>
             </Link>
@@ -445,7 +422,7 @@ export default function LandingPage() {
           <Link href="#" className="hover:text-primary transition-colors">Support</Link>
         </div>
         <div className="text-micro">
-          SYSTEM_ID: IEEE RAS 2026
+          IEEE RAS 2026
         </div>
       </motion.footer>
         </>
