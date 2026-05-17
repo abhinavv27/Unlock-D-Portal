@@ -96,8 +96,8 @@ export default function ApplyPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          <nav className="fixed top-0 left-0 w-full z-50 p-8 flex justify-center pointer-events-none">
-            <div className="glass-premium rounded-full px-6 py-2 flex items-center gap-6 border-white/5 bg-black/40 backdrop-blur-3xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] pointer-events-auto">
+          <nav className="fixed top-0 left-0 w-full z-50 p-4 md:p-8 flex justify-center pointer-events-none">
+            <div className="glass-premium rounded-full px-4 md:px-6 py-2 flex items-center gap-4 md:gap-6 border-white/5 bg-black/40 backdrop-blur-3xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] pointer-events-auto w-[95%] md:w-auto overflow-x-auto">
               <Link href="/" className="text-label-caps !text-white/50 hover:!text-white transition-colors !text-[9px]">
                 ← Back
               </Link>
@@ -128,15 +128,15 @@ export default function ApplyPage() {
             </div>
           </nav>
 
-          <div className="max-w-2xl mx-auto px-6 pt-40 pb-32 relative z-10">
+          <div className="max-w-2xl mx-auto px-4 md:px-6 pt-28 md:pt-40 pb-20 md:pb-32 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as any }}
             >
-              <div className="mb-16">
-                <div className="text-micro mb-4">SEGMENT_INITIATION_V.01</div>
-                <h1 className="text-6xl md:text-8xl text-hero mb-6 !normal-case">
+              <div className="mb-10 md:mb-16">
+                <div className="text-micro mb-4">Application Form</div>
+                <h1 className="text-5xl md:text-6xl lg:text-8xl text-hero mb-4 md:mb-6 !normal-case">
                   {STEPS[step]}
                 </h1>
                 <p className="text-editorial text-xl italic max-w-lg">
@@ -163,7 +163,7 @@ export default function ApplyPage() {
                   </AnimatePresence>
                 </div>
 
-                <div className="mt-20 pt-10 border-t border-white/5 flex justify-between items-center">
+                <div className="mt-12 md:mt-20 pt-6 md:pt-10 border-t border-white/5 flex justify-between items-center">
                   <button
                     onClick={() => setStep(s => Math.max(0, s - 1))}
                     disabled={step === 0 || loading}
@@ -193,23 +193,23 @@ export default function ApplyPage() {
 
 function StepPersonal({ data, update }: { data: FormData; update: (f: keyof FormData, v: string | boolean) => void }) {
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-2 gap-6">
+    <div className="space-y-6 md:space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div className="space-y-2">
-          <label className="text-label-caps">First Name</label>
+          <label className="text-label-caps !text-[9px]">First Name</label>
           <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors font-medium" placeholder="Jane" value={data.firstName} onChange={e => update('firstName', e.target.value)} required />
         </div>
         <div className="space-y-2">
-          <label className="text-label-caps">Last Name</label>
+          <label className="text-label-caps !text-[9px]">Last Name</label>
           <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors font-medium" placeholder="Doe" value={data.lastName} onChange={e => update('lastName', e.target.value)} required />
         </div>
       </div>
       <div className="space-y-2">
-        <label className="text-label-caps">Phone Number</label>
+        <label className="text-label-caps !text-[9px]">Phone Number</label>
         <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors font-medium" placeholder="+1 (555) 000-0000" value={data.phone} onChange={e => update('phone', e.target.value)} />
       </div>
       <div className="space-y-2">
-        <label className="text-label-caps">Country of Residence</label>
+        <label className="text-label-caps !text-[9px]">Country of Residence</label>
         <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors font-medium" placeholder="United States" value={data.country} onChange={e => update('country', e.target.value)} />
       </div>
     </div>
@@ -218,9 +218,9 @@ function StepPersonal({ data, update }: { data: FormData; update: (f: keyof Form
 
 function StepAcademic({ data, update, universities, uniQuery, searchUniversities, setUniversities }: any) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div className="relative space-y-2">
-        <label className="text-label-caps">University</label>
+        <label className="text-label-caps !text-[9px]">University</label>
         <input
           className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors font-medium"
           placeholder="Search university..."
@@ -241,7 +241,7 @@ function StepAcademic({ data, update, universities, uniQuery, searchUniversities
           </div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div className="space-y-2">
           <label className="text-label-caps !text-[9px]">Major</label>
           <input className="premium-input w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/30 transition-colors font-sans text-sm tracking-tight" placeholder="Computer Science" value={data.major} onChange={e => update('major', e.target.value)} />
@@ -265,7 +265,7 @@ function StepHackathon({ data, update }: { data: FormData; update: (f: keyof For
     <div className="space-y-8">
       <div className="space-y-3">
         <label className="text-label-caps">Experience Level</label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {['Beginner', 'Intermediate', 'Advanced'].map(level => (
             <button
               key={level}
@@ -284,7 +284,7 @@ function StepHackathon({ data, update }: { data: FormData; update: (f: keyof For
       </div>
       <div className="space-y-3">
         <label className="text-label-caps">Team Status</label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[{ v: 'solo', l: 'Solo' }, { v: 'have-team', l: 'Have Team' }, { v: 'looking', l: 'Looking' }].map(({ v, l }) => (
             <button
               key={v}
@@ -347,30 +347,30 @@ function StepReview({ data, onSubmit, loading }: { data: FormData; onSubmit: () 
     <div className="space-y-10">
       <div className="glass-premium rounded-2xl overflow-hidden border-white/5">
         {rows.map(([label, value], i) => (
-          <div key={label} className={`flex items-center justify-between px-8 py-5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors`}>
-            <span className="text-label-caps !text-[9px]">{label}</span>
-            <span className="text-editorial text-lg text-right max-w-[250px] truncate !text-white">{value || '—'}</span>
+          <div key={label} className={`flex items-center justify-between px-4 md:px-8 py-3 md:py-5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors`}>
+            <span className="text-label-caps !text-[8px] md:!text-[9px]">{label}</span>
+            <span className="text-editorial text-base md:text-lg text-right max-w-[150px] md:max-w-[250px] truncate !text-white">{value || '—'}</span>
           </div>
         ))}
       </div>
-      <button 
-        onClick={onSubmit} 
-        disabled={loading}
-        className="btn-vibrant w-full !py-6 text-label-caps !text-[12px] relative overflow-hidden flex items-center justify-center group"
-      >
-        <span className={loading ? 'opacity-0' : 'opacity-100'}>
-          SUBMIT_APPLICATION 
-          <span className="inline-block ml-3 group-hover:translate-x-1 transition-transform">→</span>
-        </span>
+        <button 
+          onClick={onSubmit} 
+          disabled={loading}
+          className="btn-vibrant w-full !py-4 md:!py-6 text-label-caps !text-[10px] md:!text-[12px] relative overflow-hidden flex items-center justify-center group"
+        >
+          <span className={loading ? 'opacity-0' : 'opacity-100'}>
+            Submit Application
+            <span className="inline-block ml-3 group-hover:translate-x-1 transition-transform">→</span>
+          </span>
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           </div>
         )}
       </button>
-      <div className="text-center">
-        <span className="text-micro !text-white/10 tracking-[0.6em]">FINAL_VALIDATION_REQUIRED</span>
-      </div>
+        <div className="text-center">
+          <span className="text-micro !text-white/10 tracking-[0.3em] md:tracking-[0.6em]">Review your information before submitting</span>
+        </div>
     </div>
   )
 }

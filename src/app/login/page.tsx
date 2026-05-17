@@ -36,7 +36,7 @@ export default function LoginPage() {
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
   return (
-    <main className="min-h-screen bg-[oklch(var(--background))] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-primary">
+    <main className="min-h-screen bg-[oklch(var(--background))] text-white flex items-center justify-center p-4 md:p-6 relative overflow-x-hidden font-sans selection:bg-primary">
       
       {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -54,16 +54,16 @@ export default function LoginPage() {
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] as any }}
         className="w-full max-w-[440px] relative z-20 mt-16"
       >
-        <div className="glass-premium p-10 md:p-12 rounded-[2.5rem] border-white/5 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
-          <div className="flex flex-col items-center mb-12 text-center">
+        <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[2.5rem] border-white/5 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+          <div className="flex flex-col items-center mb-8 md:mb-12 text-center">
             <motion.div 
               whileHover={{ scale: 1.05, rotate: 5 }}
-              className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center mb-10 shadow-2xl shadow-white/10 border border-white/10"
+              className="w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl overflow-hidden flex items-center justify-center mb-6 md:mb-10 shadow-2xl shadow-white/10 border border-white/10"
             >
               <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </motion.div>
-            <h1 className="text-4xl text-headline mb-3 !normal-case">Portal Access</h1>
-            <p className="text-editorial text-white/40">Initialize your session to continue.</p>
+            <h1 className="text-3xl md:text-4xl text-headline mb-2 md:mb-3 !normal-case">Sign In</h1>
+            <p className="text-editorial text-white/40 text-sm md:text-base">Access your dashboard to continue.</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -149,9 +149,9 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-micro opacity-40">
-            ENCRYPTED ACCESS PORTAL V2.0 // SSL_ACTIVE
+        <div className="mt-8 md:mt-12 text-center">
+          <p className="text-micro opacity-40 text-[8px] md:text-[10px]">
+            Secure Access Portal // SSL Active
           </p>
         </div>
       </motion.div>

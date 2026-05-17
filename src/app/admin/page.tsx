@@ -38,7 +38,7 @@ function AdminClient({ session, stats, funnel }: { session: any, stats: any[], f
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <main className="min-h-screen bg-[#050505] flex text-white font-sans selection:bg-primary relative overflow-hidden">
+    <main className="min-h-screen bg-[#050505] flex text-white font-sans selection:bg-primary relative overflow-x-hidden">
       {/* Background elements */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
@@ -124,15 +124,15 @@ function AdminClient({ session, stats, funnel }: { session: any, stats: any[], f
             </div>
 
             {/* Centered Action Bar */}
-            <div className="glass-premium rounded-full px-10 py-4 flex items-center gap-8 border-white/10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] bg-black/40 backdrop-blur-3xl">
+            <div className="glass-premium rounded-2xl md:rounded-full px-4 md:px-10 py-3 md:py-4 flex flex-col md:flex-row items-center gap-4 md:gap-8 border-white/10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] bg-black/40 backdrop-blur-3xl w-full md:w-auto">
               <RefreshButton />
-              <div className="h-6 w-px bg-white/10" />
-              <div className="flex items-center gap-10">
-                <Link href="/admin/applications" className="text-label-caps !text-[10px] text-white/40 hover:text-white transition-all hover:tracking-[0.4em]">Applications</Link>
-                <Link href="/admin/schedule" className="text-label-caps !text-[10px] text-white/40 hover:text-white transition-all hover:tracking-[0.4em]">Schedule</Link>
+              <div className="hidden md:block h-6 w-px bg-white/10" />
+              <div className="flex items-center gap-6 md:gap-10">
+                <Link href="/admin/applications" className="text-label-caps !text-[9px] md:!text-[10px] text-white/40 hover:text-white transition-all">Applications</Link>
+                <Link href="/admin/schedule" className="text-label-caps !text-[9px] md:!text-[10px] text-white/40 hover:text-white transition-all">Schedule</Link>
               </div>
-              <div className="h-6 w-px bg-white/10" />
-              <Link href="/admin/applications" className="btn-vibrant !py-3 !px-10 !rounded-full text-label-caps !text-[9px]">
+              <div className="hidden md:block h-6 w-px bg-white/10" />
+              <Link href="/admin/applications" className="btn-vibrant !py-2 md:!py-3 !px-6 md:!px-10 !rounded-full text-label-caps !text-[8px] md:!text-[9px] w-full md:w-auto text-center">
                 Manage Applications
               </Link>
             </div>

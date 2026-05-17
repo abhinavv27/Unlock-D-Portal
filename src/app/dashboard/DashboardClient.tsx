@@ -100,9 +100,9 @@ export default function DashboardClient({ session, status, application }: Dashbo
       {/* Navigation */}
       <Navbar session={session as any} />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-32 md:pt-48 lg:pt-60 pb-20 md:pb-32 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-28 md:pt-48 lg:pt-60 pb-16 md:pb-32 relative z-10">
         {/* Hero Section */}
-        <section className="mb-20 md:mb-40">
+        <section className="mb-16 md:mb-40">
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
@@ -122,13 +122,13 @@ export default function DashboardClient({ session, status, application }: Dashbo
         </section>
 
         {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-40">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-20 md:mb-40">
           {/* Status Card */}
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
-            className={`lg:col-span-8 glass-premium rounded-[var(--radius)] p-8 md:p-20 relative overflow-hidden group border-t-2 ${config.border} shadow-2xl`}
+            className={`lg:col-span-8 glass-premium rounded-2xl md:rounded-[var(--radius)] p-6 md:p-12 lg:p-20 relative overflow-hidden group border-t-2 ${config.border} shadow-2xl`}
           >
             <div className="absolute top-0 right-0 p-12 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
               <svg width="400" height="400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">
@@ -165,12 +165,12 @@ export default function DashboardClient({ session, status, application }: Dashbo
           </motion.div>
 
           {/* Side Panels */}
-          <div className="lg:col-span-4 flex flex-col gap-8">
+          <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8">
             <motion.div 
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="glass-premium rounded-[var(--radius)] p-8 md:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
+              className="glass-premium rounded-2xl md:rounded-[var(--radius)] p-6 md:p-10 lg:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-12">
                 <span className="text-label-caps !text-[9px]">Upcoming Event</span>
@@ -189,7 +189,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="glass-premium rounded-[var(--radius)] p-8 md:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
+              className="glass-premium rounded-2xl md:rounded-[var(--radius)] p-6 md:p-10 lg:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-12">
                 <span className="text-label-caps !text-[9px]">Profile Completion</span>
@@ -212,14 +212,14 @@ export default function DashboardClient({ session, status, application }: Dashbo
         </div>
 
         {/* Resource Grid */}
-        <section className="mb-40">
-          <div className="flex items-center gap-8 mb-20">
+        <section className="mb-20 md:mb-40">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 mb-12 md:mb-20">
             <h3 className="text-hero text-4xl md:text-7xl uppercase">Resources</h3>
-            <div className="flex-1 h-px bg-white/10" />
-            <div className="text-micro">Quick Links</div>
+            <div className="flex-1 h-px bg-white/10 hidden md:block" />
+            <div className="text-micro text-[8px] md:text-[10px]">Quick Links</div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
             {[
               { title: 'Timeline', desc: 'View the full event schedule', href: '/schedule', icon: '⚡' },
               { title: 'Network', desc: 'Connect with other attendees', href: '#', icon: '🧬' },
@@ -234,7 +234,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
               >
                 <Link 
                   href={item.href}
-                  className="group relative block p-12 rounded-[var(--radius)] glass-premium border border-white/5 hover:border-white/20 hover:bg-white/[0.05] transition-all duration-700 overflow-hidden shadow-2xl"
+                  className="group relative block p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[var(--radius)] glass-premium border border-white/5 hover:border-white/20 hover:bg-white/[0.05] transition-all duration-700 overflow-hidden shadow-2xl"
                 >
                   <div className="relative z-10">
                     <div className="text-5xl mb-12 group-hover:scale-110 transition-transform duration-700 inline-block filter grayscale group-hover:grayscale-0">{item.icon}</div>
@@ -250,7 +250,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
       </div>
 
       {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-8 py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12 text-white/20 relative z-10">
+      <footer className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12 text-white/20 relative z-10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center border border-white/10 shadow-2xl">
             <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />

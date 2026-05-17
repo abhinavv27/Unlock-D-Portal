@@ -115,14 +115,14 @@ export default function ScannerPage() {
           </div>
         </header>
 
-        <section className="space-y-6">
-          <h2 className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-1 italic">Action Type</h2>
-          <div className="flex flex-wrap gap-2 md:gap-3">
+        <section className="space-y-4 md:space-y-6">
+          <h2 className="text-label-caps !text-[9px] md:!text-[10px] text-white/30 uppercase tracking-[0.3em] px-1 italic">Action Type</h2>
+          <div className="flex flex-wrap gap-2">
             {ACTIONS.map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => setAction(value)}
-                className={`px-6 py-3 rounded-xl text-label-caps !text-[10px] transition-all duration-300 border font-bold ${
+                className={`px-3 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl text-label-caps !text-[8px] md:!text-[10px] transition-all duration-300 border font-bold ${
                   action === value
                     ? 'border-primary bg-primary text-white shadow-xl shadow-primary/20 scale-[1.05]'
                     : 'border-white/5 text-white/30 hover:text-white hover:border-white/20 hover:bg-white/[0.03]'
@@ -134,7 +134,7 @@ export default function ScannerPage() {
           </div>
         </section>
 
-        <div className="aspect-video bg-black rounded-[2.5rem] relative border border-white/5 overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] group">
+        <div className="aspect-video bg-black rounded-2xl md:rounded-[2.5rem] relative border border-white/5 overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] group">
           <Scanner
             onScan={(result) => {
               if (result?.[0]?.rawValue) {
@@ -193,7 +193,7 @@ export default function ScannerPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              className={`rounded-[2rem] p-10 flex flex-col items-center justify-center text-center border shadow-2xl transition-all duration-300 ${
+              className={`rounded-2xl md:rounded-[2rem] p-6 md:p-10 flex flex-col items-center justify-center text-center border shadow-2xl transition-all duration-300 ${
                 lastResult.success 
                   ? 'bg-emerald-500/5 border-emerald-500/20 shadow-emerald-500/5' 
                   : 'bg-red-500/5 border-red-500/20 shadow-red-500/5'
@@ -237,13 +237,13 @@ export default function ScannerPage() {
         </div>
 
         {results.length > 0 && (
-          <div className="glass-premium rounded-[2.5rem] overflow-hidden border-white/5 shadow-2xl">
-            <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02]">
+          <div className="glass-premium rounded-2xl md:rounded-[2.5rem] overflow-hidden border-white/5 shadow-2xl">
+            <div className="px-4 md:px-8 py-4 md:py-6 border-b border-white/5 bg-white/[0.02]">
               <h3 className="text-label-caps !text-[10px] text-white/40 tracking-[0.2em] italic">Recent Scans</h3>
             </div>
             <div className="divide-y divide-white/5">
               {results.map((r, i) => (
-                <div key={i} className="flex items-center justify-between px-8 py-5 hover:bg-white/[0.03] transition-colors group">
+                <div key={i} className="flex items-center justify-between px-4 md:px-8 py-3 md:py-5 hover:bg-white/[0.03] transition-colors group">
                   <div className="flex items-center gap-6">
                     <div className={`w-2 h-2 rounded-full ${r.success ? 'bg-emerald-400 shadow-[0_0_10px_#4ade80]' : 'bg-red-400 shadow-[0_0_10px_#f87171]'}`} />
                     <span className="text-value-mono !text-[10px] text-white/40 group-hover:text-white transition-colors">{r.message}</span>
