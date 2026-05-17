@@ -83,16 +83,16 @@ export default function SponsorPage() {
 
       <Navbar session={session as any} />
 
-      <div className="max-w-7xl mx-auto px-8 pt-60 pb-40 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-32 md:pt-48 lg:pt-60 pb-20 md:pb-40 relative z-10">
         {/* Hero Section */}
-        <section className="mb-48">
+        <section className="mb-24 md:mb-48">
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as any }}
           >
-            <div className="premium-sticker mb-12 inline-block">PARTNERSHIP_RESOURCES_v2.0</div>
-            <h1 className="text-8xl md:text-[180px] text-hero leading-[0.8] mb-12">
+            <div className="premium-sticker mb-6 md:mb-12 inline-block">Partnership Opportunities</div>
+            <h1 className="text-6xl md:text-8xl lg:text-[180px] text-hero leading-[0.8] mb-8 md:mb-12">
               ELITE <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">PARTNERS.</span>
             </h1>
@@ -103,8 +103,8 @@ export default function SponsorPage() {
         </section>
 
         {/* Impact Stats */}
-        <section className="mb-56">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="mb-24 md:mb-56">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, i) => (
               <motion.div 
                 key={stat.label}
@@ -112,22 +112,22 @@ export default function SponsorPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05, duration: 0.5 }}
-                className="glass-premium p-12 rounded-[var(--radius)] group hover:bg-white/[0.08] transition-all duration-500"
+                className="glass-premium p-6 md:p-12 rounded-[var(--radius)] group hover:bg-white/[0.08] transition-all duration-500"
               >
-                <div className="flex justify-between items-start mb-12">
-                  <span className="text-label-caps group-hover:!text-primary transition-colors">{stat.label}</span>
-                  <span className="mono-tag !text-[8px] !px-3 !py-1.5">{stat.trend}</span>
+                <div className="flex justify-between items-start mb-6 md:mb-12">
+                  <span className="text-label-caps !text-[10px] md:!text-[12px] group-hover:!text-primary transition-colors">{stat.label}</span>
+                  <span className="mono-tag !text-[7px] md:!text-[8px] !px-2 md:!px-3 !py-1 md:!py-1.5">{stat.trend}</span>
                 </div>
-                <div className="text-6xl text-stat group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
+                <div className="text-4xl md:text-6xl text-stat group-hover:scale-105 transition-transform origin-left">{stat.value}</div>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* Tiers Section */}
-        <section className="mb-56">
-          <div className="flex items-center gap-6 mb-20">
-            <h2 className="text-label-caps !text-white/20 italic">Infrastructural Tiers</h2>
+        <section className="mb-24 md:mb-56">
+          <div className="flex items-center gap-4 md:gap-6 mb-12 md:mb-20">
+            <h2 className="text-label-caps !text-white/20 italic !text-[10px] md:!text-[12px]">Sponsorship Tiers</h2>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
@@ -139,34 +139,34 @@ export default function SponsorPage() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05, duration: 0.6 }}
-                className="glass-premium p-16 rounded-[var(--radius)] relative overflow-hidden group hover:bg-white/[0.06] transition-all duration-700"
+                className="glass-premium p-8 md:p-16 rounded-[var(--radius)] relative overflow-hidden group hover:bg-white/[0.06] transition-all duration-700"
               >
                 <div 
                   className="absolute top-0 right-0 w-64 h-64 rounded-full blur-[120px] -mr-32 -mt-32 opacity-20 group-hover:opacity-40 transition-opacity" 
                   style={{ backgroundColor: tier.accent }}
                 />
                 <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-16">
+                  <div className="flex justify-between items-start mb-8 md:mb-16">
                     <div>
-                      <h3 className="text-6xl text-headline mb-2">{tier.name}</h3>
-                      <p className="text-value-mono">{tier.price}</p>
+                      <h3 className="text-4xl md:text-6xl text-headline mb-2">{tier.name}</h3>
+                      <p className="text-value-mono !text-[10px] md:!text-[12px]">{tier.price}</p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-value-mono !text-white/40">
                       {String(i + 1).padStart(2, '0')}
                     </div>
                   </div>
                   
-                  <ul className="space-y-4 mb-20">
+                  <ul className="space-y-3 md:space-y-4 mb-12 md:mb-20">
                     {tier.benefits.map((benefit) => (
-                      <li key={benefit} className="flex items-center gap-4 text-lg text-editorial !font-medium group-hover:text-white transition-colors">
+                      <li key={benefit} className="flex items-center gap-3 md:gap-4 text-base md:text-lg text-editorial !font-medium group-hover:text-white transition-colors">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                         {benefit}
                       </li>
                     ))}
                   </ul>
 
-                  <Link href="/login" className="mt-auto w-full btn-ghost !py-5 !px-10 !text-[10px] group-hover:bg-white group-hover:text-black transition-all border-white/10 flex items-center justify-center">
-                    Portal Access
+                  <Link href="/login" className="mt-auto w-full btn-ghost !py-4 md:!py-5 !px-6 md:!px-10 !text-[9px] md:!text-[10px] group-hover:bg-white group-hover:text-black transition-all border-white/10 flex items-center justify-center">
+                    View Details
                   </Link>
                 </div>
               </motion.div>
@@ -179,22 +179,22 @@ export default function SponsorPage() {
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="glass-premium p-24 rounded-[var(--radius)] text-center relative overflow-hidden border-white/10"
+          className="glass-premium p-12 md:p-24 rounded-[var(--radius)] text-center relative overflow-hidden border-white/10"
         >
           <div className="absolute inset-0 neural-grid opacity-[0.1]" />
           <div className="relative z-10">
-            <h2 className="text-7xl text-headline mb-10 leading-none">Ready to <br />Scale?</h2>
-            <p className="text-2xl max-w-2xl mx-auto mb-16 text-editorial leading-relaxed">
+            <h2 className="text-5xl md:text-7xl text-headline mb-6 md:mb-10 leading-none">Ready to <br />Scale?</h2>
+            <p className="text-lg md:text-2xl max-w-2xl mx-auto mb-10 md:mb-16 text-editorial leading-relaxed">
               Join the ecosystem of elite institutions shaping the future of robotics and AI.
             </p>
-            <Link href="/login" className="btn-vibrant !py-6 !px-20 !text-[12px] inline-flex">
-              Portal Access
+            <Link href="/login" className="btn-vibrant !py-4 md:!py-6 !px-10 md:!px-20 !text-[10px] md:!text-[12px] inline-flex">
+              Become a Partner
             </Link>
           </div>
         </motion.section>
       </div>
 
-      <footer className="max-w-7xl mx-auto px-8 py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12">
+      <footer className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-32 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-white/10">
             <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
@@ -207,7 +207,7 @@ export default function SponsorPage() {
           <Link href="#" className="hover:text-white transition-colors">Legal</Link>
         </div>
         <div className="text-micro">
-          SPONSOR_NODE: READY // LINK_ESTABLISHED
+          IEEE RAS 2026
         </div>
       </footer>
     </main>

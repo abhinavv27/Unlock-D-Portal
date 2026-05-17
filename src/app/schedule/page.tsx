@@ -72,16 +72,16 @@ export default function SchedulePage() {
 
       <Navbar session={session as any} />
 
-      <div className="max-w-6xl mx-auto px-6 pt-40 pb-20 relative z-10">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 pt-32 md:pt-40 pb-16 md:pb-20 relative z-10">
         {/* Header */}
-        <header className="mb-24">
+        <header className="mb-16 md:mb-24">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="premium-sticker mb-10 inline-block">Timeline_2026</div>
-            <h1 className="text-8xl md:text-[180px] text-hero mb-12">
+            <div className="premium-sticker mb-6 md:mb-10 inline-block">Event Timeline</div>
+            <h1 className="text-6xl md:text-8xl lg:text-[180px] text-hero mb-8 md:mb-12">
               The <br />
               <span className="text-white/20">Schedule.</span>
             </h1>
@@ -92,13 +92,13 @@ export default function SchedulePage() {
         </header>
 
         {/* Day Selector */}
-        <section className="mb-16">
-          <div className="flex gap-2 p-1.5 glass-premium rounded-2xl w-fit border-white/5">
+        <section className="mb-10 md:mb-16 overflow-x-auto">
+          <div className="flex gap-2 p-1.5 glass-premium rounded-2xl w-fit border-white/5 min-w-fit">
             {['Friday', 'Saturday', 'Sunday'].map((day) => (
-              <button
-                key={day}
-                onClick={() => setActiveDay(day)}
-                className={`relative px-8 py-3 rounded-xl text-label-caps transition-all duration-300 ${
+                <button
+                  key={day}
+                  onClick={() => setActiveDay(day)}
+                  className={`relative px-4 md:px-8 py-2 md:py-3 rounded-xl text-label-caps !text-[10px] md:!text-[12px] transition-all duration-300 whitespace-nowrap ${
                   activeDay === day 
                     ? '!text-black' 
                     : '!text-white/40 hover:!text-white'
@@ -134,26 +134,26 @@ export default function SchedulePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="glass-premium rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 group hover:bg-white/[0.04] transition-all duration-300 border-white/5"
+                  className="glass-premium rounded-2xl p-4 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 group hover:bg-white/[0.04] transition-all duration-300 border-white/5"
                 >
-                  <div className="flex items-start md:items-center gap-8 flex-1">
-                    <div className="w-28 flex-shrink-0">
-                      <span className="text-label-caps block mb-1">Time</span>
-                      <div className="text-xl text-value-mono !text-white/80">
+                  <div className="flex items-start md:items-center gap-4 md:gap-8 flex-1 min-w-0">
+                    <div className="w-20 md:w-28 flex-shrink-0">
+                      <span className="text-label-caps block mb-1 !text-[8px] md:!text-[10px]">Time</span>
+                      <div className="text-base md:text-xl text-value-mono !text-white/80">
                         {event.time.split(' ').slice(1).join(' ')}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-6">
-                      <div className={`w-12 h-12 rounded-xl ${TYPE_CONFIG[event.type].bg} ${TYPE_CONFIG[event.type].border} border flex items-center justify-center ${TYPE_CONFIG[event.type].color}`}>
+                    <div className="flex items-center gap-4 md:gap-6 min-w-0">
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${TYPE_CONFIG[event.type].bg} ${TYPE_CONFIG[event.type].border} border flex items-center justify-center ${TYPE_CONFIG[event.type].color} flex-shrink-0`}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <path d={event.icon} strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </div>
                       <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="text-2xl text-headline">{event.title}</h3>
-                          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${TYPE_CONFIG[event.type].bg} ${TYPE_CONFIG[event.type].color} border ${TYPE_CONFIG[event.type].border}`}>
+                        <div className="flex items-center gap-2 md:gap-3 mb-1 flex-wrap">
+                          <h3 className="text-lg md:text-2xl text-headline">{event.title}</h3>
+                          <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${TYPE_CONFIG[event.type].bg} ${TYPE_CONFIG[event.type].color} border ${TYPE_CONFIG[event.type].border} whitespace-nowrap`}>
                             {event.type}
                           </span>
                         </div>
@@ -162,9 +162,9 @@ export default function SchedulePage() {
                     </div>
                   </div>
                   
-                  <div className="text-left md:text-right md:min-w-[150px]">
-                    <span className="text-label-caps block mb-1">Location</span>
-                    <span className="text-xl text-stat !tracking-normal">{event.location}</span>
+                  <div className="text-left md:text-right md:min-w-[120px] lg:min-w-[150px] w-full md:w-auto">
+                    <span className="text-label-caps block mb-1 !text-[8px] md:!text-[10px]">Location</span>
+                    <span className="text-lg md:text-xl text-stat !tracking-normal">{event.location}</span>
                   </div>
                 </motion.div>
               ))}
@@ -174,7 +174,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10 relative z-10">
+      <footer className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-10 relative z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center border border-white/10">
             <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
@@ -187,7 +187,7 @@ export default function SchedulePage() {
           <Link href="#" className="hover:text-white transition-colors">Support</Link>
         </div>
         <div className="text-micro">
-          BUILD v2.6.0 // STK_READY
+          IEEE RAS 2026
         </div>
       </footer>
     </main>
