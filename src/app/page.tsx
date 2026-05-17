@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { HeroBackground } from '@/components/HeroBackground'
+import SplineRobot from '@/components/SplineRobot'
 import dynamic from 'next/dynamic'
 const DeepSpaceScene = dynamic(() => import('@/components/DeepSpaceScene').then(mod => mod.DeepSpaceScene), { ssr: false })
 import { RadarSweep } from '@/components/RadarSweep'
@@ -147,6 +148,7 @@ export default function LandingPage() {
       {/* Deep Space Backgrounds */}
       <DeepSpaceScene />
       <HeroBackground />
+      <SplineRobot />
       <RadarSweep />
 
       {/* Noise texture overlay */}
@@ -215,7 +217,7 @@ export default function LandingPage() {
                 <span className="group-hover:translate-x-1 transition-transform inline-block ml-3">→</span>
               </span>
             </Link>
-            <span className="text-micro !text-white/30 tracking-[0.4em] font-mono mt-4">HACKERS // JUDGES // VOLUNTEERS // SPONSORS</span>
+            <span className="text-micro !text-white/60 !opacity-100 tracking-[0.4em] font-mono mt-4">HACKERS // JUDGES // VOLUNTEERS // SPONSORS</span>
           </motion.div>
           </motion.div>
         </motion.div>

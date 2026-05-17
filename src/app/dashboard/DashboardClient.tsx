@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'fra
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
+import SplineRobot from '@/components/SplineRobot'
 
 interface DashboardClientProps {
   session: {
@@ -87,6 +88,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
           <div className="mesh-blob w-[1000px] h-[1000px] bg-primary/40 bottom-[-10%] right-[-10%]" />
         </div>
         <div className="absolute inset-0 neural-grid opacity-[0.03]" />
+        <SplineRobot />
       </motion.div>
 
       {/* Progress Bar */}
