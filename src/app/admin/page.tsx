@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/trpc/server'
 import RefreshButton from '@/components/RefreshButton'
+import { useState } from 'react'
 
 export const metadata = { title: 'Admin Hub | IEEE RAS 2026' }
 
@@ -29,6 +30,14 @@ export default async function AdminPage() {
   ]
 
   return (
+    <AdminClient session={session} stats={stats} funnel={funnel} />
+  )
+}
+
+function AdminClient({ session, stats, funnel }: { session: any, stats: any[], funnel: any[] }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  return (
     <main className="min-h-screen bg-[#050505] flex text-white font-sans selection:bg-primary relative overflow-hidden">
       {/* Background elements */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -36,8 +45,26 @@ export default async function AdminPage() {
         <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.03]" />
       </div>
 
+      {/* Mobile Menu Button */}
+      <button 
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-black/60 border border-white/10 backdrop-blur-xl"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/60 z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-72 border-r border-white/5 bg-black/40 backdrop-blur-3xl flex flex-col z-10 sticky top-0 h-screen">
+      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-72 border-r border-white/5 bg-black/80 lg:bg-black/40 backdrop-blur-3xl flex flex-col z-50 lg:z-10 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-10 border-b border-white/5">
           <Link href="/" className="flex items-center gap-4 group">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5 border border-white/10">
@@ -84,15 +111,15 @@ export default async function AdminPage() {
 
       {/* Content */}
       <div className="flex-1 relative z-10 overflow-auto">
-        <div className="max-w-6xl mx-auto p-16 space-y-16">
+        <div className="max-w-6xl mx-auto p-6 md:p-12 lg:p-16 space-y-10 md:space-y-16">
           {/* Header */}
-          <header className="flex flex-col items-center text-center space-y-10">
-            <div className="space-y-6">
+          <header className="flex flex-col items-center text-center space-y-6 md:space-y-10 pt-12 lg:pt-0">
+            <div className="space-y-4 md:space-y-6">
               <div className="inline-block px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-value-mono !text-[9px] text-primary uppercase">
-                System_Operational // Live_Telemetry
+                Live Dashboard
               </div>
-              <h1 className="text-8xl text-hero leading-[0.8] !normal-case">
-                Control <span className="text-white/20">Center.</span>
+              <h1 className="text-5xl md:text-7xl lg:text-8xl text-hero leading-[0.8] !normal-case">
+                Admin Dashboard
               </h1>
             </div>
 
@@ -106,13 +133,13 @@ export default async function AdminPage() {
               </div>
               <div className="h-6 w-px bg-white/10" />
               <Link href="/admin/applications" className="btn-vibrant !py-3 !px-10 !rounded-full text-label-caps !text-[9px]">
-                MANAGE POOL
+                Manage Applications
               </Link>
             </div>
           </header>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {stats.map((stat, i) => (
               <div key={i} className="glass-premium p-8 rounded-3xl border-white/5 group hover:bg-white/[0.04] transition-all cursor-default relative overflow-hidden">
                 <div className="flex justify-between items-start mb-6">
@@ -130,7 +157,7 @@ export default async function AdminPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10">
             {/* Funnel */}
             <div className="lg:col-span-2 glass-premium p-10 rounded-[2.5rem] border-white/5">
               <div className="flex items-center justify-between mb-12">
@@ -161,7 +188,7 @@ export default async function AdminPage() {
               {[
                 { label: 'Review Pool', href: '/admin/applications', icon: '📋', desc: 'Process pending queue' },
                 { label: 'Manage Time', href: '/admin/schedule', icon: '📅', desc: 'Adjust event clock' },
-                { label: 'System Logs', href: '/admin/analytics', icon: '📈', desc: 'Real-time telemetry' },
+                { label: 'System Logs', href: '/admin/analytics', icon: '📈', desc: 'View analytics' },
               ].map((action, i) => (
                 <Link 
                   key={i} 

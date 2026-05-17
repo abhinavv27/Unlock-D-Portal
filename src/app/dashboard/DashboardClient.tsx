@@ -100,16 +100,16 @@ export default function DashboardClient({ session, status, application }: Dashbo
       {/* Navigation */}
       <Navbar session={session as any} />
 
-      <div className="max-w-7xl mx-auto px-8 pt-60 pb-32 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-32 md:pt-48 lg:pt-60 pb-20 md:pb-32 relative z-10">
         {/* Hero Section */}
-        <section className="mb-40">
+        <section className="mb-20 md:mb-40">
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as any }}
           >
-            <div className="premium-sticker mb-10 inline-block">SESSION_USER_01</div>
-            <h1 className="text-[12vw] md:text-[140px] text-hero mb-12 !leading-[0.85]">
+            <div className="premium-sticker mb-10 inline-block">Welcome Back</div>
+            <h1 className="text-6xl md:text-8xl lg:text-[140px] text-hero mb-8 md:mb-12 !leading-[0.85]">
               SALUTATIONS, <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/20">
                 {session.user.name?.split(' ')[0] || 'GUEST'}.
@@ -139,10 +139,10 @@ export default function DashboardClient({ session, status, application }: Dashbo
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-12 md:mb-20">
                 <div className={`w-2 h-2 rounded-full ${config.bg.replace('/10', '/100')} shadow-[0_0_20px_rgba(255,255,255,0.2)]`} />
-                <span className="text-label-caps !text-[9px]">System Status</span>
+                <span className="text-label-caps !text-[9px]">Application Status</span>
               </div>
 
-              <h2 className={`text-[15vw] md:text-[120px] text-stat mb-8 ${config.color} leading-none`}>
+              <h2 className={`text-6xl md:text-8xl lg:text-[120px] text-stat mb-6 md:mb-8 ${config.color} leading-none`}>
                 {config.label}
               </h2>
               
@@ -152,7 +152,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
 
               <div className="mt-20 md:mt-32 pt-12 border-t border-white/5 flex flex-wrap items-center justify-between gap-8">
                 <div className="flex flex-col gap-2">
-                  <span className="text-value-mono !text-[9px] text-white/20 uppercase">User ID</span>
+                  <span className="text-value-mono !text-[9px] text-white/20 uppercase">Participant ID</span>
                   <span className="text-value-mono bg-white/5 px-4 py-1.5 rounded-lg border border-white/5 !text-[10px]">
                     {session.user.id?.slice(0, 16) || 'UNREGISTERED'}
                   </span>
@@ -173,7 +173,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
               className="glass-premium rounded-[var(--radius)] p-8 md:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-12">
-                <span className="text-label-caps !text-[9px]">Next Event</span>
+                <span className="text-label-caps !text-[9px]">Upcoming Event</span>
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_15px_oklch(var(--primary))]" />
               </div>
               <div className="relative z-10">
@@ -192,7 +192,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
               className="glass-premium rounded-[var(--radius)] p-8 md:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-12">
-                <span className="text-label-caps !text-[9px]">Profile Info</span>
+                <span className="text-label-caps !text-[9px]">Profile Completion</span>
                 <span className="text-value-mono !text-primary !text-[10px]">100%</span>
               </div>
               <div className="flex gap-2 items-end h-20 mb-8 opacity-40 group-hover:opacity-100 transition-opacity">
@@ -206,7 +206,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
                   />
                 ))}
               </div>
-              <p className="text-value-mono !text-[10px] text-white/20 uppercase tracking-widest">All systems nominal</p>
+              <p className="text-value-mono !text-[10px] text-white/20 uppercase tracking-widest">Profile Complete</p>
             </motion.div>
           </div>
         </div>
@@ -214,16 +214,16 @@ export default function DashboardClient({ session, status, application }: Dashbo
         {/* Resource Grid */}
         <section className="mb-40">
           <div className="flex items-center gap-8 mb-20">
-            <h3 className="text-hero text-7xl uppercase">Resources</h3>
+            <h3 className="text-hero text-4xl md:text-7xl uppercase">Resources</h3>
             <div className="flex-1 h-px bg-white/10" />
-            <div className="text-micro">ROOT_LEVEL_ACCESS</div>
+            <div className="text-micro">Quick Links</div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { title: 'Timeline', desc: 'Temporal event mapping and synchronization', href: '/schedule', icon: '⚡' },
-              { title: 'Network', desc: 'Secure attendee integration and coordination', href: '#', icon: '🧬' },
-              { title: 'Protocols', desc: 'Standard operating guidelines and documentation', href: '#', icon: '📑' },
+              { title: 'Timeline', desc: 'View the full event schedule', href: '/schedule', icon: '⚡' },
+              { title: 'Network', desc: 'Connect with other attendees', href: '#', icon: '🧬' },
+              { title: 'Protocols', desc: 'Rules and documentation', href: '#', icon: '📑' },
             ].map((item, i) => (
               <motion.div
                 key={item.title}
@@ -263,7 +263,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
           <Link href="#" className="hover:text-white transition-colors">Support</Link>
         </div>
         <div className="text-value-mono text-white/10 uppercase !text-[9px]">
-          USER_NODE: {session.user.id?.slice(0, 8)} // ACTIVE
+          Logged in as {session.user.name?.split(' ')[0] || 'Guest'}
         </div>
       </footer>
     </main>

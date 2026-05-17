@@ -92,32 +92,32 @@ export default function ScannerPage() {
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white p-8 md:p-16 font-sans relative overflow-hidden selection:bg-primary">
+    <main className="min-h-screen bg-[#050505] text-white p-4 md:p-8 lg:p-16 font-sans relative overflow-hidden selection:bg-primary">
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
         <div className="absolute inset-0 neural-grid opacity-[0.03]" />
       </div>
 
       <div className="max-w-2xl mx-auto space-y-12 relative z-10">
-        <header className="flex items-center justify-between border-b border-white/5 pb-10">
+        <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-white/5 pb-6 md:pb-10 gap-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center hover:scale-110 transition-transform shadow-2xl shadow-white/5 border border-white/10">
               <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </Link>
             <div>
-              <h1 className="text-4xl text-hero text-white !normal-case leading-none">Scanner</h1>
+              <h1 className="text-4xl md:text-5xl text-hero text-white !normal-case leading-none">Scanner</h1>
               <p className="text-value-mono !text-[10px] text-white/30 mt-2 uppercase tracking-[0.2em]">Staff Portal</p>
             </div>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/5">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-label-caps !text-[8px] text-emerald-400">Camera Active</span>
+            <span className="text-label-caps !text-[8px] text-emerald-400">Scanner Active</span>
           </div>
         </header>
 
         <section className="space-y-6">
-          <h2 className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-1 italic">Scan Type</h2>
-          <div className="flex flex-wrap gap-3">
+          <h2 className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-1 italic">Action Type</h2>
+          <div className="flex flex-wrap gap-2 md:gap-3">
             {ACTIONS.map(({ value, label }) => (
               <button
                 key={value}
@@ -215,8 +215,8 @@ export default function ScannerPage() {
         </AnimatePresence>
 
         <div className="space-y-6">
-          <label className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-2 italic">Manual Entry</label>
-          <div className="flex gap-4">
+          <label className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-2 italic">Manual Input</label>
+          <div className="flex flex-col md:flex-row gap-4">
             <input
               id="input-qr-code"
               className="flex-1 bg-white/[0.03] border border-white/5 rounded-2xl px-8 py-5 text-value-mono !text-[12px] focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10 shadow-inner"
@@ -229,7 +229,7 @@ export default function ScannerPage() {
               id="btn-manual-scan"
               onClick={() => handleScan(manualCode)}
               disabled={!manualCode || scanning}
-              className="btn-accent !px-10 !py-5 text-label-caps !text-[10px] shadow-2xl shadow-primary/20"
+              className="btn-accent !px-10 !py-5 text-label-caps !text-[10px] shadow-2xl shadow-primary/20 w-full md:w-auto"
             >
               {scanning ? 'Processing...' : 'Submit'}
             </button>
@@ -239,7 +239,7 @@ export default function ScannerPage() {
         {results.length > 0 && (
           <div className="glass-premium rounded-[2.5rem] overflow-hidden border-white/5 shadow-2xl">
             <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02]">
-              <h3 className="text-label-caps !text-[10px] text-white/40 tracking-[0.2em] italic">Scan History</h3>
+              <h3 className="text-label-caps !text-[10px] text-white/40 tracking-[0.2em] italic">Recent Scans</h3>
             </div>
             <div className="divide-y divide-white/5">
               {results.map((r, i) => (
