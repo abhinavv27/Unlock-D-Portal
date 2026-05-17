@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Float, Stars, Octahedron } from '@react-three/drei'
 
@@ -7,20 +8,23 @@ function FloatingShards() {
   const isLowEnd = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency <= 4 : false
   const shardCount = isLowEnd ? 8 : 15
   
-  const shards = Array.from({ length: shardCount }).map((_, i) => ({
-    position: [
-      (Math.random() - 0.5) * 15,
-      (Math.random() - 0.5) * 10,
-      (Math.random() - 0.5) * 10 - 2
-    ] as [number, number, number],
-    rotation: [
-      Math.random() * Math.PI,
-      Math.random() * Math.PI,
-      0
-    ] as [number, number, number],
-    scale: Math.random() * 0.4 + 0.1,
-    speed: Math.random() * 0.5 + 0.5
-  }))
+  const shards = useMemo(() => {
+    return Array.from({ length: shardCount }).map((_, i) => ({
+      position: [
+        (Math.random() - 0.5) * 15,
+        (Math.random() - 0.5) * 10,
+        (Math.random() - 0.5) * 10 - 2
+      ] as [number, number, number],
+      rotation: [
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        0
+      ] as [number, number, number],
+      scale: Math.random() * 0.4 + 0.1,
+      speed: Math.random() * 0.5 + 0.5,
+      isWireframe: Math.random() > 0.5
+    }))
+  }, [shardCount])
 
   return (
     <>
@@ -35,7 +39,7 @@ function FloatingShards() {
               color="#4c1d95" 
               roughness={0.3} 
               metalness={0.8} 
-              wireframe={Math.random() > 0.5} 
+              wireframe={shard.isWireframe} 
               transparent
               opacity={0.6}
             />
@@ -51,8 +55,9 @@ export function DeepSpaceScene() {
   const starCount = isLowEnd ? 1500 : 3000
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[0] opacity-60">
+    <div className="fixed inset-0 w-full h-full pointer-events-none z-[0] opacity-60">
       <Canvas 
+        style={{ width: '100%', height: '100%' }}
         camera={{ position: [0, 0, 8], fov: 45 }}
         gl={{ 
           antialias: !isLowEnd,

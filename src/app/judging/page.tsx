@@ -40,12 +40,12 @@ export default function JudgingPage() {
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5 border border-white/10">
               <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-label-caps !text-[10px] text-white/40 group-hover:text-white transition-colors">Evaluation_Hub</span>
+            <span className="text-label-caps !text-[10px] text-white/40 group-hover:text-white transition-colors">Judging</span>
           </Link>
           
           <div className="space-y-3">
             <div className="flex justify-between items-end">
-              <p className="text-label-caps !text-[9px] text-white/30">Overall_Progress</p>
+              <p className="text-label-caps !text-[9px] text-white/30">Progress</p>
               <p className="text-value-mono !text-[10px] text-primary">{submitted.size}/{PROJECTS.length}</p>
             </div>
             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -75,7 +75,7 @@ export default function JudgingPage() {
               <div className="flex items-center justify-between mb-4">
                 <span className={`text-label-caps !text-[8px] ${activeProject?.id === p.id ? '!text-primary' : '!text-white/20'}`}>Table {p.tableNumber}</span>
                 {submitted.has(p.id) ? (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-label-caps !text-[7px] border border-emerald-500/20">Scored_✓</span>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-label-caps !text-[7px] border border-emerald-500/20">Scored</span>
                 ) : (
                   <span className="px-2.5 py-1 rounded-full bg-white/5 text-white/20 text-label-caps !text-[7px] border border-white/5">Pending</span>
                 )}
@@ -87,7 +87,7 @@ export default function JudgingPage() {
         </div>
 
         <div className="p-8 border-t border-white/5 text-center">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em]">IEEE_RAS_JUDGE_SYSTEM_V2</p>
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em]">Judge Portal</p>
         </div>
       </aside>
 
@@ -153,18 +153,18 @@ export default function JudgingPage() {
                 <div className="relative overflow-hidden p-10 rounded-[2rem] bg-primary/5 border border-primary/20 flex items-center justify-between group transition-all hover:bg-primary/10">
                   <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
                   <div className="relative z-10">
-                    <span className="text-label-caps !text-primary !text-[9px]">Computed_Performance_Index</span>
+                    <span className="text-label-caps !text-primary !text-[9px]">Performance Index</span>
                     <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Weighted System Total</h3>
                   </div>
                   <div className="relative z-10 text-right">
                     <span className="text-7xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none">{overall}</span>
-                    <span className="text-label-caps !text-[10px] opacity-40 mt-2 block">Index_Points</span>
+                    <span className="text-label-caps !text-[10px] opacity-40 mt-2 block">Points</span>
                   </div>
                 </div>
 
                 {/* Notes */}
                 <div className="space-y-4">
-                  <label className="text-label-caps !text-[10px] text-white/30 px-2 italic">Judge_Observations</label>
+                  <label className="text-label-caps !text-[10px] text-white/30 px-2 italic">Notes</label>
                   <textarea
                     className="w-full bg-white/[0.03] border border-white/5 rounded-[1.5rem] p-8 text-sm text-editorial focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all min-h-[160px] placeholder:text-white/10 shadow-inner"
                     placeholder="Enter technical feedback, presentation notes, or general impressions..."

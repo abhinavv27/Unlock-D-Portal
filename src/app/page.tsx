@@ -15,6 +15,9 @@ import gsap from 'gsap'
 export default function LandingPage() {
   const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
+  const [splineLoaded, setSplineLoaded] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [showPreloader, setShowPreloader] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
   
   const { scrollYProgress } = useScroll()
@@ -48,12 +51,59 @@ export default function LandingPage() {
   const heroTranslateY = useTransform(heroY, [-1, 1], [-15, 15])
   
   // Rotating words for hero using GSAP
-  const words = ["PORTAL.", "FOR ALL.", "ONE TRUTH.", "FOR CHANGE."]
+  const words = ["ACCESS.", "SECURED.", "GRANTED.", "ONLINE."]
   const wordRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    let currentProgress = 0
+    const interval = setInterval(() => {
+      if (splineLoaded) {
+        currentProgress = 100
+        setProgress(100)
+        clearInterval(interval)
+        setTimeout(() => {
+          setShowPreloader(false)
+        }, 800)
+      } else {
+        if (currentProgress < 90) {
+          const step = Math.floor(Math.random() * 5) + 3 // 3-7%
+          currentProgress = Math.min(90, currentProgress + step)
+          setProgress(currentProgress)
+        }
+      }
+    }, 120)
+
+    const safetyTimeout = setTimeout(() => {
+      if (currentProgress < 100) {
+        setSplineLoaded(true)
+      }
+    }, 9000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(safetyTimeout)
+    }
+  }, [mounted, splineLoaded])
+
+  useEffect(() => {
+    if (showPreloader) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.height = '100vh'
+    } else {
+      document.body.style.overflow = 'unset'
+      document.body.style.height = 'auto'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+      document.body.style.height = 'auto'
+    }
+  }, [showPreloader])
 
   useEffect(() => {
     if (!mounted) return;
@@ -131,25 +181,120 @@ export default function LandingPage() {
     }
   }
 
+  const loadingSteps = [
+    { text: 'Connecting to server...', minProgress: 0 },
+    { text: 'Loading dashboard...', minProgress: 25 },
+    { text: 'Syncing data...', minProgress: 50 },
+    { text: 'Preparing workspace...', minProgress: 75 },
+    { text: 'Almost ready...', minProgress: 90 }
+  ]
+  const currentStep = loadingSteps.find(step => progress >= step.minProgress) || loadingSteps[loadingSteps.length - 1]
+
   return (
     <main ref={containerRef} className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
       {!mounted ? (
-        <div className="fixed inset-0 bg-[oklch(var(--background))] flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-        </div>
+        <div className="fixed inset-0 bg-[oklch(var(--background))]" />
       ) : (
         <>
-      {/* Scroll Progress */}
-      <motion.div 
-        className="fixed top-0 left-0 right-0 h-[2px] bg-primary z-[100] origin-left"
-        style={{ scaleX }}
-      />
+          <AnimatePresence mode="wait">
+            {showPreloader && (
+              <motion.div
+                key="preloader"
+                initial={{ opacity: 1 }}
+                exit={{ 
+                  opacity: 0, 
+                  transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+                }}
+                className="fixed inset-0 z-[999] bg-[oklch(var(--background))] flex flex-col items-center justify-center select-none"
+              >
+                {/* Subtle background glow */}
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+                
+                {/* Top branding */}
+                <div className="absolute top-8 left-8 flex items-center gap-3 z-10">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden">
+                    <img src="/ras-logo.png" alt="IEEE RAS" className="w-full h-full object-contain" />
+                  </div>
+                  <span className="font-medium text-sm text-white/60">IEEE RAS 2026</span>
+                </div>
 
-      {/* Deep Space Backgrounds */}
-      <DeepSpaceScene />
-      <HeroBackground />
-      <SplineRobot />
-      <RadarSweep />
+                {/* Center content */}
+                <div className="relative z-10 flex flex-col items-center gap-6">
+                  {/* Spinner */}
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="w-12 h-12 rounded-full border-2 border-white/10 border-t-primary/80 animate-spin"
+                  />
+
+                  {/* Title & status */}
+                  <div className="text-center">
+                    <motion.h2 
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1, duration: 0.4 }}
+                      className="text-xl font-semibold text-white mb-1.5"
+                    >
+                      Loading Portal
+                    </motion.h2>
+                    <motion.p 
+                      key={currentStep.text}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-sm text-white/40"
+                    >
+                      {currentStep.text}
+                    </motion.p>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-64 mt-2">
+                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-primary rounded-full"
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-2 text-xs text-white/30 font-mono">
+                      <span>{progress}%</span>
+                      <span>Loading</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom tagline */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="absolute bottom-8 text-center z-10"
+                >
+                  <p className="text-xs text-white/30 tracking-wide">
+                    Unified dashboard for hackers, judges, volunteers & sponsors
+                  </p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Scroll Progress */}
+          <motion.div 
+            className="fixed top-0 left-0 right-0 h-[2px] bg-primary z-[100] origin-left"
+            style={{ scaleX }}
+          />
+
+          {/* Deep Space Backgrounds */}
+          <DeepSpaceScene />
+          <HeroBackground />
+          <SplineRobot 
+            hideLocalLoader 
+            onLoad={() => setSplineLoaded(true)} 
+            onError={() => setSplineLoaded(true)} 
+          />
+          <RadarSweep />
 
       {/* Noise texture overlay */}
       <div className="fixed inset-0 pointer-events-none z-[3] noise-overlay opacity-[0.03]" />
@@ -174,7 +319,7 @@ export default function LandingPage() {
             transition={{ delay: 0.1, duration: 0.4 }}
             className="premium-sticker inline-block mb-10 border-primary/30 text-primary/80"
           >
-            IEEE_RAS_2026 // HACKATHON_FOR_CHANGE
+            SYSTEM_ACCESS_REQUIRED
           </motion.div>
           
           <div className="overflow-hidden mb-[-2vw] md:mb-[-40px]">
@@ -184,7 +329,7 @@ export default function LandingPage() {
               animate="show"
               className="text-[12vw] md:text-[160px] text-hero"
             >
-              UNIFIED
+              PORTAL
             </motion.h1>
           </div>
 
@@ -213,11 +358,11 @@ export default function LandingPage() {
           >
             <Link href="/login" className="px-10 py-4 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/60 hover:shadow-[0_0_30px_rgba(109,40,217,0.3)] backdrop-blur-md transition-all duration-300 group relative overflow-hidden flex items-center justify-center">
               <span className="relative z-10 font-display font-medium text-lg tracking-wide text-white flex items-center">
-                Portal Access
+                Initialize Portal Gateway
                 <span className="group-hover:translate-x-1 transition-transform inline-block ml-3">→</span>
               </span>
             </Link>
-            <span className="text-micro !text-white/60 !opacity-100 tracking-[0.4em] font-mono mt-4">HACKERS // JUDGES // VOLUNTEERS // SPONSORS</span>
+            <span className="text-micro !text-white/60 !opacity-100 tracking-[0.4em] font-mono mt-4">Hackers • Judges • Volunteers • Sponsors</span>
           </motion.div>
           </motion.div>
         </motion.div>
@@ -235,7 +380,7 @@ export default function LandingPage() {
           <Card3D variants={itemVariants} className="md:col-span-8 glass-premium rounded-[var(--radius)] p-12 md:p-20 relative overflow-hidden group border-white/10"
           >
             <div className="relative z-10">
-              <span className="text-value-mono mb-8 block w-fit border border-primary/30 text-primary px-3 py-1 rounded-full !text-[9px]">CORE_MISSION</span>
+              <span className="text-value-mono mb-8 block w-fit border border-primary/30 text-primary px-3 py-1 rounded-full !text-[9px]">Our Mission</span>
               <h2 className="text-5xl md:text-8xl text-hero mb-8 leading-[0.8]">One Portal. <br />All Groups. <br />No Silos.</h2>
               <p className="max-w-md text-editorial text-xl text-white/70">
                 The IEEE RAS team used to juggle separate dashboards for hackers, volunteers, judges, and sponsors. Not anymore. One unified portal. One source of truth. One cohesive experience for everyone.
@@ -263,19 +408,19 @@ export default function LandingPage() {
           <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 flex flex-col justify-center items-center text-center"
           >
             <div className="text-8xl text-stat mb-4 text-primary drop-shadow-[0_0_15px_rgba(109,40,217,0.5)]">48H</div>
-            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">HACKATHON_DURATION</div>
+            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">48 Hour Hackathon</div>
           </Card3D>
 
           <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 flex flex-col justify-center items-center text-center"
           >
             <div className="text-8xl text-stat mb-4">4</div>
-            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">PARTICIPANT_GROUPS</div>
+            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">Participant Groups</div>
           </Card3D>
 
           <Card3D variants={itemVariants} className="md:col-span-4 glass-premium rounded-[var(--radius)] p-12 border-white/10 overflow-hidden relative group flex flex-col justify-center items-center text-center"
           >
             <div className="text-8xl text-stat mb-4 group-hover:scale-110 group-hover:text-primary transition-all duration-700">1</div>
-            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">UNIFIED_PLATFORM</div>
+            <div className="text-label-caps !text-[10px] tracking-[0.2em] text-white/40">Unified Platform</div>
             <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-[0.05] transition-opacity duration-500" />
           </Card3D>
         </motion.div>
@@ -300,7 +445,7 @@ export default function LandingPage() {
           <Link href="#" className="hover:text-primary transition-colors">Support</Link>
         </div>
         <div className="text-micro">
-          SYSTEM_ID: IEE_RAS_V1 // UNIFIED_PORTAL
+          SYSTEM_ID: IEEE RAS 2026
         </div>
       </motion.footer>
         </>
