@@ -16,6 +16,7 @@ export default function JudgingPage() {
   const [notes, setNotes] = useState('')
   const [submitted, setSubmitted] = useState<Set<string>>(new Set(['2']))
   const [mounted, setMounted] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -33,8 +34,26 @@ export default function JudgingPage() {
         <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.03]" />
       </div>
 
+      {/* Mobile Menu Button */}
+      <button 
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-black/60 border border-white/10 backdrop-blur-xl"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/60 z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Project list Sidebar */}
-      <aside className="w-80 border-r border-white/5 bg-black/40 backdrop-blur-3xl flex flex-col z-10 sticky top-0 h-screen">
+      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-80 border-r border-white/5 bg-black/80 lg:bg-black/40 backdrop-blur-3xl flex flex-col z-50 lg:z-10 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-10 border-b border-white/5 space-y-8">
           <Link href="/" className="flex items-center gap-4 group">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5 border border-white/10">
@@ -87,7 +106,7 @@ export default function JudgingPage() {
         </div>
 
         <div className="p-8 border-t border-white/5 text-center">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em]">Judge Portal</p>
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em]">Judging Panel</p>
         </div>
       </aside>
 
@@ -100,14 +119,14 @@ export default function JudgingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="max-w-4xl mx-auto p-16 lg:p-24 space-y-16"
+              className="max-w-4xl mx-auto p-6 md:p-12 lg:p-16 space-y-10 md:space-y-16"
             >
               <header className="space-y-6">
                 <div className="flex items-center gap-4">
                   <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-label-caps !text-[9px] border border-primary/20 shadow-lg shadow-primary/5">Table {activeProject.tableNumber}</span>
                   <span className="text-label-caps !text-[10px] text-white/20">{activeProject.track}</span>
                 </div>
-                <h1 className="text-8xl text-hero text-white !normal-case leading-[0.8]">
+                <h1 className="text-5xl md:text-7xl lg:text-8xl text-hero text-white !normal-case leading-[0.8]">
                   {activeProject.name}.
                 </h1>
                 <p className="text-2xl text-editorial max-w-2xl leading-relaxed text-white/40 italic">
@@ -142,8 +161,8 @@ export default function JudgingPage() {
                         />
                       </div>
                       <div className="flex justify-between text-value-mono !text-[8px] !text-white/10 font-bold">
-                        <span>MIN_01</span>
-                        <span>MAX_10</span>
+                        <span>1</span>
+                        <span>10</span>
                       </div>
                     </div>
                   ))}
@@ -153,8 +172,8 @@ export default function JudgingPage() {
                 <div className="relative overflow-hidden p-10 rounded-[2rem] bg-primary/5 border border-primary/20 flex items-center justify-between group transition-all hover:bg-primary/10">
                   <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
                   <div className="relative z-10">
-                    <span className="text-label-caps !text-primary !text-[9px]">Performance Index</span>
-                    <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Weighted System Total</h3>
+                    <span className="text-label-caps !text-primary !text-[9px]">Overall Score</span>
+                    <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Average Score</h3>
                   </div>
                   <div className="relative z-10 text-right">
                     <span className="text-7xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none">{overall}</span>
@@ -182,7 +201,7 @@ export default function JudgingPage() {
                   }}
                   className="w-full py-8 rounded-[1.5rem] bg-white text-black text-label-caps !text-[12px] hover:bg-primary hover:text-white transition-all hover:scale-[1.01] active:scale-[0.99] shadow-2xl shadow-white/5 font-black"
                 >
-                  {submitted.has(activeProject.id) ? 'Update_Evaluation_Node' : 'Finalize_Performance_Scores'}
+                  {submitted.has(activeProject.id) ? 'Update Scores' : 'Submit Scores'}
                 </button>
               </div>
             </motion.div>
@@ -196,10 +215,10 @@ export default function JudgingPage() {
                 <div className="absolute inset-0 rounded-[2rem] bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-6xl grayscale group-hover:grayscale-0 transition-all scale-110">⚖️</span>
               </div>
-              <h2 className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] mb-6">Awaiting_Active_Selection</h2>
-              <h3 className="text-5xl text-hero !normal-case !tracking-tight text-white leading-tight">Select a project <br /><span className="text-white/20 italic">to begin scoring.</span></h3>
+              <h2 className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] mb-6">Ready to Judge</h2>
+              <h3 className="text-3xl md:text-5xl text-hero !normal-case !tracking-tight text-white leading-tight">Select a project <br /><span className="text-white/20 italic">to begin scoring.</span></h3>
               <p className="mt-8 text-lg text-white/30 max-w-md font-medium text-editorial leading-relaxed">
-                The neural evaluation engine is ready. Select a team from the registry to input real-time performance metrics.
+                Choose a team from the list to input your scores.
               </p>
             </motion.div>
           )}
