@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Spline from '@splinetool/react-spline';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function SplineRobot() {
+interface SplineRobotProps {
+  onLoad?: () => void;
+  onError?: () => void;
+  hideLocalLoader?: boolean;
+}
+
+export default function SplineRobot({ onLoad, onError, hideLocalLoader = false }: SplineRobotProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isLowEnd, setIsLowEnd] = useState(false);
@@ -117,7 +123,7 @@ export default function SplineRobot() {
       }}
     >
       <AnimatePresence>
-        {isLoading && !hasError && (
+        {isLoading && !hasError && !hideLocalLoader && (
           <motion.div 
             className="absolute inset-0 flex items-center justify-center z-10 bg-[oklch(var(--background))]"
             exit={{ opacity: 0 }}
@@ -144,10 +150,14 @@ export default function SplineRobot() {
         {!hasError ? (
           <Spline 
             scene="/scene.splinecode"
-            onLoad={() => setIsLoading(false)}
+            onLoad={() => {
+              setIsLoading(false);
+              onLoad?.();
+            }}
             onError={() => {
               setHasError(true);
               setIsLoading(false);
+              onError?.();
             }}
           />
         ) : (

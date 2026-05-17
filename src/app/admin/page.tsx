@@ -43,7 +43,7 @@ export default async function AdminPage() {
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5 border border-white/10">
               <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-label-caps !text-[10px] text-white/40 group-hover:text-white transition-colors">Admin_Hub</span>
+            <span className="text-label-caps !text-[10px] text-white/40 group-hover:text-white transition-colors">Admin</span>
           </Link>
         </div>
 
@@ -134,7 +134,7 @@ export default async function AdminPage() {
             {/* Funnel */}
             <div className="lg:col-span-2 glass-premium p-10 rounded-[2.5rem] border-white/5">
               <div className="flex items-center justify-between mb-12">
-                <h3 className="text-label-caps !text-[10px] text-white/40 italic">Application_Pipeline</h3>
+                <h3 className="text-label-caps !text-[10px] text-white/40 italic">Applications</h3>
                 <span className="text-value-mono !text-[8px] text-white/20 uppercase">Last Updated: Just Now</span>
               </div>
               <div className="space-y-8">
@@ -157,7 +157,7 @@ export default async function AdminPage() {
 
             {/* Quick Actions */}
             <div className="space-y-6">
-              <h3 className="text-label-caps !text-[10px] text-white/40 mb-6 px-4 italic">Quick_Operations</h3>
+              <h3 className="text-label-caps !text-[10px] text-white/40 mb-6 px-4 italic">Quick Actions</h3>
               {[
                 { label: 'Review Pool', href: '/admin/applications', icon: '📋', desc: 'Process pending queue' },
                 { label: 'Manage Time', href: '/admin/schedule', icon: '📅', desc: 'Adjust event clock' },

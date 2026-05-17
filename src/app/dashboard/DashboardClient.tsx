@@ -139,7 +139,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-12 md:mb-20">
                 <div className={`w-2 h-2 rounded-full ${config.bg.replace('/10', '/100')} shadow-[0_0_20px_rgba(255,255,255,0.2)]`} />
-                <span className="text-label-caps !text-[9px]">INTEGRATION_STATUS</span>
+                <span className="text-label-caps !text-[9px]">System Status</span>
               </div>
 
               <h2 className={`text-[15vw] md:text-[120px] text-stat mb-8 ${config.color} leading-none`}>
@@ -152,7 +152,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
 
               <div className="mt-20 md:mt-32 pt-12 border-t border-white/5 flex flex-wrap items-center justify-between gap-8">
                 <div className="flex flex-col gap-2">
-                  <span className="text-value-mono !text-[9px] text-white/20 uppercase">ACCESS_KEY_HASH</span>
+                  <span className="text-value-mono !text-[9px] text-white/20 uppercase">User ID</span>
                   <span className="text-value-mono bg-white/5 px-4 py-1.5 rounded-lg border border-white/5 !text-[10px]">
                     {session.user.id?.slice(0, 16) || 'UNREGISTERED'}
                   </span>
@@ -173,7 +173,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
               className="glass-premium rounded-[var(--radius)] p-8 md:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-12">
-                <span className="text-label-caps !text-[9px]">UPCOMING_SEGMENT</span>
+                <span className="text-label-caps !text-[9px]">Next Event</span>
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_15px_oklch(var(--primary))]" />
               </div>
               <div className="relative z-10">
@@ -192,7 +192,7 @@ export default function DashboardClient({ session, status, application }: Dashbo
               className="glass-premium rounded-[var(--radius)] p-8 md:p-12 flex-1 relative overflow-hidden group border-white/10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-12">
-                <span className="text-label-caps !text-[9px]">PROFILE_META</span>
+                <span className="text-label-caps !text-[9px]">Profile Info</span>
                 <span className="text-value-mono !text-primary !text-[10px]">100%</span>
               </div>
               <div className="flex gap-2 items-end h-20 mb-8 opacity-40 group-hover:opacity-100 transition-opacity">

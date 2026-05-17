@@ -8,6 +8,10 @@ export function HeroBackground() {
   useEffect(() => {
     const canvas = canvasRef.current!
     const ctx = canvas.getContext('2d')!
+
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+
     const mouse = { x: -9999, y: -9999 }
     let raf: number
     let tick = 0
@@ -31,7 +35,7 @@ export function HeroBackground() {
       spd:   0.5 + Math.random() * 1.5,
     }))
 
-    const pkts: Pkt[] = []
+    const pkts: any[] = []
     const MAX_PKTS = isLowEnd ? 10 : 20
 
     const spawnPkt = () => {
@@ -49,11 +53,35 @@ export function HeroBackground() {
     }
     for (let i = 0; i < MAX_PKTS; i++) spawnPkt()
 
+    let lastW = canvas.width
+    let lastH = canvas.height
+
     const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      const newW = window.innerWidth
+      const newH = window.innerHeight
+      canvas.width = newW
+      canvas.height = newH
+      
+      if (lastW > 50 && lastH > 50) {
+        for (const n of nodes) {
+          n.x = (n.x / lastW) * newW
+          n.y = (n.y / lastH) * newH
+        }
+      } else {
+        for (const n of nodes) {
+          n.x = Math.random() * newW
+          n.y = Math.random() * newH
+        }
+      }
+
+      // Reset active packets to prevent visually disconnected lines on resize
+      pkts.length = 0
+      for (let i = 0; i < MAX_PKTS; i++) spawnPkt()
+
+      lastW = newW
+      lastH = newH
     }
-    resize()
+
     window.addEventListener('resize', resize)
     window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY })
 
