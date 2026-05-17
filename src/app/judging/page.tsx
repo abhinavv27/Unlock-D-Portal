@@ -27,7 +27,7 @@ export default function JudgingPage() {
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
   return (
-    <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-hidden font-sans">
+    <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-x-hidden font-sans">
       {/* Background elements */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
@@ -53,8 +53,8 @@ export default function JudgingPage() {
       )}
 
       {/* Project list Sidebar */}
-      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-80 border-r border-white/5 bg-black/80 lg:bg-black/40 backdrop-blur-3xl flex flex-col z-50 lg:z-10 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-10 border-b border-white/5 space-y-8">
+      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-72 md:w-80 border-r border-white/5 bg-black/80 lg:bg-black/40 backdrop-blur-3xl flex flex-col z-50 lg:z-10 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-6 md:p-10 border-b border-white/5 space-y-6 md:space-y-8">
           <Link href="/" className="flex items-center gap-4 group">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl shadow-white/5 border border-white/10">
               <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
@@ -119,7 +119,7 @@ export default function JudgingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="max-w-4xl mx-auto p-6 md:p-12 lg:p-16 space-y-10 md:space-y-16"
+              className="max-w-4xl mx-auto p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12"
             >
               <header className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -134,8 +134,8 @@ export default function JudgingPage() {
                 </p>
               </header>
 
-              <div className="glass-premium p-12 rounded-[3rem] border-white/5 space-y-16 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+              <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-10 md:space-y-16 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16">
                   {[
                     { key: 'innovation' as const, label: 'Innovation', desc: 'Is the idea original and creative?' },
                     { key: 'technical' as const, label: 'Technical', desc: 'Is the implementation well-built?' },
@@ -169,7 +169,7 @@ export default function JudgingPage() {
                 </div>
 
                 {/* Overall Score Banner */}
-                <div className="relative overflow-hidden p-10 rounded-[2rem] bg-primary/5 border border-primary/20 flex items-center justify-between group transition-all hover:bg-primary/10">
+                <div className="relative overflow-hidden p-6 md:p-10 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 group transition-all hover:bg-primary/10">
                   <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
                   <div className="relative z-10">
                     <span className="text-label-caps !text-primary !text-[9px]">Overall Score</span>
@@ -209,7 +209,7 @@ export default function JudgingPage() {
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="h-full flex flex-col items-center justify-center text-center p-24"
+              className="h-full flex flex-col items-center justify-center text-center p-6 md:p-12 lg:p-24"
             >
               <div className="w-40 h-40 rounded-[2rem] border border-white/5 flex items-center justify-center mb-10 relative group bg-white/[0.02] shadow-2xl">
                 <div className="absolute inset-0 rounded-[2rem] bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
