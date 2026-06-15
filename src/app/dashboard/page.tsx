@@ -3,23 +3,17 @@ import { redirect } from 'next/navigation'
 import { api } from '@/trpc/server'
 import DashboardClient from './DashboardClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  let application
   try {
-    const session = await auth()
-    if (!session?.user) redirect('/login')
-
-    const application = await api.application.getMine()
-    const status = application?.status ?? 'PENDING'
-
-    return (
-      <DashboardClient 
-        session={session} 
-        status={status} 
-        application={application} 
-      />
-    )
+    application = await api.application.getMine()
   } catch (error) {
-    console.error('Dashboard Error:', error)
+    console.error('Dashboard Data Fetch Error:', error)
     return (
       <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex items-center justify-center p-6">
         <div className="text-center max-w-md">
@@ -32,5 +26,15 @@ export default async function DashboardPage() {
       </div>
     )
   }
+
+  const status = application?.status ?? 'PENDING'
+
+  return (
+    <DashboardClient 
+      session={session} 
+      status={status} 
+      application={application} 
+    />
+  )
 }
 
