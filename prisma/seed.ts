@@ -1,102 +1,99 @@
 import { PrismaClient } from '@prisma/client'
+import crypto from 'crypto'
 
 const prisma = new PrismaClient()
 
+// Standard password hashing function matching our backend auth utilities
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
+  return `${salt}:${hash}`
+}
+
 async function main() {
-  // Create mock user
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@ras.test' },
-    update: {},
-    create: {
-      email: 'admin@ras.test',
-      name: 'Admin User',
-      role: 'ADMIN',
+  console.log('Seeding database...')
+  console.log('Prisma keys:', Object.keys(prisma))
+
+  // 1. Clear existing records to ensure a fresh state
+  await prisma.evaluation.deleteMany()
+  await prisma.submission.deleteMany()
+  await prisma.registration.deleteMany()
+  await prisma.event.deleteMany()
+  await prisma.user.deleteMany()
+
+  // 2. Create staff users
+  const adminPassword = hashPassword('admin123')
+  const judgePassword = hashPassword('judge123')
+
+  const admin = await prisma.user.create({
+    data: {
+      username: 'admin',
+      passwordHash: adminPassword,
+      systemRole: 'ADMIN',
     },
   })
 
-  const user = await prisma.user.upsert({
-    where: { email: 'hacker@ras.test' },
-    update: {},
-    create: {
-      id: 'mock-id', // Match the hardcoded session ID
-      email: 'hacker@ras.test',
-      name: 'Hacker User',
-      role: 'APPLICANT',
+  const judge = await prisma.user.create({
+    data: {
+      username: 'judge',
+      passwordHash: judgePassword,
+      systemRole: 'JUDGE',
     },
   })
 
-  // Create mock application
-  await prisma.application.upsert({
-    where: { userId: 'mock-id' },
-    update: {},
-    create: {
-      userId: 'mock-id',
-      firstName: 'Alan',
-      lastName: 'Turing',
-      university: 'Cambridge',
-      major: 'Computer Science',
-      graduationYear: 2025,
-      experience: 'advanced',
-      teamPreference: 'solo',
-      status: 'PENDING',
+  console.log(`Created staff users:`)
+  console.log(`- Admin: username "admin", password "admin123"`)
+  console.log(`- Judge: username "judge", password "judge123"`)
+
+  // 3. Create default Event blueprints
+  const hackathonConfig = {
+    stages: [
+      { stage: 1, name: 'Ideation & Wireframing', pointsRequired: 20 },
+      { stage: 2, name: 'Database & Backend Setup', pointsRequired: 30 },
+      { stage: 3, name: 'Frontend & API Integration', pointsRequired: 30 },
+      { stage: 4, name: 'Final Presentation & Polish', pointsRequired: 20 },
+    ],
+    rubric: {
+      innovation: 10,
+      technical: 10,
+      presentation: 10,
+      impact: 10,
     },
-  })
-
-  // Create some extra applications for the admin dashboard
-  const extraApplicants = [
-    { name: 'Grace Hopper', university: 'Yale', status: 'ACCEPTED' },
-    { name: 'Ada Lovelace', university: 'Oxford', status: 'UNDER_REVIEW' },
-    { name: 'Margaret Hamilton', university: 'MIT', status: 'REJECTED' },
-    { name: 'Claude Shannon', university: 'Michigan', status: 'PENDING' },
-    { name: 'John von Neumann', university: 'Princeton', status: 'ACCEPTED' },
-    { name: 'Linus Torvalds', university: 'Helsinki', status: 'ACCEPTED' },
-    { name: 'Tim Berners-Lee', university: 'Oxford', status: 'UNDER_REVIEW' },
-    { name: 'Hedy Lamarr', university: 'Vienna', status: 'WAITLISTED' },
-    { name: 'Radia Perlman', university: 'MIT', status: 'ACCEPTED' },
-    { name: 'Vint Cerf', university: 'Stanford', status: 'UNDER_REVIEW' },
-    { name: 'Bjarne Stroustrup', university: 'Aarhus', status: 'PENDING' },
-    { name: 'Guido van Rossum', university: 'Amsterdam', status: 'ACCEPTED' },
-    { name: 'James Gosling', university: 'Calgary', status: 'UNDER_REVIEW' },
-    { name: 'Anders Hejlsberg', university: 'DTU', status: 'ACCEPTED' },
-    { name: 'Brendan Eich', university: 'Santa Clara', status: 'REJECTED' },
-    { name: 'Sophie Wilson', university: 'Cambridge', status: 'ACCEPTED' },
-    { name: 'Katherine Johnson', university: 'West Virginia', status: 'WAITLISTED' },
-    { name: 'Dorothy Vaughan', university: 'Wilberforce', status: 'ACCEPTED' },
-    { name: 'Mary Jackson', university: 'Hampton', status: 'PENDING' },
-  ]
-
-  for (const applicant of extraApplicants) {
-    const [first, last] = applicant.name.split(' ')
-    const email = `${first.toLowerCase().replace(' ', '')}.${last.toLowerCase()}@ras.test`
-    
-    const u = await prisma.user.upsert({
-      where: { email },
-      update: {},
-      create: {
-        email,
-        name: applicant.name,
-        role: 'APPLICANT',
-      },
-    })
-
-    await prisma.application.upsert({
-      where: { userId: u.id },
-      update: {},
-      create: {
-        userId: u.id,
-        firstName: first,
-        lastName: last,
-        university: applicant.university,
-        major: 'Computer Science',
-        graduationYear: 2026,
-        experience: 'intermediate',
-        teamPreference: 'looking',
-        status: applicant.status as any,
-      },
-    })
   }
 
-  console.log('Seed completed successfully with 20+ applications.')
+  const ctfConfig = {
+    flags: [
+      { id: 'flag_1', points: 10, flag: 'IEEE{welcome_to_ras}' },
+      { id: 'flag_2', points: 20, flag: 'IEEE{scrypt_is_fun}' },
+      { id: 'flag_3', points: 30, flag: 'IEEE{jsonb_unlocks_all}' },
+    ],
+  }
+
+  const hackathonEvent = await prisma.event.create({
+    data: {
+      name: 'UnlockD Progressive Hackathon',
+      slug: 'unlockd-2024',
+      eventType: 'PROGRESSIVE_HACKATHON',
+      config: hackathonConfig,
+      isActive: true,
+    },
+  })
+
+  const ctfEvent = await prisma.event.create({
+    data: {
+      name: 'RAS Capture The Flag',
+      slug: 'ras-ctf-2024',
+      eventType: 'CTF',
+      config: ctfConfig,
+      isActive: false, // Inactive by default
+    },
+  })
+
+  console.log('Created events:')
+  console.log(`- Hackathon: "${hackathonEvent.name}" (slug: "${hackathonEvent.slug}")`)
+  console.log(`- CTF: "${ctfEvent.name}" (slug: "${ctfEvent.slug}")`)
+
+  console.log('Seed completed successfully!')
 }
 
 main()
