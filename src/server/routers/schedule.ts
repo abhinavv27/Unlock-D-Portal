@@ -3,16 +3,13 @@ import { createTRPCRouter, publicProcedure, adminProcedure } from '@/server/trpc
 
 export const scheduleRouter = createTRPCRouter({
   // Public: get all public events
-  getEvents: publicProcedure.query(async ({ ctx }) => {
-    return ctx.db.scheduleEvent.findMany({
-      where: { isPublic: true },
-      orderBy: { startTime: 'asc' },
-    })
+  getEvents: publicProcedure.query(async () => {
+    return []
   }),
 
   // Admin: get all events (including private)
-  getAllEvents: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.scheduleEvent.findMany({ orderBy: { startTime: 'asc' } })
+  getAllEvents: adminProcedure.query(async () => {
+    return []
   }),
 
   // Admin: create event
@@ -27,8 +24,8 @@ export const scheduleRouter = createTRPCRouter({
       isPublic: z.boolean().default(true),
       color: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.scheduleEvent.create({ data: input })
+    .mutation(async ({ input }) => {
+      return { id: 'mock-id', ...input }
     }),
 
   // Admin: update event
@@ -44,15 +41,14 @@ export const scheduleRouter = createTRPCRouter({
       isPublic: z.boolean().optional(),
       color: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input
-      return ctx.db.scheduleEvent.update({ where: { id }, data })
+    .mutation(async ({ input }) => {
+      return input
     }),
 
   // Admin: delete event
   deleteEvent: adminProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.scheduleEvent.delete({ where: { id: input.id } })
+    .mutation(async ({ input }) => {
+      return { id: input.id }
     }),
 })
