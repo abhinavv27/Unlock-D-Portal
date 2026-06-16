@@ -6,6 +6,15 @@ import { usePathname } from 'next/navigation'
 
 export default function AdminAnalyticsPage() {
   const pathname = usePathname()
+
+  const handleLogout = () => {
+    localStorage.removeItem('staff_token')
+    localStorage.removeItem('team_token')
+    document.cookie = 'staff_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+    document.cookie = 'team_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+    window.location.href = '/login'
+  }
+
   return (
     <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-hidden">
       {/* Background Parallax Elements */}
@@ -62,8 +71,14 @@ export default function AdminAnalyticsPage() {
           })}
         </nav>
 
-        <div className="p-6 border-t border-white/5 text-center">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">IEEE RAS 2026</p>
+        <div className="p-6 border-t border-white/5 space-y-4">
+          <button
+            onClick={handleLogout}
+            className="w-full btn-ghost !py-3 rounded-xl text-[10px] font-mono tracking-wider hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-center uppercase"
+          >
+            Sign Out
+          </button>
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] text-center">IEEE RAS 2026</p>
         </div>
       </aside>
 

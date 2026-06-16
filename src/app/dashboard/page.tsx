@@ -1,40 +1,74 @@
-import { auth } from '@/server/auth'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { api } from '@/trpc/server'
+import { db } from '@/server/db'
 import DashboardClient from './DashboardClient'
+import { decryptToken } from '@/lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const session = await auth()
-  if (!session?.user) redirect('/login')
+  const cookieStore = await cookies()
+  const teamToken = cookieStore.get('team_token')?.value
+  const staffToken = cookieStore.get('staff_token')?.value
 
-  let application
-  try {
-    application = await api.application.getMine()
-  } catch (error) {
-    console.error('Dashboard Data Fetch Error:', error)
+  // 1. Participant Team Login Session
+  if (teamToken) {
+    const team = await db.registration.findUnique({
+      where: { id: teamToken },
+      include: {
+        event: true,
+        submissions: {
+          include: {
+            evaluation: true,
+          },
+          orderBy: {
+            submittedAt: 'desc',
+          },
+        },
+      },
+    })
+
+    if (!team) {
+      // Clear invalid cookie and redirect
+      redirect('/login')
+    }
+
+    const state = team.progressState as any
+    const currentStage = state?.current_stage || 1
+    const score = state?.score || 0
+
+    // Construct session payload for front-end compatibility
+    const mockSession = {
+      user: {
+        id: team.id,
+        name: team.teamName,
+        image: 'https://github.com/shadcn.png',
+      },
+    }
+
     return (
-      <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <h1 className="text-hero !text-2xl mb-3">Something went wrong</h1>
-          <p className="text-editorial !text-sm mb-6 text-white/60">We couldn't load your dashboard data. Please try refreshing the page.</p>
-          <pre className="p-4 bg-[var(--bg-elevated)] rounded-lg text-xs text-red-400 text-left overflow-auto">
-            {String(error)}
-          </pre>
-        </div>
-      </div>
+      <DashboardClient
+        session={mockSession}
+        status={`STAGE ${currentStage}`}
+        team={team}
+      />
     )
   }
 
-  const status = application?.status ?? 'PENDING'
+  // 2. Staff Login Session
+  if (staffToken) {
+    const staff = decryptToken(staffToken)
+    if (!staff) {
+      redirect('/login')
+    }
 
-  return (
-    <DashboardClient 
-      session={session} 
-      status={status} 
-      application={application} 
-    />
-  )
+    if (staff.role === 'ADMIN' || staff.role === 'SUPER_ADMIN') {
+      redirect('/admin')
+    } else {
+      redirect('/judging')
+    }
+  }
+
+  // 3. No Session
+  redirect('/login')
 }
-

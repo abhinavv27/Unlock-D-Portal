@@ -7,6 +7,14 @@ import RefreshButton from '@/components/RefreshButton'
 export default function AdminClient({ session, stats, funnel }: { session: any, stats: any[], funnel: any[] }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  const handleLogout = () => {
+    localStorage.removeItem('staff_token')
+    localStorage.removeItem('team_token')
+    document.cookie = 'staff_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+    document.cookie = 'team_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+    window.location.href = '/login'
+  }
+
   return (
     <main className="min-h-screen bg-[#050505] flex text-white font-sans selection:bg-primary relative overflow-x-hidden">
       {/* Background elements */}
@@ -50,6 +58,8 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
+            { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => (
             <Link 
               key={href} 
@@ -66,7 +76,7 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
           ))}
         </nav>
 
-        <div className="p-8 border-t border-white/5">
+        <div className="p-8 border-t border-white/5 space-y-4">
           <div className="flex items-center gap-4 p-4 glass-premium rounded-2xl border-white/5">
             <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shadow-inner">
               {session.user.name?.[0]}
@@ -76,6 +86,12 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
               <span className="text-value-mono !text-[8px] text-primary uppercase">Super_Admin</span>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full btn-ghost !py-3 rounded-xl text-[10px] font-mono tracking-wider hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-center uppercase"
+          >
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -158,6 +174,7 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
               {[
                 { label: 'Review Pool', href: '/admin/applications', icon: '📋', desc: 'Process pending queue' },
                 { label: 'Manage Time', href: '/admin/schedule', icon: '📅', desc: 'Adjust event clock' },
+                { label: 'Roster Ingest', href: '/admin/import', icon: '📥', desc: 'Ingest Unstop CSV' },
                 { label: 'System Logs', href: '/admin/analytics', icon: '📈', desc: 'View analytics' },
               ].map((action, i) => (
                 <Link 
