@@ -31,7 +31,8 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   })
 
   // Submission form states
-  const [submitPayload, setSubmitPayload] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
+  const [liveDemoUrl, setLiveDemoUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -77,7 +78,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
   const handleWorkSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!submitPayload.trim()) return
+    if (!githubUrl.trim() && !liveDemoUrl.trim()) return
 
     setLoading(true)
     setSubmitError(null)
@@ -92,7 +93,8 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
         },
         body: JSON.stringify({
           payload: {
-            github: submitPayload,
+            github: githubUrl.trim() || undefined,
+            liveDemo: liveDemoUrl.trim() || undefined,
             submitted_at: new Date().toISOString()
           }
         })
@@ -104,9 +106,9 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       }
 
       setSubmitSuccess(true)
-      setSubmitPayload('')
-      
-      // Auto-reload to refresh submissions list
+      setGithubUrl('')
+      setLiveDemoUrl('')
+
       setTimeout(() => {
         window.location.reload()
       }, 1500)
@@ -129,6 +131,14 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
   // Check if team has an active pending submission
   const hasPending = team?.submissions?.some((sub: any) => sub.status === 'PENDING')
+
+  // Extract stage data from event config for roadmap
+  const stages: { stage: number; name: string; pointsRequired: number }[] = team?.event?.config?.stages || []
+  const currentStageNum: number = team?.progressState?.current_stage || 1
+  const currentStage = stages[currentStageNum - 1] || null
+
+  // Find the most recent rejected submission for resubmit prompt
+  const lastRejected = team?.submissions?.find((sub: any) => sub.status === 'REJECTED')
 
   return (
     <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
@@ -187,6 +197,59 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
           </motion.div>
         </section>
 
+        {/* Roadmap Tracker */}
+        {team && stages.length > 0 && (
+          <section className="mb-16 md:mb-24">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.5 }}
+              className="glass-premium rounded-2xl md:rounded-[var(--radius)] p-8 md:p-12 border-white/5"
+            >
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_20px_rgba(52,211,153,0.2)]" />
+                <span className="text-label-caps !text-[9px] tracking-[0.2em] text-white/40">Round Progress</span>
+              </div>
+              <div className="flex items-center gap-0">
+                {stages.map((stage, idx) => {
+                  const isCompleted = currentStageNum > stage.stage
+                  const isCurrent = currentStageNum === stage.stage
+                  const isLocked = currentStageNum < stage.stage
+                  return (
+                    <div key={stage.stage} className="flex-1 relative">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 ${
+                          isCompleted
+                            ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(52,211,153,0.3)]'
+                            : isCurrent
+                              ? 'bg-primary text-black shadow-[0_0_20px_rgba(109,40,217,0.4)] ring-2 ring-primary/50'
+                              : 'bg-white/5 text-white/20 border border-white/10'
+                        }`}>
+                          {isCompleted ? '✓' : stage.stage}
+                        </div>
+                        <span className={`mt-3 text-[9px] font-black text-center uppercase tracking-[0.15em] leading-relaxed max-w-[90px] ${
+                          isCompleted
+                            ? 'text-emerald-400/80'
+                            : isCurrent
+                              ? 'text-white'
+                              : 'text-white/20'
+                        }`}>
+                          {stage.name}
+                        </span>
+                      </div>
+                      {idx < stages.length - 1 && (
+                        <div className={`absolute top-5 left-[60%] w-[80%] h-[2px] -translate-y-1/2 ${
+                          isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'
+                        }`} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </section>
+        )}
+
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-20 md:mb-32">
           
@@ -211,14 +274,45 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 {config.message}
               </p>
 
+              {/* Current Objective */}
+              {team && currentStage && (
+                <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-white/[0.03] border border-white/5">
+                  <span className="text-[9px] text-white/30 uppercase font-mono tracking-widest">Current Objective</span>
+                  <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-2">
+                    {currentStage.name}
+                  </h3>
+                  <p className="text-sm text-white/50 mt-1">
+                    {currentStageNum <= stages.length
+                      ? `Round ${currentStageNum} — ${currentStage.pointsRequired} points required to advance`
+                      : 'All rounds completed'}
+                  </p>
+                </div>
+              )}
+
               {/* PARTICIPANT WORK SUBMISSION INPUT */}
               {team && (
-                <div className="mt-12 md:mt-20 pt-10 border-t border-white/5">
+                <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
                   <h3 className="text-xl md:text-2xl font-display font-medium text-white mb-6">Submit Round Progress</h3>
                   
+                  {/* Rejected submission feedback + resubmit prompt */}
+                  {lastRejected && lastRejected.evaluation && !hasPending && (
+                    <div className="mb-6 p-5 rounded-2xl bg-rose-500/5 border border-rose-500/15">
+                      <div className="flex items-start gap-3">
+                        <span className="text-rose-400 text-sm mt-0.5">!</span>
+                        <div className="flex-1">
+                          <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Submission Rejected</span>
+                          <p className="text-xs text-rose-300/80 mt-1 leading-relaxed">
+                            &ldquo;{lastRejected.evaluation.feedback}&rdquo;
+                          </p>
+                          <p className="text-[10px] text-white/40 mt-2">Fix the issues below and resubmit to advance.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {hasPending ? (
                     <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-400 text-sm leading-relaxed max-w-xl">
-                      ⚡ **Payload Pending Evaluation**: Your team's latest submission is currently queued for grading. Our judging panel will inspect the code and calculate score marks shortly.
+                      ⚡ Your team&apos;s latest submission is currently queued for grading. Judging panel will inspect and score shortly.
                     </div>
                   ) : (
                     <form onSubmit={handleWorkSubmit} className="max-w-xl space-y-4">
@@ -229,27 +323,35 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                       )}
                       {submitSuccess && (
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                          🚀 Submission uploaded successfully! Refreshing dashboard...
+                          Submission uploaded successfully! Refreshing dashboard...
                         </div>
                       )}
-                      <div className="flex flex-col md:flex-row gap-4">
+                      <div className="space-y-3">
                         <input
                           type="url"
-                          value={submitPayload}
-                          onChange={(e) => setSubmitPayload(e.target.value)}
-                          placeholder="e.g. https://github.com/your-team/project"
-                          required
-                          className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                          value={githubUrl}
+                          onChange={(e) => setGithubUrl(e.target.value)}
+                          placeholder="GitHub Repository URL"
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                         />
+                        <input
+                          type="url"
+                          value={liveDemoUrl}
+                          onChange={(e) => setLiveDemoUrl(e.target.value)}
+                          placeholder="Live Demo URL (optional)"
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                        />
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                         <button
                           type="submit"
-                          disabled={loading}
+                          disabled={loading || (!githubUrl.trim() && !liveDemoUrl.trim())}
                           className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
                         >
-                          {loading ? 'Submitting...' : 'Upload Link'}
+                          {loading ? 'Submitting...' : 'Submit Entry'}
                         </button>
+                        <span className="text-[10px] text-white/20 font-mono">Provide at least one URL to submit</span>
                       </div>
-                      <span className="text-[10px] text-white/20 font-mono block ml-1">Provide your repository URL, prototype host, or payload format</span>
                     </form>
                   )}
                 </div>
@@ -386,15 +488,32 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
 
                     <div className="mt-2 space-y-2">
-                      <span className="text-[9px] text-white/20 uppercase font-mono block">Submission Payload URL</span>
-                      <a 
-                        href={sub.payload?.github} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors"
-                      >
-                        {sub.payload?.github || 'No link provided'}
-                      </a>
+                      {sub.payload?.github && (
+                        <>
+                          <span className="text-[9px] text-white/20 uppercase font-mono block">GitHub Repository</span>
+                          <a 
+                            href={sub.payload.github} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
+                          >
+                            {sub.payload.github}
+                          </a>
+                        </>
+                      )}
+                      {sub.payload?.liveDemo && (
+                        <>
+                          <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Live Demo</span>
+                          <a 
+                            href={sub.payload.liveDemo} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
+                          >
+                            {sub.payload.liveDemo}
+                          </a>
+                        </>
+                      )}
                     </div>
 
                     {sub.evaluation && (
@@ -429,11 +548,10 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
             <div className="text-micro text-[10px]">Quick Links</div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {[
               { title: 'Timeline', desc: 'View the full event schedule', href: '/schedule', icon: '⚡' },
-              { title: 'Network', desc: 'Connect with other attendees', href: '#', icon: '🧬' },
-              { title: 'Protocols', desc: 'Rules and documentation', href: '#', icon: '📑' },
+              { title: 'Protocols', desc: 'Rules and documentation', href: 'https://www.ieeerasmuj.com/unlockd#overview', external: true, icon: '📑' },
             ].map((item, i) => (
               <motion.div
                 key={item.title}
@@ -442,8 +560,9 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                <a 
+                <a
                   href={item.href}
+                  {...(item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                   className="group relative block p-6 md:p-10 rounded-2xl glass-premium border border-white/5 hover:border-white/20 hover:bg-white/[0.05] transition-all duration-700 overflow-hidden shadow-2xl"
                 >
                   <div className="relative z-10">

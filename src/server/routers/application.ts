@@ -99,4 +99,18 @@ export const applicationRouter = createTRPCRouter({
     .mutation(() => {
       return { success: true }
     }),
+
+  removeTeam: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.registration.delete({ where: { id: input.id } })
+      return { success: true }
+    }),
+
+  bulkRemoveTeams: adminProcedure
+    .input(z.object({ ids: z.array(z.string()) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.registration.deleteMany({ where: { id: { in: input.ids } } })
+      return { success: true }
+    }),
 })
