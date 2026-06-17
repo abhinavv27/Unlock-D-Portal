@@ -58,7 +58,7 @@ export function parseCSV(csvText: string): string[][] {
 /**
  * Parses a CSV export from Unstop, extracting the team ID, team name, and email columns.
  */
-export function parseUnstopCSV(csvText: string): Array<{ teamId: string; teamName: string; email: string }> {
+export function parseUnstopCSV(csvText: string): Array<{ teamId: string; teamName: string; email?: string }> {
   const parsed = parseCSV(csvText)
   if (parsed.length < 2) return []
 
@@ -75,21 +75,21 @@ export function parseUnstopCSV(csvText: string): Array<{ teamId: string; teamNam
     (h) => h.includes('email') || h.includes('e-mail') || h.includes('mail')
   )
 
-  if (teamIdIndex === -1 || teamNameIndex === -1 || emailIndex === -1) {
-    throw new Error('CSV headers must include "Team ID", "Team Name", and "Email" columns.')
+  if (teamIdIndex === -1 || teamNameIndex === -1) {
+    throw new Error('CSV headers must include "Team ID" and "Team Name" columns.')
   }
 
-  const teams: Array<{ teamId: string; teamName: string; email: string }> = []
+  const teams: Array<{ teamId: string; teamName: string; email?: string }> = []
   for (let i = 1; i < parsed.length; i++) {
     const row = parsed[i]
-    if (row.length <= Math.max(teamIdIndex, teamNameIndex, emailIndex)) continue
+    if (row.length <= Math.max(teamIdIndex, teamNameIndex)) continue
 
     const teamId = row[teamIdIndex]
     const teamName = row[teamNameIndex]
-    const email = row[emailIndex]
+    const email = emailIndex !== -1 && row.length > emailIndex ? row[emailIndex] : undefined
 
-    if (teamId && teamName && email) {
-      teams.push({ teamId, teamName, email })
+    if (teamId && teamName) {
+      teams.push({ teamId, teamName, email: email || undefined })
     }
   }
 

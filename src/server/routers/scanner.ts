@@ -18,7 +18,11 @@ export const scannerRouter = createTRPCRouter({
       action: z.enum(['CHECK_IN', ...MEAL_ACTIONS]),
     }))
     .mutation(async () => {
-      return { success: false, message: 'Scanner offline or database migrated.' }
+      return {
+        success: false,
+        message: 'Scanner offline or database migrated.',
+        attendee: null as { firstName: string; lastName: string } | null
+      }
     }),
 
   // Recent scan events

@@ -14,7 +14,7 @@ export default function TestSplinePage() {
     <DashboardClient 
       session={mockSession as any} 
       status="ACCEPTED" 
-      application={null} 
+      team={null} 
     />
   );
 }
