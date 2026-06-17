@@ -18,8 +18,7 @@ export function Navbar({ session }: NavbarProps) {
   
   const navLinks = [
     { label: 'Schedule', href: '/schedule' },
-    { label: 'Sponsors', href: '/sponsor' },
-    { label: 'Apply', href: '/apply' },
+    { label: 'Resources', href: 'https://www.ieeerasmuj.com/unlockd/resources', external: true },
   ]
 
   return (
@@ -46,13 +45,10 @@ export function Navbar({ session }: NavbarProps) {
         {/* Navigation Section - All items centered */}
         <div className="flex items-center gap-1 md:gap-2">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href
-            return (
-              <Link 
-                key={link.label}
-                href={link.href} 
-                className={`text-label-caps !text-[10px] md:!text-[12px] px-3 md:px-5 py-2 md:py-2.5 rounded-full transition-all relative group ${isActive ? '!text-white bg-white/10' : '!text-white/40 hover:!text-white hover:bg-white/5'}`}
-              >
+            const isActive = !link.external && pathname === link.href
+            const className = `text-label-caps !text-[10px] md:!text-[12px] px-3 md:px-5 py-2 md:py-2.5 rounded-full transition-all relative group ${isActive ? '!text-white bg-white/10' : '!text-white/40 hover:!text-white hover:bg-white/5'}`
+            const inner = (
+              <>
                 <span className="hidden sm:inline">{link.label}</span>
                 <span className="sm:hidden">{link.label.slice(0, 3)}</span>
                 {isActive && (
@@ -62,8 +58,12 @@ export function Navbar({ session }: NavbarProps) {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                   />
                 )}
-              </Link>
+              </>
             )
+            if (link.external) {
+              return <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" className={className}>{inner}</a>
+            }
+            return <Link key={link.label} href={link.href} className={className}>{inner}</Link>
           })}
 
           {session?.user ? (

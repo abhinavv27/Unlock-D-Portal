@@ -48,16 +48,19 @@ async function main() {
   // 3. Create default Event blueprints
   const hackathonConfig = {
     stages: [
-      { stage: 1, name: 'Ideation & Wireframing', pointsRequired: 20 },
-      { stage: 2, name: 'Database & Backend Setup', pointsRequired: 30 },
-      { stage: 3, name: 'Frontend & API Integration', pointsRequired: 30 },
-      { stage: 4, name: 'Final Presentation & Polish', pointsRequired: 20 },
+      { stage: 0, name: 'Environment Setup & Architecture', pointsRequired: 10 },
+      { stage: 1, name: 'Core Implementation & API Development', pointsRequired: 20 },
+      { stage: 2, name: 'Feature Integration & UI Polish', pointsRequired: 30 },
+      { stage: 3, name: 'Deployment & Final Presentation', pointsRequired: 40 },
     ],
     rubric: {
-      innovation: 10,
-      technical: 10,
-      presentation: 10,
-      impact: 10,
+      functionality: 10,
+      codeQuality: 10,
+      integration: 10,
+      userExperience: 10,
+      deployment: 10,
+      teamwork: 10,
+      errorHandling: 10,
     },
   }
 

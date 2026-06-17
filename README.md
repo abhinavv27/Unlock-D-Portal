@@ -1,106 +1,40 @@
-# 🌌 RAS Hackathon Portal
+# UNLOCK'D — IEEE RAS MUJ Hackathon Portal
 
-A production-grade, role-based hackathon operations platform serving as the central nervous system for the **IEEE Robotics & Automation Society (RAS) 2026 Hackathon**.
+Role-based operations platform for **UNLOCK'D**, the 24-hour progressive software development challenge by IEEE Robotics & Automation Society, MUJ.
 
----
+## Tech Stack
 
-## ️ Architecture & Tech Stack
-
-Built on a modern, type-safe stack designed for high performance and rapid iteration.
-
-### **1. Core Infrastructure**
 - **Framework:** Next.js 16 (App Router + Turbopack)
 - **Language:** TypeScript (Strict Mode)
-- **Styling:** Tailwind CSS (Customized with CSS variables for dynamic theming)
-- **Authentication:** NextAuth.js v5 — Google/GitHub OAuth + Magic Links
-- **Animation:** Framer Motion & GSAP for high-fidelity UI interactions
+- **Styling:** Tailwind CSS + Framer Motion
+- **Database:** PostgreSQL (Supabase) + Prisma ORM
+- **API:** tRPC + REST endpoints
+- **UI:** Base UI (sliders), custom glassmorphic components
 
-### **2. Data Layer**
-- **Database:** Supabase (Serverless PostgreSQL)
-- **ORM:** Prisma with Supavisor connection pooling
-- **API Transport:** tRPC (End-to-end type-safe API boundaries)
-- **State Management:** React Query (Integrated with tRPC)
+## Portal Features
 
-### **3. Application Domains (Role-Based Workflows)**
-The platform enforces strict RBAC (Role-Based Access Control) across four distinct user groups.
+| Route | Role | Description |
+|-------|------|-------------|
+| `/` | Public | Landing page with event overview, timeline, judging criteria |
+| `/schedule` | Public | 24-hour event schedule (Day 1 + Day 2) |
+| `/login` | Public | Staff (admin/judge) and team login |
+| `/dashboard` | Team | Roadmap tracker (4 progressive stages), current objective, submission with GitHub + Live Demo URLs, resubmit prompt with judge feedback, submission logs |
+| `/judging` | Judge | Live submission queue with time-ago display, 7-criteria scoring (Base UI sliders), GitHub + demo links, approve/reject with feedback, global leaderboard |
+| `/admin/*` | Admin | Team management, project overview, bulk import, schedule editor |
+| `/scanner` | Staff | QR scanner for check-ins |
 
-| Domain | Route | Access Level | Description |
-|--------|-------|--------------|-------------|
-| **Applicant Gateway** | `/apply`, `/dashboard` | `APPLICANT` | Multi-step application wizard, live status tracking, and QR ticket distribution. |
-| **Command Center** | `/admin/*` | `ADMIN` | High-level metrics, pipeline funnels, and bulk application management. |
-| **Judging Arena** | `/judging` | `JUDGE` | Dedicated mobile-friendly portal for grading projects in real-time. |
-| **Logistics/Scanner**| `/scanner` | `STAFF` | Camera-enabled QR scanner for attendee check-ins and meal tracking. |
+## Staff Credentials
 
----
+- Admin: `admin` / `admin123`
+- Judge: `judge` / `judge123`
 
-## 🎨 Design System: "Obsidian Command Center"
+## Local Development
 
-The UI features a dark-mode-first aesthetic with deep purples, glowing accents, and glassmorphic elements, tailored for a high-tech hackathon atmosphere.
+```bash
+npm install
+npx prisma db push
+npm run db:seed
+npm run dev
+```
 
-- **Typography:** `Space Grotesk` (Headings) and `Inter` (Body).
-- **Visuals:** Spline 3D integration and custom radar sweep animations.
-- **Components:** Custom lightweight components replacing bloated external UI libraries.
-
----
-
-##  Local Development Setup
-
-### Prerequisites
-- Node.js 18+
-- Git
-- Supabase Account
-
-### Installation
-
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Environment Setup**
-   Create a `.env` file with your Supabase connection strings:
-   ```bash
-   DATABASE_URL="postgresql://..."
-   DIRECT_URL="postgresql://..."
-   ```
-
-3. **Database Initialization**
-   ```bash
-   npx prisma db push
-   npm run db:seed
-   ```
-
-4. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-   The portal will be live at `http://localhost:3000`.
-
----
-
-## 🛡️ GitHub Workflow
-
-We use a **Feature Branch Workflow** to keep `main` stable.
-
-### **Standard Development Workflow**
-
-1. **Sync with main:**
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-
-2. **Create a feature branch:**
-   ```bash
-   git checkout -b feat/your-feature-name
-   ```
-
-3. **Commit and Push:**
-   ```bash
-   git add .
-   git commit -m "feat: description of changes"
-   git push origin feat/your-feature-name
-   ```
-
-4. **Merge via Pull Request:**
-   Open a PR on GitHub, review changes, and merge into `main`.
+Portal at `http://localhost:3000`. Requires `.env` with `DATABASE_URL` and `DIRECT_URL`.

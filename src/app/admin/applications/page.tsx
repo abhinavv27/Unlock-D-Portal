@@ -6,19 +6,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { api } from '@/trpc/react'
 
-type AppStatus = 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'WAITLISTED' | 'REJECTED' | 'WITHDRAWN' | 'ALL'
-
-const BADGE_MAP: Record<string, string> = {
-  PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  UNDER_REVIEW: 'bg-primary/10 text-primary/80 border-primary/20',
-  ACCEPTED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  WAITLISTED: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
-}
-
 export default function AdminApplicationsPage() {
   const pathname = usePathname()
-  const [filter, setFilter] = useState<AppStatus>('ALL')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -31,22 +20,22 @@ export default function AdminApplicationsPage() {
   }
 
   const { data, isLoading, refetch } = api.application.getAll.useQuery({
-    status: filter,
+    status: 'ALL',
     search: search,
     page: 1,
     limit: 50
   })
 
-  const updateStatusMutation = api.application.updateStatus.useMutation({
+  const removeTeamMutation = api.application.removeTeam.useMutation({
     onSuccess: () => refetch(),
-    onError: (err) => alert(`Error updating status: ${err.message}`),
+    onError: (err) => alert(`Error removing team: ${err.message}`),
   })
-  const bulkUpdateMutation = api.application.bulkUpdateStatus.useMutation({
+  const bulkRemoveMutation = api.application.bulkRemoveTeams.useMutation({
     onSuccess: () => {
       setSelected(new Set())
       refetch()
     },
-    onError: (err) => alert(`Error performing bulk update: ${err.message}`),
+    onError: (err) => alert(`Error removing teams: ${err.message}`),
   })
 
   const filtered = data?.applications ?? []
@@ -156,15 +145,14 @@ export default function AdminApplicationsPage() {
                 >
                   <span className="px-4 text-[10px] font-black text-white/40 uppercase tracking-widest">{selected.size} SELECTED</span>
                   <button
-                    className="px-6 py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), status: 'ACCEPTED' })}
-                    disabled={bulkUpdateMutation.isPending}
-                  >ACCEPT</button>
-                  <button
-                    className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), status: 'REJECTED' })}
-                    disabled={bulkUpdateMutation.isPending}
-                  >REJECT</button>
+                    className="px-6 py-2 bg-rose-900/60 text-rose-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-800/60 transition-colors border border-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      if (window.confirm(`Remove ${selected.size} team(s)? This cannot be undone.`)) {
+                        bulkRemoveMutation.mutate({ ids: Array.from(selected) })
+                      }
+                    }}
+                    disabled={bulkRemoveMutation.isPending}
+                  >REMOVE</button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -185,22 +173,6 @@ export default function AdminApplicationsPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {(['ALL', 'PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'] as AppStatus[]).map(s => (
-                <button
-                  key={s}
-                  id={`filter-${s.toLowerCase()}`}
-                  onClick={() => setFilter(s)}
-                  className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                    filter === s
-                      ? 'border-primary bg-primary text-black shadow-lg shadow-primary/20'
-                      : 'border-white/5 bg-white/5 text-white/40 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {s.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Table Card */}
@@ -219,10 +191,8 @@ export default function AdminApplicationsPage() {
                         />
                       </div>
                     </th>
-                    <th className="p-6 text-label-caps">Applicant</th>
+                    <th className="p-6 text-label-caps">Team</th>
                     <th className="p-6 text-label-caps">University</th>
-                    <th className="p-6 text-label-caps">Major</th>
-                    <th className="p-6 text-label-caps">Status</th>
                     <th className="p-6 text-label-caps">Submitted</th>
                     <th className="p-6 text-label-caps text-right">Operations</th>
                   </tr>
@@ -230,7 +200,7 @@ export default function AdminApplicationsPage() {
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={7} className="p-20 text-center">
+                      <td colSpan={5} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                           <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Synching_Records...</span>
@@ -239,7 +209,7 @@ export default function AdminApplicationsPage() {
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-20 text-center">
+                      <td colSpan={5} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-2 opacity-20">
                           <span className="text-4xl">📁</span>
                           <span className="text-[10px] font-black uppercase tracking-[0.3em]">No_Matching_Entries</span>
@@ -274,39 +244,23 @@ export default function AdminApplicationsPage() {
                         <span className="text-xs font-bold text-white/60 tracking-tight">{app.university}</span>
                       </td>
                       <td className="p-6">
-                        <span className="text-xs font-bold text-white/60 tracking-tight">{app.major}</span>
-                      </td>
-                      <td className="p-6">
-                        <span className={`inline-flex px-3 py-1 rounded-lg text-label-caps !text-[9px] border ${BADGE_MAP[app.status] || 'border-white/10 !text-white/40'}`}>
-                          {app.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="p-6">
                         <span className="text-value-mono !text-white/20">
                           {new Date(app.submittedAt).toLocaleDateString()}
                         </span>
                       </td>
                       <td className="p-6 text-right">
-                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <select
-                            value={app.status}
-                            onChange={(e) => updateStatusMutation.mutate({ 
-                              id: app.id, 
-                              status: e.target.value as Exclude<AppStatus, 'ALL'> 
-                            })}
-                            disabled={updateStatusMutation.isPending}
-                            className="bg-transparent border-none text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest cursor-pointer focus:ring-0 p-0 h-auto w-auto"
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
+                                removeTeamMutation.mutate({ id: app.id })
+                              }
+                            }}
+                            disabled={removeTeamMutation.isPending}
+                            className="text-[10px] font-black text-rose-400/60 hover:text-rose-400 uppercase tracking-widest transition-colors"
                           >
-                            {['PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'].map(s => (
-                              <option key={s} value={s} className="bg-[#050505] text-white">{s.replace('_', ' ')}</option>
-                            ))}
-                          </select>
-                          <Link
-                            href={`/admin/applications/${app.id}`}
-                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors border-l border-white/10 pl-3"
-                          >
-                            View_Profile
-                          </Link>
+                            Remove
+                          </button>
                         </div>
                       </td>
                     </motion.tr>
