@@ -3,12 +3,14 @@ import { applicationRouter } from './application'
 import { judgingRouter } from './judging'
 import { scheduleRouter } from './schedule'
 import { scannerRouter } from './scanner'
+import { authRouter } from './auth'
 
 export const appRouter = createTRPCRouter({
   application: applicationRouter,
   judging: judgingRouter,
   schedule: scheduleRouter,
   scanner: scannerRouter,
+  auth: authRouter,
 })
 
 export type AppRouter = typeof appRouter

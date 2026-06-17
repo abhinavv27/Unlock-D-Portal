@@ -14,12 +14,12 @@ export async function GET(request: Request) {
     }
 
     // 2. Query team submissions and judges' evaluations
-    const submissions = await db.submission.findMany({
+    const rawSubmissions = await db.submission.findMany({
       where: {
         registrationId: team.id,
       },
       include: {
-        evaluation: {
+        evaluations: {
           select: {
             scoreBreakdown: true,
             totalScore: true,
@@ -31,6 +31,49 @@ export async function GET(request: Request) {
       orderBy: {
         submittedAt: 'desc',
       },
+    })
+
+    const submissions = rawSubmissions.map((sub) => {
+      const { evaluations, ...rest } = sub
+      let virtualEvaluation = null
+
+      if (evaluations && evaluations.length > 0) {
+        const count = evaluations.length
+        const totalScoreSum = evaluations.reduce((sum, e) => sum + e.totalScore, 0)
+        const averageTotalScore = Math.round((totalScoreSum / count) * 10) / 10
+
+        const scoreBreakdownAverage: Record<string, number> = {}
+        evaluations.forEach((evaluation: any) => {
+          const breakdown = evaluation.scoreBreakdown as Record<string, number> || {}
+          Object.entries(breakdown).forEach(([key, val]) => {
+            scoreBreakdownAverage[key] = (scoreBreakdownAverage[key] || 0) + Number(val)
+          })
+        })
+        Object.keys(scoreBreakdownAverage).forEach((key) => {
+          scoreBreakdownAverage[key] = Math.round((scoreBreakdownAverage[key] / count) * 10) / 10
+        })
+
+        const feedbacks = evaluations
+          .map((e: any) => e.feedback?.trim())
+          .filter(Boolean)
+        const consolidatedFeedback = feedbacks.join(' | ')
+
+        const latestGradedAt = new Date(
+          Math.max(...evaluations.map((e: any) => new Date(e.gradedAt).getTime()))
+        )
+
+        virtualEvaluation = {
+          totalScore: averageTotalScore,
+          scoreBreakdown: scoreBreakdownAverage,
+          feedback: consolidatedFeedback,
+          gradedAt: latestGradedAt,
+        }
+      }
+
+      return {
+        ...rest,
+        evaluation: virtualEvaluation,
+      }
     })
 
     // 3. Return team status, active event metadata, and submissions logs

@@ -1,15 +1,27 @@
 import { z } from 'zod'
 import { createTRPCRouter, publicProcedure, adminProcedure } from '@/server/trpc'
 
+export interface ScheduleEvent {
+  id: string
+  title: string
+  description?: string | null
+  location?: string | null
+  startTime: Date
+  endTime: Date
+  type: 'GENERAL' | 'WORKSHOP' | 'MEAL' | 'JUDGING' | 'CEREMONY' | 'SPONSOR'
+  isPublic: boolean
+  color?: string | null
+}
+
 export const scheduleRouter = createTRPCRouter({
   // Public: get all public events
   getEvents: publicProcedure.query(async () => {
-    return []
+    return [] as ScheduleEvent[]
   }),
 
   // Admin: get all events (including private)
   getAllEvents: adminProcedure.query(async () => {
-    return []
+    return [] as ScheduleEvent[]
   }),
 
   // Admin: create event
