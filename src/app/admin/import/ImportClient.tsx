@@ -15,9 +15,6 @@ interface EventItem {
 interface ImportResultTeam {
   teamName: string
   passcode: string
-  email: string
-  emailSent: boolean
-  emailError?: string
 }
 
 export default function ImportClient({ session, events }: { session: any; events: EventItem[] }) {
@@ -250,18 +247,15 @@ export default function ImportClient({ session, events }: { session: any; events
                   <thead>
                     <tr className="border-b border-white/5 bg-white/[0.02]">
                       <th className="p-4 text-[9px] uppercase tracking-widest text-white/40 font-mono font-black">Team Name</th>
-                      <th className="p-4 text-[9px] uppercase tracking-widest text-white/40 font-mono font-black">Email</th>
-                      <th className="p-4 text-[9px] uppercase tracking-widest text-white/40 font-mono font-black">Passcode</th>
-                      <th className="p-4 text-[9px] uppercase tracking-widest text-white/40 font-mono font-black text-right">Email Status</th>
+                      <th className="p-4 text-[9px] uppercase tracking-widest text-white/40 font-mono font-black text-right">Passcode</th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.map((team, i) => (
                       <tr key={i} className="border-b border-white/5 hover:bg-white/[0.01] transition-all">
                         <td className="p-4 text-xs font-semibold text-white/90">{team.teamName}</td>
-                        <td className="p-4 text-xs font-mono text-white/50">{team.email}</td>
-                        <td className="p-4 text-xs">
-                          <div className="flex items-center gap-2">
+                        <td className="p-4 text-xs text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <span className="font-mono bg-white/5 px-2.5 py-1 rounded text-primary font-bold">{team.passcode}</span>
                             <button
                               onClick={() => handleCopyPasscode(team.passcode, i)}
@@ -271,20 +265,6 @@ export default function ImportClient({ session, events }: { session: any; events
                               {copiedIndex === i ? 'Copied ✓' : 'Copy'}
                             </button>
                           </div>
-                        </td>
-                        <td className="p-4 text-xs text-right">
-                          {team.emailSent ? (
-                            <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-mono">
-                              SENT
-                            </span>
-                          ) : (
-                            <span
-                              className="inline-block px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-mono cursor-help"
-                              title={team.emailError || 'Failed to connect to Resend API'}
-                            >
-                              FAILED 🛈
-                            </span>
-                          )}
                         </td>
                       </tr>
                     ))}

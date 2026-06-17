@@ -42,7 +42,7 @@ model Registration {
   unstopTeamId  String       @map("unstop_team_id")
   teamName      String       @map("team_name")
   teamPasscode  String       @map("team_passcode")
-  email         String?      @map("email")
+  memberDetails Json?        @map("member_details")
   progressState Json         @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
   registeredAt  DateTime     @default(now()) @map("registered_at")
   submissions   Submission[]
@@ -58,14 +58,14 @@ model Submission {
   payload        Json         // JSONB: dynamic submission payload (e.g. GitHub URL, CTF flag submission)
   status         String       @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED'
   submittedAt    DateTime     @default(now()) @map("submitted_at")
-  evaluation     Evaluation?
+  evaluations    Evaluation[]
 
   @@map("submissions")
 }
 
 model Evaluation {
   id             Int        @id @default(autoincrement())
-  submissionId   Int        @unique @map("submission_id")
+  submissionId   Int        @map("submission_id")
   submission     Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   judgeId        Int        @map("judge_id")
   judge          User       @relation(fields: [judgeId], references: [id], onDelete: Cascade)
@@ -74,5 +74,6 @@ model Evaluation {
   feedback       String
   gradedAt       DateTime   @default(now()) @map("graded_at")
 
+  @@unique([submissionId, judgeId])
   @@map("evaluations")
 }

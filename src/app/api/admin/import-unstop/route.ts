@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     // 4. Parse CSV text
     const csvText = await file.text()
-    let importedTeams: Array<{ teamId: string; teamName: string; email: string }> = []
+    let importedTeams: Array<{ teamId: string; teamName: string; email?: string }> = []
     
     try {
       importedTeams = parseUnstopCSV(csvText)
@@ -82,9 +82,6 @@ export async function POST(request: Request) {
     const generatedTeams: Array<{ 
       teamName: string 
       passcode: string 
-      email: string
-      emailSent: boolean
-      emailError?: string 
     }> = []
 
     // 6. Bulk insert new registrations (skipping duplicate unstopTeamIds)
@@ -107,53 +104,14 @@ export async function POST(request: Request) {
             unstopTeamId: team.teamId,
             teamName: team.teamName,
             teamPasscode: passcode,
-            email: team.email,
+            memberDetails: team.email ? [{ email: team.email }] : [],
             progressState: initialProgress,
           },
         })
 
-        let emailSent = false
-        let emailError = undefined
-
-        if (team.email) {
-          if (resend) {
-            try {
-              const fromAddress = process.env.EMAIL_FROM || 'UnlockD Portal <onboarding@resend.dev>'
-              await resend.emails.send({
-                from: fromAddress,
-                to: team.email,
-                subject: `Passcode for ${team.teamName} - ${event.name}`,
-                html: `
-                  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
-                    <h2 style="color: #4F46E5;">Welcome to ${event.name}!</h2>
-                    <p>Your team, <strong>${team.teamName}</strong>, has been successfully registered.</p>
-                    <p>Use the following 6-digit passcode to log in to the participant portal:</p>
-                    <div style="background-color: #F3F4F6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; border-radius: 6px; margin: 20px 0; color: #111827; border: 1px solid #E5E7EB;">
-                      ${passcode}
-                    </div>
-                    <p>Please share this passcode with your team members. Do not share it with anyone outside your team.</p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-                    <p style="font-size: 12px; color: #6B7280; text-align: center;">This email was automated by the UnlockD Portal.</p>
-                  </div>
-                `
-              })
-              emailSent = true
-            } catch (err: any) {
-              console.error(`Failed to send email to ${team.email}:`, err)
-              emailError = err.message || 'Error sending email via Resend'
-            }
-          } else {
-            console.log(`[SIMULATED EMAIL] To: ${team.email} | Subject: Passcode for ${team.teamName} | Content: Passcode is ${passcode}`)
-            emailSent = true // mock as sent successfully in simulated environment
-          }
-        }
-
         generatedTeams.push({
           teamName: team.teamName,
           passcode,
-          email: team.email,
-          emailSent,
-          emailError,
         })
       }
     }

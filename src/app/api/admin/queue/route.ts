@@ -13,10 +13,15 @@ export async function GET(request: Request) {
       )
     }
 
-    // 2. Query all submissions where status is PENDING
+    // 2. Query submissions where status is PENDING or APPROVED, excluding those graded by the current judge
     const submissions = await db.submission.findMany({
       where: {
-        status: 'PENDING',
+        status: { in: ['PENDING', 'APPROVED'] },
+        evaluations: {
+          none: {
+            judgeId: staff.userId,
+          },
+        },
       },
       include: {
         registration: {

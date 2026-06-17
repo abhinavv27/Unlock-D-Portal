@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { api } from '@/trpc/react'
-import { useSession } from 'next-auth/react'
 import { Scanner } from '@yudiel/react-qr-scanner'
 
 type ScanResult = {
@@ -27,7 +26,7 @@ const ACTIONS: { value: ScanAction; label: string }[] = [
 ]
 
 export default function ScannerPage() {
-  const { data: session } = useSession()
+  const { data: session } = api.auth.getSession.useQuery()
   const [action, setAction] = useState<ScanAction>('CHECK_IN')
   const [manualCode, setManualCode] = useState('')
   const [results, setResults] = useState<ScanResult[]>([])
