@@ -60,6 +60,7 @@ export const judgingRouter = createTRPCRouter({
         return {
           id: reg.id,
           name: reg.teamName,
+          description: `Unstop Team ID: ${reg.unstopTeamId}`,
           tableNumber: reg.unstopTeamId,
           track: { name: reg.event.name },
           judgeCount: 0,

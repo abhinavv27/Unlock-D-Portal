@@ -4,10 +4,10 @@ import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'fra
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
-import { useSession } from 'next-auth/react'
+import { api } from '@/trpc/react'
 
 export default function SponsorPage() {
-  const { data: session } = useSession()
+  const { data: session } = api.auth.getSession.useQuery()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   

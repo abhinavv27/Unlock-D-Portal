@@ -9,11 +9,11 @@ import SplineRobot from '@/components/SplineRobot'
 import dynamic from 'next/dynamic'
 const DeepSpaceScene = dynamic(() => import('@/components/DeepSpaceScene').then(mod => mod.DeepSpaceScene), { ssr: false })
 import { RadarSweep } from '@/components/RadarSweep'
-import { useSession } from 'next-auth/react'
+import { api } from '@/trpc/react'
 import gsap from 'gsap'
 
 export default function LandingPage() {
-  const { data: session } = useSession()
+  const { data: session } = api.auth.getSession.useQuery()
   const [mounted, setMounted] = useState(false)
   const [splineLoaded, setSplineLoaded] = useState(false)
   const [progress, setProgress] = useState(0)

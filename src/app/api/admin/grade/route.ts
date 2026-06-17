@@ -51,9 +51,24 @@ export async function POST(request: Request) {
       )
     }
 
-    if (submission.status !== 'PENDING') {
+    // Check if the current judge has already evaluated this submission
+    const existingEvaluation = await db.evaluation.findFirst({
+      where: {
+        submissionId: submission.id,
+        judgeId: staff.userId,
+      },
+    })
+
+    if (existingEvaluation) {
       return NextResponse.json(
-        { error: 'This submission has already been graded and closed.' },
+        { error: 'You have already evaluated this submission.' },
+        { status: 400 }
+      )
+    }
+
+    if (submission.status !== 'PENDING' && submission.status !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'This submission is not open for grading (already rejected or finalized).' },
         { status: 400 }
       )
     }
@@ -80,38 +95,59 @@ export async function POST(request: Request) {
         },
       })
 
+      // Determine new submission status (keep APPROVED if it was already APPROVED)
+      const nextStatus = submission.status === 'APPROVED' ? 'APPROVED' : gradeStatus
+
       // Update submission status
       await tx.submission.update({
         where: { id: submission.id },
-        data: { status: gradeStatus },
+        data: { status: nextStatus },
       })
 
-      // Update team progress if approved
-      if (gradeStatus === 'APPROVED') {
-        const reg = submission.registration
-        const eventConfig = reg.event.config as any
-        const stages = eventConfig?.stages || []
-        const maxStage = stages.length > 0 ? Math.max(...stages.map((s: any) => s.stage)) : 4
+      const reg = submission.registration
+      const eventConfig = reg.event.config as any
+      const stages = eventConfig?.stages || []
+      const maxStage = stages.length > 0 ? Math.max(...stages.map((s: any) => s.stage)) : 4
 
-        const stateObj = reg.progressState as any
-        const currentStage = stateObj?.current_stage || 1
-        const currentScore = stateObj?.score || 0
+      const stateObj = reg.progressState as any
+      const currentStage = stateObj?.current_stage || 1
 
-        // Advance to next stage unless max stage is reached
-        const nextStage = currentStage < maxStage ? currentStage + 1 : currentStage
+      // Advance stage only if the submission was PENDING and the new grade is APPROVED
+      const nextStage = (submission.status === 'PENDING' && gradeStatus === 'APPROVED')
+        ? (currentStage < maxStage ? currentStage + 1 : currentStage)
+        : currentStage
 
-        const updatedProgress = {
-          ...stateObj,
-          current_stage: nextStage,
-          score: currentScore + totalScore,
-          updated_at: new Date().toISOString(),
+      // Query all approved submissions of this team to calculate the updated cumulative score
+      const approvedSubmissions = await tx.submission.findMany({
+        where: {
+          registrationId: reg.id,
+          status: 'APPROVED',
+        },
+        include: {
+          evaluations: true,
+        },
+      })
+
+      let cumulativeScore = 0
+      for (const approvedSub of approvedSubmissions) {
+        const evals = approvedSub.evaluations
+        if (evals.length > 0) {
+          const avgScore = evals.reduce((sum, e) => sum + e.totalScore, 0) / evals.length
+          cumulativeScore += Math.round(avgScore * 10) / 10
         }
-
-        await tx.registration.update({
-          where: { id: reg.id },
-          data: { progressState: updatedProgress },
-        })
       }
+
+      const updatedProgress = {
+        ...stateObj,
+        current_stage: nextStage,
+        score: cumulativeScore,
+        updated_at: new Date().toISOString(),
+      }
+
+      await tx.registration.update({
+        where: { id: reg.id },
+        data: { progressState: updatedProgress },
+      })
     })
 
     return NextResponse.json({

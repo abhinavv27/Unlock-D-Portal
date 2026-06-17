@@ -1,51 +1,47 @@
-import NextAuth, { type DefaultSession } from 'next-auth'
-import Google from 'next-auth/providers/google'
-import GitHub from 'next-auth/providers/github'
-import Resend from 'next-auth/providers/resend'
-import { PrismaAdapter } from '@auth/prisma-adapter'
+import { cookies } from 'next/headers'
+import { decryptToken } from '@/lib/auth-utils'
 import { db } from '@/server/db'
-import { Role } from '@prisma/client'
-
-export const { handlers, signIn, signOut, auth: actualAuth } = NextAuth({
-  adapter: PrismaAdapter(db),
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID || 'mock',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'mock',
-    }),
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID || 'mock',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || 'mock',
-    }),
-    Resend({
-      apiKey: process.env.RESEND_API_KEY || 'mock',
-      from: process.env.EMAIL_FROM ?? 'noreply@rasportal.com',
-    }),
-  ],
-  callbacks: {
-    session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id
-        session.user.role = (user as any).role as Role
-      }
-      return session
-    },
-  },
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
-})
 
 export const auth = async () => {
-  return {
-    user: {
-      id: "mock-admin-id",
-      name: "Mock Admin",
-      email: "admin@ras.test",
-      role: "SUPER_ADMIN" as Role,
-      image: "https://github.com/shadcn.png", // Added for UI consistency
-    },
-    expires: "9999-12-31T23:59:59.999Z",
+  try {
+    const cookieStore = await cookies()
+    const staffToken = cookieStore.get('staff_token')?.value
+    const teamToken = cookieStore.get('team_token')?.value
+
+    if (staffToken) {
+      const decoded = decryptToken(staffToken)
+      if (decoded && decoded.userId && decoded.role) {
+        return {
+          user: {
+            id: String(decoded.userId),
+            name: decoded.username,
+            email: `${decoded.username}@ras.test`,
+            role: decoded.role as string, // 'ADMIN' or 'JUDGE'
+          },
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        }
+      }
+    }
+
+    if (teamToken) {
+      const team = await db.registration.findUnique({
+        where: { id: teamToken },
+      })
+      if (team) {
+        return {
+          user: {
+            id: team.id,
+            name: team.teamName,
+            email: "",
+            role: "TEAM",
+          },
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        }
+      }
+    }
+  } catch (error) {
+    console.error("auth helper error:", error)
   }
+
+  return null
 }

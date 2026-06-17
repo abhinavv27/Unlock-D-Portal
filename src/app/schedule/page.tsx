@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useScroll, useSpring, useTransform } from 'fra
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
-import { useSession } from 'next-auth/react'
+import { api } from '@/trpc/react'
 
 const EVENTS = [
   { time: 'Fri 6:00 PM', title: 'Registration', location: 'Main Hall', type: 'GENERAL', detail: 'Check-in and welcome package distribution.', icon: 'M15 7l-3-3m0 0l-3 3m3-3v12' },
@@ -31,7 +31,7 @@ const TYPE_CONFIG: Record<string, { color: string, bg: string, border: string }>
 }
 
 export default function SchedulePage() {
-  const { data: session } = useSession()
+  const { data: session } = api.auth.getSession.useQuery()
   const [mounted, setMounted] = useState(false)
   const [activeDay, setActiveDay] = useState('Friday')
   const { scrollYProgress } = useScroll()
