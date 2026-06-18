@@ -96,7 +96,15 @@ export default function JudgingPage() {
 
   useEffect(() => {
     setMounted(true)
-    const token = localStorage.getItem('staff_token')
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+
     if (!token) {
       router.push('/login')
       return
