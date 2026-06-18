@@ -128,6 +128,120 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   // Find the most recent rejected submission for resubmit prompt
   const lastRejected = team?.submissions?.find((sub: any) => sub.status === 'REJECTED')
 
+  if (team?.allowedTaskId === 'WAITING_ROOM') {
+    return (
+      <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
+        {/* Background Layer */}
+        <motion.div 
+          style={{ y: backgroundY }}
+          className="fixed inset-0 pointer-events-none z-0"
+        >
+          <div className="mesh-gradient !opacity-25">
+            <div className="mesh-blob w-[1200px] h-[1200px] bg-primary top-[-10%] left-[-10%]" />
+            <div className="mesh-blob w-[1000px] h-[1000px] bg-primary/40 bottom-[-10%] right-[-10%]" />
+          </div>
+          <div className="absolute inset-0 neural-grid opacity-[0.03]" />
+          <SplineRobot />
+        </motion.div>
+
+        <Navbar session={session as any} />
+
+        <div className="max-w-4xl mx-auto px-4 md:px-8 pt-32 md:pt-48 pb-16 relative z-10 flex flex-col items-center justify-center min-h-[80vh]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as any }}
+            className="w-full glass-premium rounded-3xl md:rounded-[2.5rem] p-8 md:p-14 border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] text-center relative overflow-hidden space-y-8"
+          >
+            {/* Ambient glows inside card */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/25 blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 blur-[80px] pointer-events-none" />
+
+            <div className="flex flex-col items-center gap-4">
+              <span className="px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-mono tracking-widest border border-amber-500/20 uppercase animate-pulse">
+                ⏳ Synchronized Waiting Room
+              </span>
+              <h1 className="text-5xl md:text-7xl font-display font-black leading-tight text-white uppercase tracking-tight">
+                Round 1 <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+                  Completed.
+                </span>
+              </h1>
+              <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
+                Excellent work, <strong>{team.teamName}</strong>! Your team has successfully submitted and passed all milestones for Round 1. You are currently in the workspace waiting room.
+              </p>
+            </div>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center">
+                <span className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Cumulative Score</span>
+                <span className="text-4xl md:text-5xl font-mono font-bold text-primary mt-2">
+                  {team.progressState?.score || 0} pts
+                </span>
+              </div>
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center">
+                <span className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Global Status</span>
+                <span className="text-sm font-bold text-emerald-400 mt-3 uppercase tracking-wider">
+                  Waiting for Round 2
+                </span>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white/[0.01] border border-white/5 text-xs text-white/45 max-w-lg mx-auto leading-relaxed">
+              💡 <strong>System Notice:</strong> Progression in this event is synchronized. The administrator must advance the global event ceiling before you can access Round 2 objectives.
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-4 pt-4">
+              <button 
+                onClick={() => window.location.reload()}
+                className="btn-vibrant !py-3 !px-8 text-xs font-semibold rounded-xl"
+              >
+                🔄 Refresh Status
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="btn-ghost !py-3 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20"
+              >
+                DISCONNECT
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Submission logs of completed tasks */}
+          {team.submissions && team.submissions.length > 0 && (
+            <div className="w-full mt-12 space-y-6">
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl text-white/60 font-display uppercase tracking-wider">Approved Milestones</h3>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {team.submissions.filter((s: any) => s.status === 'APPROVED').map((sub: any) => (
+                  <div key={sub.id} className="p-6 rounded-2xl glass-premium border border-white/5 flex flex-col justify-between gap-4">
+                    <div>
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
+                        {sub.taskId}
+                      </span>
+                      <p className="text-xs text-white/50 mt-4 font-mono">
+                        Approved on {new Date(sub.submittedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {sub.evaluation && (
+                      <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-[10px] text-white/40 font-mono">Judge Score</span>
+                        <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
       
@@ -271,14 +385,30 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     The next round has started, but unfortunately your team was not selected to advance. Thank you for participating!
                   </p>
                 </div>
-              ) : team && team.inWaitingRoom ? (
-                <div className="mt-10 p-10 rounded-2xl bg-blue-950/20 border border-blue-500/20 flex flex-col items-center text-center space-y-4">
-                  <h3 className="text-3xl font-display font-medium text-blue-400">
-                    Waiting Room
-                  </h3>
-                  <p className="text-sm text-blue-200/80 leading-relaxed font-mono max-w-md">
-                    Congratulations on finishing the round early! Hang tight, the next round has not started yet.
-                  </p>
+              ) : team && team.allowedTaskId === 'WAITING_ROOM' ? (
+                <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
+                  <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 text-center max-w-xl mx-auto space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto text-primary text-3xl animate-pulse">
+                      ⏳
+                    </div>
+                    <h3 className="text-2xl font-display font-medium text-white">Waiting Room</h3>
+                    <p className="text-sm text-white/50 leading-relaxed">
+                      Salutations! Your team has completed the requirements for the current round early.
+                      Please wait here in the workspace nexus until the administrator lifts the global ceiling and unlocks the next round.
+                    </p>
+                  </div>
+                </div>
+              ) : team && team.allowedTaskId === 'COMPLETED' ? (
+                <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
+                  <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 text-center max-w-xl mx-auto space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-400 text-3xl">
+                      🏆
+                    </div>
+                    <h3 className="text-2xl font-display font-medium text-white">Event Completed</h3>
+                    <p className="text-sm text-white/50 leading-relaxed">
+                      Congratulations! Your team has completed all challenges and tasks for this event!
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <>

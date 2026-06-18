@@ -6,8 +6,8 @@ import { getTeamStatus } from '@/lib/state-engine'
 export async function GET(request: Request) {
   try {
     // 1. Validate staff authentication (requires ADMIN or JUDGE)
-    const staff = getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'JUDGE' && staff.role !== 'ADMIN')) {
+    const staff = await getStaffFromRequest(request)
+    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
       return NextResponse.json(
         { error: 'Unauthorized. Judge or Admin access required.' },
         { status: 401 }

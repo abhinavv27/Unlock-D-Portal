@@ -195,7 +195,7 @@ export const applicationRouter = createTRPCRouter({
     if (!activeEvent) return null
 
     const config = (activeEvent.config as any) || {}
-    const currentRound = config.currentRound !== undefined ? Number(config.currentRound) : 0
+    const currentRound = config.currentRound !== undefined ? Number(config.currentRound) : activeEvent.currentGlobalRound
 
     return {
       id: activeEvent.id,
@@ -228,7 +228,10 @@ export const applicationRouter = createTRPCRouter({
 
       await ctx.db.event.update({
         where: { id: activeEvent.id },
-        data: { config: updatedConfig }
+        data: { 
+          config: updatedConfig,
+          currentGlobalRound: input.round
+        }
       })
 
       return { success: true, currentRound: input.round }

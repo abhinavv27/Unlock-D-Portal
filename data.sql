@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS events (
   name VARCHAR(255) NOT NULL,
   event_type VARCHAR(50) NOT NULL,
   config JSONB NOT NULL,
+  current_global_round INT NOT NULL DEFAULT 1,
   is_active BOOLEAN DEFAULT TRUE 
 );
 
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   team_passcode VARCHAR(50) NOT NULL,
   progress_state JSONB NOT NULL DEFAULT '{}'::jsonb,
   member_details JSONB,
+  total_score DOUBLE PRECISION DEFAULT 0.0,
   registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT fk_registrations_event
@@ -40,9 +42,13 @@ CREATE TABLE IF NOT EXISTS registrations (
 CREATE TABLE IF NOT EXISTS submissions (
   id SERIAL PRIMARY KEY,
   registration_id UUID NOT NULL,
+  round_number INT NOT NULL, 
+  task_id VARCHAR(100) NOT NULL, -- '1a', 'feature-auth'
   payload JSONB NOT NULL,
   status VARCHAR(50) DEFAULT 'PENDING',
-  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Added missing comma
+  average_score DOUBLE PRECISION,
+  rejection_reason TEXT,
+  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT fk_submissions_registration
     FOREIGN KEY (registration_id)
@@ -78,12 +84,13 @@ VALUES
     ('judge_dinesh_sir', '$2a$10$K7b...', 'JUDGE')
 ON CONFLICT (username) DO NOTHING;
 
-INSERT INTO events (slug, name, event_type, config, is_active) 
+INSERT INTO events (slug, name, event_type, config, current_global_round, is_active) 
 VALUES (
     'unlockd-2024', 
     'Unlock''D', 
     'PROGRESSIVE_PRODUCT_BUILDING_EVENT', 
-    '{"total_rounds": 3, "rubric": ["functionality", "code_quality", "ux"]}'::jsonb, 
+    '{"total_rounds": 3, "passing_threshold": 60, "roadmap": [{"step": 1, "task_id": "FEATURE-1", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 2, "task_id": "FEATURE-2", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 3, "task_id": "FEATURE-3", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 4, "task_id": "ROUND-2", "round": 2, "rubric": ["ux", "polish", "innovation"]}, {"step": 5, "task_id": "ROUND-3", "round": 3, "rubric": ["presentation", "business_viability"]}]}'::jsonb, 
+    1,
     TRUE
 )
 ON CONFLICT (slug) DO NOTHING;

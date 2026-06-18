@@ -11,7 +11,7 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 export async function POST(request: Request) {
   try {
     // 1. Authenticate and authorize (Admin only)
-    const staff = getStaffFromRequest(request)
+    const staff = await getStaffFromRequest(request)
     if (!staff || staff.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized. Staff Admin access required.' },
@@ -31,17 +31,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const eventId = z.coerce.number().int().positive().safeParse(eventIdStr)
-    if (!eventId.success) {
+    const eventIdParsed = z.coerce.number().int().positive().safeParse(eventIdStr)
+    if (!eventIdParsed.success) {
       return NextResponse.json(
         { error: 'Invalid eventId format. Must be a positive integer.' },
         { status: 400 }
       )
     }
+    const eventId = eventIdParsed.data
 
     // 3. Verify event exists
     const event = await db.event.findUnique({
-      where: { id: eventId.data },
+      where: { id: eventId },
     })
 
     if (!event) {

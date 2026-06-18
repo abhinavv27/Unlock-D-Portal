@@ -45,7 +45,6 @@ async function main() {
   console.log(`- Admin: username "admin", password "admin123"`)
   console.log(`- Judge: username "judge", password "judge123"`)
 
-  // 3. Create default Event blueprints
   const hackathonConfig = {
     currentRound: 0,
     stages: [
@@ -54,15 +53,16 @@ async function main() {
       { stage: 2, name: 'Optimisation & Open Innovation', pointsRequired: 30 },
       { stage: 3, name: 'Final Demonstration & Evaluation', pointsRequired: 40 },
     ],
-    rubric: {
-      functionality: 10,
-      codeQuality: 10,
-      integration: 10,
-      userExperience: 10,
-      deployment: 10,
-      teamwork: 10,
-      errorHandling: 10,
-    },
+    total_rounds: 3,
+    passing_threshold: 60,
+    roadmap: [
+      { step: 1, task_id: 'ROUND-0', round: 0, rubric: ['setup'] },
+      { step: 2, task_id: 'FEATURE-1', round: 1, rubric: ['functionality', 'code_quality'] },
+      { step: 3, task_id: 'FEATURE-2', round: 1, rubric: ['functionality', 'code_quality'] },
+      { step: 4, task_id: 'FEATURE-3', round: 1, rubric: ['functionality', 'code_quality'] },
+      { step: 5, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'] },
+      { step: 6, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'] },
+    ],
   }
 
   const ctfConfig = {

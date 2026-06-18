@@ -4,8 +4,8 @@ import { getStaffFromRequest } from '@/lib/auth-utils'
 
 export async function GET(request: Request) {
   try {
-    const staff = getStaffFromRequest(request)
-    if (!staff || staff.role !== 'JUDGE') {
+    const staff = await getStaffFromRequest(request)
+    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
       return NextResponse.json(
         { error: 'Unauthorized.' },
         { status: 401 }

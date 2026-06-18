@@ -108,7 +108,7 @@ export function verifyPassword(password: string, storedHash: string): Promise<bo
 /**
  * Extracts and decrypts the staff session from request headers.
  */
-export function getStaffFromRequest(request: Request): { userId: number; username: string; role: 'ADMIN' | 'JUDGE' } | null {
+export async function getStaffFromRequest(request: Request): Promise<{ userId: number; username: string; role: 'ADMIN' | 'JUDGE' } | null> {
   let token: string | null = null
 
   // 1. Check Authorization header
@@ -132,6 +132,12 @@ export function getStaffFromRequest(request: Request): { userId: number; usernam
 
   const decoded = decryptToken(token)
   if (!decoded || !decoded.role || !decoded.userId) return null
+
+  const userExists = await db.user.findUnique({
+    where: { id: decoded.userId }
+  })
+  if (!userExists) return null
+
   return decoded as { userId: number; username: string; role: 'ADMIN' | 'JUDGE' }
 }
 
