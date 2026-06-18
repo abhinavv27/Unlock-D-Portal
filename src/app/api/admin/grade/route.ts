@@ -66,9 +66,9 @@ export async function POST(request: Request) {
       )
     }
 
-    if (submission.status !== 'PENDING') {
+    if (submission.status !== 'PENDING' && submission.status !== 'APPROVED' && submission.status !== 'REJECTED') {
       return NextResponse.json(
-        { error: 'Submission is not in PENDING status.' },
+        { error: 'Submission is not in a gradable status.' },
         { status: 400 }
       )
     }
