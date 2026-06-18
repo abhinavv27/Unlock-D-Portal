@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 const gradeSchema = z.object({
   submissionId: z.union([z.number(), z.string().transform(Number)]),
-  scoreBreakdown: z.record(z.union([z.number(), z.string()])),
+  scoreBreakdown: z.record(z.string(), z.union([z.number(), z.string()])),
   feedback: z.string().max(2000),
   status: z.enum(['APPROVED', 'REJECTED']).optional().default('APPROVED'),
 })
@@ -14,8 +14,8 @@ const gradeSchema = z.object({
 export async function POST(request: Request) {
   try {
     // 1. Validate staff credentials (ADMIN or JUDGE)
-    const staff = getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'JUDGE' && staff.role !== 'ADMIN')) {
+    const staff = await getStaffFromRequest(request)
+    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
       return NextResponse.json(
         { error: 'Unauthorized. Judge or Admin credentials required.' },
         { status: 401 }
@@ -45,9 +45,11 @@ export async function POST(request: Request) {
 
     const { submissionId, scoreBreakdown, feedback, status: gradeStatus } = parsed.data
 
+    const numSubId = Number(submissionId)
+
     // 3. Retrieve submission details
     const submission = await db.submission.findUnique({
-      where: { id: Number(submissionId) },
+      where: { id: numSubId },
       include: {
         registration: {
           include: {
@@ -64,10 +66,17 @@ export async function POST(request: Request) {
       )
     }
 
+    if (submission.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'Submission is not in PENDING status.' },
+        { status: 400 }
+      )
+    }
+
     // Check if the current judge has already evaluated this submission
     const existingEvaluation = await db.evaluation.findFirst({
       where: {
-        submissionId: submission.id,
+        submissionId: numSubId,
         judgeId: staff.userId,
       },
     })
@@ -75,13 +84,6 @@ export async function POST(request: Request) {
     if (existingEvaluation) {
       return NextResponse.json(
         { error: 'You have already evaluated this submission.' },
-        { status: 400 }
-      )
-    }
-
-    if (submission.status !== 'PENDING' && submission.status !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'This submission is not open for grading (already rejected or finalized).' },
         { status: 400 }
       )
     }
@@ -100,67 +102,85 @@ export async function POST(request: Request) {
       // Create evaluation report
       await tx.evaluation.create({
         data: {
-          submissionId: submission.id,
+          submissionId: numSubId,
           judgeId: staff.userId,
-          scoreBreakdown,
+          scoreBreakdown: scoreBreakdown as any,
           totalScore,
           feedback,
         },
       })
 
-      // Determine new submission status (keep APPROVED if it was already APPROVED)
-      const nextStatus = submission.status === 'APPROVED' ? 'APPROVED' : gradeStatus
-
-      // Update submission status
-      await tx.submission.update({
-        where: { id: submission.id },
-        data: { 
-          status: nextStatus,
-          rejectionReason: gradeStatus === 'REJECTED' ? feedback : null,
-        },
+      // Fetch all evaluations for this submission to calculate average
+      const evaluations = await tx.evaluation.findMany({
+        where: { submissionId: numSubId },
       })
 
-      const reg = submission.registration
+      const totalScoreSum = evaluations.reduce((sum, e) => sum + e.totalScore, 0)
+      const averageScore = Math.round((totalScoreSum / evaluations.length) * 10) / 10
 
-      // Calculate dynamic allowed state using the state engine (passing transaction client)
-      const teamStatus = await getTeamStatus(reg.id, tx as any)
+      // Read passing_threshold from config
+      const eventConfig = submission.registration.event.config as any
+      const roadmap = eventConfig?.roadmap || []
+      const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
+      const rubric = stepObj?.rubric || ['functionality', 'code_quality']
+      const maxScore = rubric.length * 10
+      const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
+      const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
-      // Query all approved submissions of this team to calculate the updated cumulative score
-      const approvedSubmissions = await tx.submission.findMany({
-        where: {
-          registrationId: reg.id,
-          status: 'APPROVED',
-        },
-        include: {
-          evaluations: true,
-        },
-      })
+      let finalStatus: 'APPROVED' | 'REJECTED'
+      let rejectionReason: string | null = null
 
-      let cumulativeScore = 0
-      for (const approvedSub of approvedSubmissions) {
-        const evals = approvedSub.evaluations
-        if (evals.length > 0) {
-          const avgScore = evals.reduce((sum, e) => sum + e.totalScore, 0) / evals.length
-          cumulativeScore += Math.round(avgScore * 10) / 10
-        }
+      if (averageScore >= passingThresholdScore) {
+        finalStatus = 'APPROVED'
+      } else {
+        finalStatus = 'REJECTED'
+        rejectionReason = evaluations
+          .map((e) => e.feedback?.trim())
+          .filter(Boolean)
+          .join(' | ')
       }
 
-      const stateObj = reg.progressState as any
+      await tx.submission.update({
+        where: { id: numSubId },
+        data: {
+          status: finalStatus,
+          averageScore,
+          rejectionReason,
+        },
+      })
+
+      // Fetch new state engine status using transaction client
+      const teamStatus = await getTeamStatus(submission.registrationId, tx as any)
+
+      // Fetch cumulative totalScore for registration from all APPROVED submissions
+      const approvedSubs = await tx.submission.findMany({
+        where: {
+          registrationId: submission.registrationId,
+          status: 'APPROVED',
+        },
+      })
+      const cumulativeScore = approvedSubs.reduce((sum, s) => sum + (s.averageScore || 0), 0)
+      const roundedCumulative = Math.round(cumulativeScore * 10) / 10
+
+      const stateObj = submission.registration.progressState as any || {}
       const updatedProgress = {
         ...stateObj,
         current_stage: teamStatus.allowedRound,
-        score: cumulativeScore,
+        score: roundedCumulative,
         updated_at: new Date().toISOString(),
       }
 
       await tx.registration.update({
-        where: { id: reg.id },
-        data: { progressState: updatedProgress },
+        where: { id: submission.registrationId },
+        data: {
+          totalScore: roundedCumulative,
+          progressState: updatedProgress,
+        },
       })
     })
 
     return NextResponse.json({
-      message: `Submission graded successfully as ${gradeStatus}.`,
+      message: `Submission graded successfully.`,
       totalScore,
     })
   } catch (error: any) {

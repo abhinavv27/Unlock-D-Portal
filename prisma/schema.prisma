@@ -24,13 +24,14 @@ model User {
 }
 
 model Event {
-  id            Int            @id @default(autoincrement())
-  slug          String         @unique
-  name          String
-  eventType     String         @map("event_type") // e.g., 'PROGRESSIVE_HACKATHON', 'CTF'
-  config        Json // JSONB: stores rules, stages, grading rubrics, etc.
-  isActive      Boolean        @default(true) @map("is_active")
-  registrations Registration[]
+  id                 Int            @id @default(autoincrement())
+  slug               String         @unique
+  name               String
+  eventType          String         @map("event_type") // e.g., 'PROGRESSIVE_HACKATHON', 'CTF'
+  config             Json // JSONB: stores rules, stages, grading rubrics, etc.
+  currentGlobalRound Int            @default(1) @map("current_global_round")
+  isActive           Boolean        @default(true) @map("is_active")
+  registrations      Registration[]
 
   @@map("events")
 }
@@ -44,6 +45,7 @@ model Registration {
   teamPasscode  String       @map("team_passcode")
   memberDetails Json?        @map("member_details")
   progressState Json         @default("{}") @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
+  totalScore    Float        @default(0.0) @map("total_score")
   registeredAt  DateTime     @default(now()) @map("registered_at")
   submissions   Submission[]
 
@@ -60,6 +62,7 @@ model Submission {
   rejectionReason String?      @map("rejection_reason")
   payload         Json // JSONB: dynamic submission payload (e.g. GitHub URL, CTF flag submission)
   status          String       @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED'
+  averageScore    Float?       @map("average_score")
   submittedAt     DateTime     @default(now()) @map("submitted_at")
   evaluations     Evaluation[]
 

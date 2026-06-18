@@ -23,22 +23,32 @@ export const teamsRouter = createTRPCRouter({
         })
       }
 
-      // Check if team is in the waiting room
+      // Check if team did not advance (eliminated)
       const rawTeam = await ctx.db.registration.findUniqueOrThrow({
         where: { id: ctx.team.id },
         include: { event: true }
       })
       const eventConfig = (rawTeam.event.config as any) || {}
-      const eventRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 0
+      const eventRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : (rawTeam.event as any).currentGlobalRound
+
       if (status.allowedRound < eventRound) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Your team did not advance to the next round.',
         })
-      } else if (status.allowedRound > eventRound) {
+      }
+
+      if (status.allowedTaskId === 'WAITING_ROOM') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'The next round has not started yet.',
+          message: 'You have reached the global ceiling for the current round. Please wait in the waiting room.',
+        })
+      }
+
+      if (status.allowedTaskId === 'COMPLETED') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You have already completed all tasks for this event.',
         })
       }
 
@@ -167,7 +177,7 @@ export const teamsRouter = createTRPCRouter({
     const progressState = {
       ...(rawTeam.progressState as any || {}),
       current_stage: statusResult.allowedRound,
-      score: (rawTeam.progressState as any)?.score || 0,
+      score: rawTeam.totalScore,
     }
 
     return {

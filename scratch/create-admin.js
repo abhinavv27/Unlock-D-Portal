@@ -22,18 +22,15 @@ async function run() {
   console.log('Admin user upserted:', admin.username);
 
   const hackathonConfig = {
-    stages: [
-      { stage: 1, name: 'Ideation & Wireframing', pointsRequired: 20 },
-      { stage: 2, name: 'Database & Backend Setup', pointsRequired: 30 },
-      { stage: 3, name: 'Frontend & API Integration', pointsRequired: 30 },
-      { stage: 4, name: 'Final Presentation & Polish', pointsRequired: 20 },
+    total_rounds: 3,
+    passing_threshold: 60,
+    roadmap: [
+      { step: 1, task_id: 'FEATURE-1', round: 1, rubric: ['functionality', 'code_quality'] },
+      { step: 2, task_id: 'FEATURE-2', round: 1, rubric: ['functionality', 'code_quality'] },
+      { step: 3, task_id: 'FEATURE-3', round: 1, rubric: ['functionality', 'code_quality'] },
+      { step: 4, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'] },
+      { step: 5, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'] },
     ],
-    rubric: {
-      innovation: 10,
-      technical: 10,
-      presentation: 10,
-      impact: 10,
-    },
   };
 
   const event = await prisma.event.upsert({

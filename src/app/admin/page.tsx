@@ -1,6 +1,7 @@
 import { auth } from '@/server/auth'
 import { redirect } from 'next/navigation'
 import { api } from '@/trpc/server'
+import { db } from '@/server/db'
 import AdminClient from './AdminClient'
 
 export const metadata = { title: 'Admin Hub | IEEE RAS 2026' }
@@ -9,6 +10,10 @@ export default async function AdminPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
   if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role as string)) redirect('/dashboard')
+
+  const activeEvent = await db.event.findFirst({
+    where: { isActive: true },
+  })
 
   const { total, pending, accepted, rejected, under_review, waitlisted } = await api.application.pipelineStats()
   const totalSubmissionsCount = accepted + pending
@@ -28,7 +33,7 @@ export default async function AdminPage() {
   ]
 
   return (
-    <AdminClient session={session} stats={stats} funnel={funnel} />
+    <AdminClient session={session} stats={stats} funnel={funnel} activeEvent={activeEvent} />
   )
 }
 
