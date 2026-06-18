@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
-import { verifyPassword, encryptToken } from '@/lib/auth-utils'
+import { verifyPassword, encryptToken, hashPassword } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 
@@ -41,6 +41,19 @@ export async function POST(request: Request) {
         { error: 'Invalid username or password.' },
         { status: 401 }
       )
+    }
+
+    // Auto re-hash legacy passwords using modern iterations count
+    if (!user.passwordHash.startsWith('600000:')) {
+      try {
+        const newHash = await hashPassword(password)
+        await db.user.update({
+          where: { id: user.id },
+          data: { passwordHash: newHash },
+        })
+      } catch (err) {
+        console.error('Failed to auto re-hash legacy password:', err)
+      }
     }
 
     // Generate stateless token with user ID and systemRole (ADMIN or JUDGE)

@@ -65,10 +65,12 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
       }
     }
   } else if (teamToken) {
-    const team = await db.registration.findUnique({
+    const dbSession = await db.session.findUnique({
       where: { id: teamToken },
+      include: { registration: true },
     })
-    if (team) {
+    if (dbSession && dbSession.expiresAt > new Date()) {
+      const team = dbSession.registration
       session = {
         user: {
           id: team.id,
@@ -76,7 +78,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
           email: '',
           role: 'TEAM',
         },
-        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        expires: dbSession.expiresAt.toISOString(),
       }
     }
   }
