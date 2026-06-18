@@ -39,8 +39,13 @@ export default function TeamDetailPage() {
   const router = useRouter()
   const id = params?.id as string
 
-  const { data, isLoading, error } = api.application.getById.useQuery({ id })
+  const { data, isLoading, error, refetch } = api.application.getById.useQuery({ id })
   const [openRounds, setOpenRounds] = useState<Record<number, boolean>>({ 0: true })
+  const currentApproval = (data?.progressState as any)?.manualStatus || null
+  const approveMutation = api.application.updateStatus.useMutation({
+    onSuccess: () => refetch(),
+    onError: (err) => alert(`Error: ${err.message}`),
+  })
 
   const toggleRound = (r: number) =>
     setOpenRounds(prev => ({ ...prev, [r]: !prev[r] }))
@@ -158,6 +163,22 @@ export default function TeamDetailPage() {
             <span>Passcode: {data.teamPasscode}</span>
             <span>Event: {data.eventName}</span>
             {data.memberDetails && <span>Members: {String(Object.keys(data.memberDetails as object).length)}</span>}
+          </div>
+          <div className="flex gap-3 pt-2 border-t border-white/5">
+            <button
+              onClick={() => {
+                const newStatus = currentApproval === 'APPROVED_FOR_NEXT' ? 'NONE' : 'APPROVED_FOR_NEXT'
+                approveMutation.mutate({ id, status: newStatus })
+              }}
+              disabled={approveMutation.isPending}
+              className={`text-[10px] font-black uppercase tracking-widest transition-colors px-4 py-2 rounded-xl border ${
+                currentApproval === 'APPROVED_FOR_NEXT'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20'
+                  : 'bg-white/5 text-white/40 border-white/10 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20'
+              }`}
+            >
+              {currentApproval === 'APPROVED_FOR_NEXT' ? 'Revoke Approval' : 'Approve for Next Round'}
+            </button>
           </div>
         </header>
 

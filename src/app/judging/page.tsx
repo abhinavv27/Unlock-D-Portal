@@ -42,7 +42,6 @@ const INITIAL_SCORES = {
 export default function JudgingPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [staffToken, setStaffToken] = useState<string | null>(null)
 
   // Queue
   const [queue, setQueue] = useState<any[]>([])
@@ -62,13 +61,15 @@ export default function JudgingPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [lbLoading, setLbLoading] = useState(false)
 
-  const fetchQueue = useCallback(async (token: string) => {
+  const fetchQueue = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/queue', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch('/api/admin/queue')
+      if (res.status === 401) {
+        router.push('/admin')
+        return
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to retrieve queue.')
       setQueue(data.submissions || [])
@@ -77,14 +78,12 @@ export default function JudgingPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [router])
 
-  const fetchLeaderboard = useCallback(async (token: string) => {
+  const fetchLeaderboard = useCallback(async () => {
     setLbLoading(true)
     try {
-      const res = await fetch('/api/admin/leaderboard', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch('/api/admin/leaderboard')
       const data = await res.json()
       if (res.ok) setLeaderboard(data.teams || [])
     } catch {
@@ -96,19 +95,13 @@ export default function JudgingPage() {
 
   useEffect(() => {
     setMounted(true)
-    const token = localStorage.getItem('staff_token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-    setStaffToken(token)
-    fetchQueue(token)
-    fetchLeaderboard(token)
-  }, [router, fetchQueue, fetchLeaderboard])
+    fetchQueue()
+    fetchLeaderboard()
+  }, [fetchQueue, fetchLeaderboard])
 
   const handleGradeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeSubmission || !staffToken) return
+    if (!activeSubmission) return
 
     setSubmitLoading(true)
     setError(null)
@@ -117,10 +110,7 @@ export default function JudgingPage() {
     try {
       const res = await fetch('/api/admin/grade', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${staffToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submissionId: activeSubmission.id,
           scoreBreakdown: scores,
@@ -138,7 +128,7 @@ export default function JudgingPage() {
       setScores(INITIAL_SCORES)
       setNotes('')
       setGradeStatus('APPROVED')
-      if (staffToken) fetchLeaderboard(staffToken)
+      fetchLeaderboard()
     } catch (err: any) {
       setError(err.message || 'Failed to save scores.')
     } finally {
@@ -250,7 +240,7 @@ export default function JudgingPage() {
             <div className="flex items-center justify-between mb-4">
               <span className="text-label-caps !text-xs text-white/40">Leaderboard</span>
               <button
-                onClick={() => staffToken && fetchLeaderboard(staffToken)}
+                onClick={() => fetchLeaderboard()}
                 className="text-[9px] font-mono text-white/20 hover:text-white/60 transition-colors"
               >
                 refresh
@@ -302,7 +292,7 @@ export default function JudgingPage() {
         <div className="p-4 md:p-5 border-t border-white/5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => staffToken && fetchQueue(staffToken)}
+              onClick={() => fetchQueue()}
               className="text-[8px] font-black text-white/30 hover:text-white uppercase tracking-[0.2em]"
             >
               Refresh Queue

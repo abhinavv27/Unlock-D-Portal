@@ -295,6 +295,47 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
                   )}
 
+                  {/* Presentation Status (Round 2) */}
+                  {team && team.eventRound === 2 && team.progressState?.presentationStatus && team.progressState.presentationStatus !== 'NONE' && (
+                    <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-primary/5 border border-primary/20">
+                      <span className="text-[9px] text-primary uppercase font-mono tracking-widest">Presentation</span>
+                      {team.progressState.presentationStatus === 'QUEUED' && (
+                        <div className="mt-3 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
+                            <span className="text-sm text-blue-400">Demo approved. Waiting for your turn...</span>
+                          </div>
+                          {team.progressState.meetLink && (
+                            <a href={team.progressState.meetLink} target="_blank" rel="noopener noreferrer"
+                               className="inline-block px-6 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all text-sm font-bold">
+                              Join Meet Room
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {team.progressState.presentationStatus === 'ACTIVE' && (
+                        <div className="mt-3 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shadow-[0_0_10px_rgba(52,211,153,0.3)]" />
+                            <span className="text-sm text-emerald-400 font-bold">Your turn! Join the meeting now.</span>
+                          </div>
+                          {team.progressState.meetLink && (
+                            <a href={team.progressState.meetLink} target="_blank" rel="noopener noreferrer"
+                               className="inline-block px-6 py-3 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500/30 transition-all text-sm font-bold">
+                              Join Meet Room
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {team.progressState.presentationStatus === 'COMPLETED' && (
+                        <div className="mt-3 flex items-center gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
+                          <span className="text-sm text-white/40">Presentation completed. Thank you!</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* PARTICIPANT WORK SUBMISSION INPUT */}
                   {team && (
                     <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">

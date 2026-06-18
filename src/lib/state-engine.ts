@@ -1,62 +1,65 @@
 import { type PrismaClient } from '@prisma/client'
 
 export async function getTeamStatus(teamId: string, db: PrismaClient) {
-  // Fetch all submissions for the given teamId
-  const submissions = await db.submission.findMany({
-    where: { registrationId: teamId },
-    orderBy: { submittedAt: 'asc' },
+  const registration = await db.registration.findUniqueOrThrow({
+    where: { id: teamId },
+    include: {
+      event: true,
+      submissions: {
+        include: { evaluations: true },
+      },
+    },
   })
 
-  // 1. Determine isPending: If any submission is PENDING, return isPending: true
-  const isPending = submissions.some((sub) => sub.status === 'PENDING')
+  const isPending = registration.submissions.some((s) => s.status === 'PENDING')
 
-  // 2. Calculate Highest State by looping through only APPROVED submissions
-  let highestState = -1
-  for (const sub of submissions) {
-    if (sub.status === 'APPROVED') {
-      if (sub.taskId === 'ROUND-0') {
-        if (highestState < 0) {
-          highestState = 0
-        }
-      } else if (sub.taskId.startsWith('FEATURE-')) {
-        const num = parseInt(sub.taskId.substring(8), 10)
-        if (!isNaN(num) && num > highestState) {
-          highestState = num
-        }
-      } else if (sub.taskId === 'ROUND-2') {
-        if (highestState < 6) {
-          highestState = 6
-        }
-      } else if (sub.taskId === 'ROUND-3') {
-        if (highestState < 7) {
-          highestState = 7
-        }
-      }
+  const approvedSubs = registration.submissions.filter((s) => s.status === 'APPROVED')
+  let highestRound = -1
+  let cumulativeScore = 0
+
+  for (const sub of approvedSubs) {
+    if (sub.roundNumber > highestRound) highestRound = sub.roundNumber
+    if (sub.evaluations.length > 0) {
+      const avg = sub.evaluations.reduce((sum, e) => sum + e.totalScore, 0) / sub.evaluations.length
+      cumulativeScore += avg
     }
   }
 
-  // 3. Determine allowedTaskId and allowedRound based on highestState + 1
-  let allowedTaskId = 'ROUND-0'
-  let allowedRound = 0
+  const eventConfig = (registration.event.config as any) || {}
+  const currentGlobalRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 0
+  const progressState = (registration.progressState as any) || {}
+  const manualStatus = progressState.manualStatus
 
-  if (highestState >= 0 && highestState < 5) {
-    allowedTaskId = `FEATURE-${highestState + 1}`
-    allowedRound = 1
-  } else if (highestState === 5) {
-    allowedTaskId = 'ROUND-2'
-    allowedRound = 2
-  } else if (highestState === 6) {
-    allowedTaskId = 'ROUND-3'
-    allowedRound = 3
-  } else if (highestState >= 7) {
-    allowedTaskId = 'FINISHED'
-    allowedRound = 3
+  let allowedRound = highestRound
+
+  if (highestRound < 2) {
+    const shouldAdvance = manualStatus === 'APPROVED_FOR_NEXT' || (highestRound >= 1 && cumulativeScore > 50)
+    if (shouldAdvance) {
+      allowedRound = highestRound + 1
+    }
+  }
+
+  if (highestRound === -1) {
+    allowedRound = 0
+  }
+
+  let allowedTaskId: string
+
+  if (allowedRound > currentGlobalRound) {
+    allowedTaskId = 'WAITING_ROOM'
+    allowedRound = currentGlobalRound
+  } else if (allowedRound < currentGlobalRound) {
+    allowedTaskId = 'ELIMINATED'
+    allowedRound = currentGlobalRound
+  } else {
+    allowedTaskId = 'COMMIT'
   }
 
   return {
     allowedTaskId,
     allowedRound,
     isPending,
-    highestState,
+    highestRound,
+    cumulativeScore: Math.round(cumulativeScore * 10) / 10,
   }
 }
