@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { getTeamStatus } from '@/lib/state-engine'
+import { z } from 'zod'
+
+const gradeSchema = z.object({
+  submissionId: z.union([z.number(), z.string().transform(Number)]),
+  scoreBreakdown: z.record(z.union([z.number(), z.string()])),
+  feedback: z.string().max(2000),
+  status: z.enum(['APPROVED', 'REJECTED']).optional().default('APPROVED'),
+})
 
 export async function POST(request: Request) {
   try {
@@ -25,24 +33,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Parse payload
+    // 2. Parse and validate payload
     const body = await request.json()
-    const { submissionId, scoreBreakdown, feedback, status } = body
-
-    if (submissionId === undefined || !scoreBreakdown || feedback === undefined) {
+    const parsed = gradeSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Required fields: "submissionId", "scoreBreakdown", and "feedback".' },
         { status: 400 }
       )
     }
 
-    const gradeStatus = status || 'APPROVED'
-    if (gradeStatus !== 'APPROVED' && gradeStatus !== 'REJECTED') {
-      return NextResponse.json(
-        { error: 'Status field must be either "APPROVED" or "REJECTED".' },
-        { status: 400 }
-      )
-    }
+    const { submissionId, scoreBreakdown, feedback, status: gradeStatus } = parsed.data
 
     // 3. Retrieve submission details
     const submission = await db.submission.findUnique({
@@ -165,7 +166,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Grading operation error:', error)
     return NextResponse.json(
-      { error: error.message || 'An unexpected error occurred.' },
+      { error: 'An unexpected error occurred.' },
       { status: 500 }
     )
   }

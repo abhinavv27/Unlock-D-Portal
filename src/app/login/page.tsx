@@ -44,10 +44,6 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed.')
       }
 
-      // Save token in localStorage as backup
-      localStorage.setItem('team_token', data.sessionToken)
-      localStorage.removeItem('staff_token') // clear competing sessions
-
       // Redirect to participant dashboard
       router.push('/dashboard')
     } catch (err: any) {
@@ -76,10 +72,6 @@ export default function LoginPage() {
       if (!res.ok) {
         throw new Error(data.error || 'Login failed.')
       }
-
-      // Save token in localStorage as backup
-      localStorage.setItem('staff_token', data.token)
-      localStorage.removeItem('team_token') // clear competing sessions
 
       // Route depending on staff role
       const role = data.user.systemRole
