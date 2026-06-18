@@ -11,14 +11,19 @@ export const auth = async () => {
     if (staffToken) {
       const decoded = decryptToken(staffToken)
       if (decoded && decoded.userId && decoded.role) {
-        return {
-          user: {
-            id: String(decoded.userId),
-            name: decoded.username,
-            email: `${decoded.username}@ras.test`,
-            role: decoded.role as string, // 'ADMIN' or 'JUDGE'
-          },
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        const userExists = await db.user.findUnique({
+          where: { id: decoded.userId }
+        })
+        if (userExists) {
+          return {
+            user: {
+              id: String(decoded.userId),
+              name: decoded.username,
+              email: `${decoded.username}@ras.test`,
+              role: decoded.role as string, // 'ADMIN' or 'JUDGE'
+            },
+            expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+          }
         }
       }
     }

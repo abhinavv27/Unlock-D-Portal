@@ -2,44 +2,26 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { api } from '@/trpc/server'
 import DashboardClient from './DashboardClient'
-import { decryptToken } from '@/lib/auth-utils'
-import { db } from '@/server/db'
+import { auth } from '@/server/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies()
-  const teamToken = cookieStore.get('team_token')?.value
-  const staffToken = cookieStore.get('staff_token')?.value
+  const session = await auth()
 
-  // 1. Participant Team Login Session
-  if (teamToken) {
-    let exists = null
-    try {
-      exists = await db.registration.findUnique({
-        where: { id: teamToken },
-      })
-    } catch {
-      // handles invalid UUID format or query error
-    }
-
-    if (!exists) {
+  if (!session?.user) {
+    const cookieStore = await cookies()
+    const teamToken = cookieStore.get('team_token')?.value
+    const staffToken = cookieStore.get('staff_token')?.value
+    if (teamToken || staffToken) {
       redirect('/api/auth/logout')
+    } else {
+      redirect('/login')
     }
+  }
 
-    let team
-    let failed = false
-    try {
-      team = await api.teams.status()
-    } catch (err) {
-      console.error('Error fetching team status:', err)
-      failed = true
-    }
-
-    if (failed || !team) {
-      redirect('/api/auth/logout')
-    }
-
+  if (session.user.role === 'TEAM') {
+    const team = await api.teams.status()
     const state = team.progressState as any
     const currentStage = state?.current_stage !== undefined ? state.current_stage : 0
 
@@ -61,20 +43,10 @@ export default async function DashboardPage() {
     )
   }
 
-  // 2. Staff Login Session
-  if (staffToken) {
-    const staff = decryptToken(staffToken)
-    if (!staff) {
-      redirect('/api/auth/logout')
-    }
-
-    if (staff.role === 'ADMIN' || staff.role === 'SUPER_ADMIN') {
-      redirect('/admin')
-    } else {
-      redirect('/judging')
-    }
+  // Staff Login Session
+  if (['ADMIN', 'SUPER_ADMIN'].includes(session.user.role as string)) {
+    redirect('/admin')
+  } else {
+    redirect('/judging')
   }
-
-  // 3. No Session
-  redirect('/login')
 }
