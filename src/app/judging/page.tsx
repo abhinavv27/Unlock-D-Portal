@@ -20,22 +20,22 @@ function timeAgo(dateStr: string): string {
 }
 
 const CRITERIA = [
-  { key: 'functionality' as const, label: 'Functionality', desc: 'Does the application work as intended?' },
-  { key: 'codeQuality' as const, label: 'Code Quality', desc: 'Is the code well-structured and maintainable?' },
-  { key: 'integration' as const, label: 'Integration', desc: 'Do components and APIs work together?' },
-  { key: 'userExperience' as const, label: 'User Experience', desc: 'Is the interface intuitive and polished?' },
-  { key: 'deployment' as const, label: 'Deployment', desc: 'Is the app deployed and accessible?' },
-  { key: 'teamwork' as const, label: 'Teamwork', desc: 'Clear roles, collaboration, and presentation?' },
-  { key: 'errorHandling' as const, label: 'Error Handling', desc: 'Are edge cases and errors managed?' },
+  { key: 'functionality' as const, label: 'Functionality', desc: 'Does the application work as intended?', max: 20 },
+  { key: 'codeQuality' as const, label: 'Code Quality', desc: 'Is the code well-structured and maintainable?', max: 15 },
+  { key: 'integration' as const, label: 'Integration', desc: 'Do components and APIs work together?', max: 15 },
+  { key: 'userExperience' as const, label: 'User Experience', desc: 'Is the interface intuitive and polished?', max: 15 },
+  { key: 'deployment' as const, label: 'Deployment', desc: 'Is the app deployed and accessible?', max: 10 },
+  { key: 'teamwork' as const, label: 'Teamwork', desc: 'Clear roles, collaboration, and presentation?', max: 15 },
+  { key: 'errorHandling' as const, label: 'Error Handling', desc: 'Are edge cases and errors managed?', max: 10 },
 ]
 
 const INITIAL_SCORES = {
-  functionality: 5,
-  codeQuality: 5,
-  integration: 5,
-  userExperience: 5,
+  functionality: 10,
+  codeQuality: 8,
+  integration: 8,
+  userExperience: 8,
   deployment: 5,
-  teamwork: 5,
+  teamwork: 8,
   errorHandling: 5,
 }
 
@@ -147,8 +147,8 @@ export default function JudgingPage() {
   }
 
   const overall = (
-    CRITERIA.reduce((sum, c) => sum + scores[c.key], 0) / CRITERIA.length
-  ).toFixed(1)
+    CRITERIA.reduce((sum, c) => sum + scores[c.key], 0)
+  ).toFixed(0)
 
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
@@ -194,8 +194,8 @@ export default function JudgingPage() {
           </div>
         </div>
 
-        {/* Queue list */}
-        <div className="flex-1 overflow-auto p-4 md:p-5 space-y-2 custom-scrollbar">
+        {/* Queue list — takes upper half */}
+        <div className="flex-1 overflow-auto p-4 md:p-5 space-y-2 custom-scrollbar min-h-0">
           {loading ? (
             <div className="text-center py-16 text-white/20 text-xs font-mono tracking-widest">LOADING...</div>
           ) : queue.length === 0 ? (
@@ -244,47 +244,52 @@ export default function JudgingPage() {
           )}
         </div>
 
-        {/* Leaderboard section */}
-        <div className="border-t border-white/5">
+        {/* Leaderboard section — lower half */}
+        <div className="flex-[0.6] overflow-auto border-t border-white/5 custom-scrollbar">
           <div className="p-4 md:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-label-caps !text-[9px] text-white/30">Leaderboard</span>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-label-caps !text-xs text-white/40">Leaderboard</span>
               <button
                 onClick={() => staffToken && fetchLeaderboard(staffToken)}
-                className="text-[7px] font-mono text-white/20 hover:text-white/50 transition-colors"
+                className="text-[9px] font-mono text-white/20 hover:text-white/60 transition-colors"
               >
                 refresh
               </button>
             </div>
             {lbLoading ? (
-              <div className="text-center py-4 text-white/10 text-[9px] font-mono">LOADING...</div>
+              <div className="text-center py-6 text-white/20 text-xs font-mono">LOADING...</div>
             ) : leaderboard.length === 0 ? (
-              <div className="text-center py-4 text-white/10 text-[9px] font-mono">No teams yet</div>
+              <div className="text-center py-6 text-white/20 text-xs font-mono">No teams yet</div>
             ) : (
-              <div className="space-y-1 max-h-[200px] overflow-auto custom-scrollbar">
+              <div className="space-y-1.5">
                 {leaderboard.map((team, i) => (
                   <div
                     key={team.teamName}
-                    className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-white/[0.02] transition-colors"
+                    className="flex items-center gap-4 py-2 px-3 rounded-xl hover:bg-white/[0.03] transition-colors"
                   >
-                    <span className="w-4 text-[9px] font-mono text-white/20 text-right shrink-0">
+                    <span className="w-6 text-xs font-mono text-white/30 text-right shrink-0">
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-white/70 truncate">{team.teamName}</p>
-                      <p className="text-[7px] font-mono text-white/20 truncate">
-                        {team.stageName} · {team.score} pts
+                      <p className="text-sm text-white/80 font-medium truncate">{team.teamName}</p>
+                      <p className="text-[10px] font-mono text-white/30 truncate">
+                        {team.stageName} · {team.totalScore} pts
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: team.maxStage + 1 }, (_, s) => (
-                        <div
-                          key={s}
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            s <= team.currentStage ? 'bg-primary' : 'bg-white/10'
-                          }`}
-                        />
-                      ))}
+                    <div className="flex items-center gap-1.5">
+                      {team.roundBreakdown && Object.keys(team.roundBreakdown).sort((a, b) => Number(a) - Number(b)).map((r) => {
+                        const val = Number(team.roundBreakdown[r])
+                        return (
+                          <span
+                            key={r}
+                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md ${
+                              val ? 'bg-primary/15 text-primary border border-primary/20' : 'bg-white/10 text-white/30'
+                            }`}
+                          >
+                            {val || '-'}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}
@@ -359,10 +364,10 @@ export default function JudgingPage() {
                   {activeSubmission.registration.teamName}.
                 </h1>
 
-                {/* Links */}
+                 {/* Links */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1.5">
-                    <span className="text-[8px] text-white/20 uppercase font-mono block">GitHub Repository</span>
+                    <span className="text-[8px] text-white/20 uppercase font-mono block">GitHub Commit Link</span>
                     <a
                       href={activeSubmission.payload?.github}
                       target="_blank"
@@ -373,7 +378,7 @@ export default function JudgingPage() {
                     </a>
                   </div>
                   <div className="space-y-1.5">
-                    <span className="text-[8px] text-white/20 uppercase font-mono block">Live Demo / Video</span>
+                    <span className="text-[8px] text-white/20 uppercase font-mono block">Loom / Demo Video Link</span>
                     <a
                       href={activeSubmission.payload?.liveDemo}
                       target="_blank"
@@ -385,12 +390,12 @@ export default function JudgingPage() {
                   </div>
                 </div>
               </header>
-
+ 
               {/* Scoring form */}
               <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-8 md:space-y-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
                 <form onSubmit={handleGradeSubmit} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                    {CRITERIA.map(({ key, label, desc }) => (
+                    {CRITERIA.map(({ key, label, desc, max }) => (
                       <div key={key} className="space-y-1 group">
                         <div className="flex items-end justify-between">
                           <div>
@@ -399,15 +404,28 @@ export default function JudgingPage() {
                             </h4>
                             <p className="text-label-caps !text-[7px] opacity-20">{desc}</p>
                           </div>
-                          <span className="text-2xl text-stat !text-primary font-mono">{scores[key]}</span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={max}
+                              value={scores[key]}
+                              onChange={(e) => {
+                                const val = Math.max(0, Math.min(max, Math.round(Number(e.target.value) || 0)))
+                                setScores((prev) => ({ ...prev, [key]: val }))
+                              }}
+                              className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-right text-lg text-primary font-mono focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                            />
+                            <span className="text-xs text-white/30 font-mono">/ {max}</span>
+                          </div>
                         </div>
                         <Slider.Root
-                          value={Number(scores[key]) || 5}
+                          value={Number(scores[key]) || 0}
                           onValueChange={(val) =>
-                            setScores((prev) => ({ ...prev, [key]: Math.round(Number(val) || 5) }))
+                            setScores((prev) => ({ ...prev, [key]: Math.round(Number(val) || 0) }))
                           }
-                          min={1}
-                          max={10}
+                          min={0}
+                          max={max}
                           step={1}
                         >
                           <Slider.Control className={sliderStyles.Control}>
@@ -418,25 +436,25 @@ export default function JudgingPage() {
                           </Slider.Control>
                         </Slider.Root>
                         <div className="flex justify-between text-value-mono !text-[7px] !text-white/10 font-bold">
-                          <span>1</span>
-                          <span>10</span>
+                          <span>0</span>
+                          <span>{max}</span>
                         </div>
                       </div>
                     ))}
                   </div>
-
+ 
                   {/* Overall Score */}
                   <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
                     <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
                     <div className="relative z-10">
                       <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
-                      <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Average Score</h3>
+                      <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
                     </div>
                     <div className="relative z-10 text-right">
                       <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
                         {overall}
                       </span>
-                      <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ 10</span>
+                      <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ 100</span>
                     </div>
                   </div>
 

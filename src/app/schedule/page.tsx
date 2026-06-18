@@ -7,14 +7,18 @@ import { Navbar } from '@/components/Navbar'
 import { api } from '@/trpc/react'
 
 const EVENTS = [
-  { time: 'Sat 9:00 AM', title: 'Opening Ceremony', location: 'Main Auditorium', type: 'CEREMONY', detail: 'Problem statement release and event kickoff. All teams must be present.', icon: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z' },
-  { time: 'Sat 10:00 AM', title: 'Round 0 — Environment Setup', location: 'Hack Space', type: 'GENERAL', detail: 'Foundation & architecture planning. Choose your stack, set up CI/CD, and design your schema.', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
-  { time: 'Sat 12:00 PM', title: 'Round 1 — Core Implementation', location: 'Hack Space', type: 'GENERAL', detail: 'Build the backbone — database models, API endpoints, and core business logic.', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
-  { time: 'Sat 4:00 PM', title: 'Round 2 — Feature Integration', location: 'Hack Space', type: 'GENERAL', detail: 'Connect services, add auth, polish UI, and integrate third-party APIs.', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-  { time: 'Sat 8:00 PM', title: 'Round 3 — Deployment', location: 'Hack Space', type: 'GENERAL', detail: 'Ship to production. Configure domains, SSL, monitoring, and final testing.', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l9-5-9-5-9 5 9 5zm0 0v6m0-6V5' },
-  { time: 'Sun 9:00 AM', title: 'Submission Deadline', location: 'Portal', type: 'JUDGING', detail: 'All projects must be submitted via the portal. No late submissions accepted.', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-  { time: 'Sun 10:00 AM', title: 'Presentations', location: 'Main Auditorium', type: 'JUDGING', detail: '5-minute demo per team. Judges evaluate based on 7 criteria.', icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
-  { time: 'Sun 1:00 PM', title: 'Closing Ceremony', location: 'Main Auditorium', type: 'CEREMONY', detail: 'Results announcement, awards, and final remarks.', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l9-5-9-5-9 5 9 5zm0 0v6m0-6V5' },
+  { day: '3rd July', time: '09:00 AM', title: 'Participant Reporting & Registration', location: 'Main Gate / Hack Space', type: 'GENERAL', detail: 'Onboard teams, verify profiles, distribute hacker kits, and setup work environments.', icon: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z' },
+  { day: '3rd July', time: '09:45 AM', title: 'Opening Ceremony & Rules Briefing', location: 'Main Auditorium', type: 'CEREMONY', detail: 'Problem statement release and event kickoff. Rules briefing.', icon: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z' },
+  { day: '3rd July', time: '09:45 AM - 10:15 AM', title: 'Round 0 — System Setup & Comprehension', location: 'Hack Space', type: 'GENERAL', detail: 'Teams initialise the provided starter repository, configure local development environments, and complete a technical checkpoint to demonstrate understanding of base architecture.', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
+  { day: '3rd July', time: '10:30 AM - 08:30 PM', title: 'Round 1 — Progressive Feature Sprints', location: 'Hack Space', type: 'GENERAL', detail: 'Sequential development sprints to implement core functional modules (Easy: 1hr, Medium: 1.5hr, Hard: 2-2.5hrs). Approval required by judges to unlock subsequent phases.', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+  { day: '3rd July', time: '08:30 PM - 11:30 PM', title: 'Elimination Phase & Evaluation', location: 'Grading Room / Hack Space', type: 'JUDGING', detail: 'Evaluation of Round 1 feature sprints to filter teams.', icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
+  { day: '3rd July', time: '11:30 PM', title: 'Announcement of Results', location: 'Main Auditorium', type: 'CEREMONY', detail: 'Results announcement (Out of 100 teams, 50 teams remain).', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l9-5-9-5-9 5 9 5zm0 0v6m0-6V5' },
+  
+  { day: '4th July', time: '12:00 AM - 06:00 AM', title: 'Round 2 — Optimisation & Open Innovation', location: 'Hack Space', type: 'GENERAL', detail: 'System performance optimization, UI/UX refinement, cloud deployment, and optional innovative features integration.', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { day: '4th July', time: '06:00 AM - 08:00 AM', title: 'Elimination Phase & Evaluation', location: 'Grading Room / Hack Space', type: 'JUDGING', detail: 'Evaluation of Round 2 optimizations. Out of 50, 10 teams remain.', icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
+  { day: '4th July', time: '08:00 AM', title: 'Announcement of Finalists', location: 'Main Auditorium', type: 'CEREMONY', detail: 'Announcement of the top 10 finalist teams.', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l9-5-9-5-9 5 9 5zm0 0v6m0-6V5' },
+  { day: '4th July', time: '08:30 AM - 10:30 AM', title: 'Round 3 — Final Demonstration & Evaluation', location: 'Auditorium / Judging Panels', type: 'JUDGING', detail: 'Teams present fully deployed applications to the judging panel. (5 mins presentation + 5 mins Q&A).', icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
+  { day: '4th July', time: '11:00 AM', title: 'End of Event', location: 'Main Auditorium', type: 'CEREMONY', detail: 'End of event and closing ceremony.', icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l9-5-9-5-9 5 9 5zm0 0v6m0-6V5' },
 ]
 
 const TYPE_CONFIG: Record<string, { color: string, bg: string, border: string }> = {
@@ -28,7 +32,7 @@ const TYPE_CONFIG: Record<string, { color: string, bg: string, border: string }>
 export default function SchedulePage() {
   const { data: session } = api.auth.getSession.useQuery()
   const [mounted, setMounted] = useState(false)
-  const [activeDay, setActiveDay] = useState('Saturday')
+  const [activeDay, setActiveDay] = useState('3rd July')
   const { scrollYProgress } = useScroll()
   
   const scaleX = useSpring(scrollYProgress, {
@@ -89,7 +93,7 @@ export default function SchedulePage() {
         {/* Day Selector */}
         <section className="mb-10 md:mb-16 overflow-x-auto">
           <div className="flex gap-2 p-1.5 glass-premium rounded-2xl w-fit border-white/5 min-w-fit">
-            {['Saturday', 'Sunday'].map((day) => (
+            {['3rd July', '4th July'].map((day) => (
                 <button
                   key={day}
                   onClick={() => setActiveDay(day)}
@@ -123,7 +127,7 @@ export default function SchedulePage() {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as any }}
               className="space-y-4"
             >
-              {EVENTS.filter(e => e.time.startsWith(activeDay.slice(0, 3))).map((event, i) => (
+              {EVENTS.filter(e => e.day === activeDay).map((event, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 10 }}
@@ -135,7 +139,7 @@ export default function SchedulePage() {
                     <div className="w-20 md:w-28 flex-shrink-0">
                       <span className="text-label-caps block mb-1 !text-[8px] md:!text-[10px]">Time</span>
                       <div className="text-base md:text-xl text-value-mono !text-white/80">
-                        {event.time.split(' ').slice(1).join(' ')}
+                        {event.time}
                       </div>
                     </div>
                     

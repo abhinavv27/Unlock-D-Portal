@@ -7,9 +7,20 @@ export async function POST(request: Request) {
   try {
     // 1. Validate staff credentials (ADMIN or JUDGE)
     const staff = getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
+    if (!staff || (staff.role !== 'JUDGE' && staff.role !== 'ADMIN')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Judge or Administrator credentials required.' },
+        { error: 'Unauthorized. Judge or Admin credentials required.' },
+        { status: 401 }
+      )
+    }
+
+    // Verify staff user exists in database
+    const dbUser = await db.user.findUnique({
+      where: { id: staff.userId }
+    })
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Staff user not found in database. Please log in again.' },
         { status: 401 }
       )
     }
