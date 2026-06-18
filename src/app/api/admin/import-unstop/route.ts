@@ -3,6 +3,8 @@ import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { parseUnstopCSV } from '@/lib/csv-parser'
 import { Resend } from 'resend'
+import crypto from 'crypto'
+import { z } from 'zod'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -29,17 +31,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const eventId = parseInt(eventIdStr, 10)
-    if (isNaN(eventId)) {
+    const eventId = z.coerce.number().int().positive().safeParse(eventIdStr)
+    if (!eventId.success) {
       return NextResponse.json(
-        { error: 'Invalid eventId format. Must be an integer.' },
+        { error: 'Invalid eventId format. Must be a positive integer.' },
         { status: 400 }
       )
     }
 
     // 3. Verify event exists
     const event = await db.event.findUnique({
-      where: { id: eventId },
+      where: { id: eventId.data },
     })
 
     if (!event) {
@@ -55,9 +57,9 @@ export async function POST(request: Request) {
     
     try {
       importedTeams = parseUnstopCSV(csvText)
-    } catch (parseError: any) {
+    } catch {
       return NextResponse.json(
-        { error: parseError.message || 'CSV Parsing failed.' },
+        { error: 'CSV Parsing failed. Ensure the file is a valid CSV with "Team ID" and "Team Name" columns.' },
         { status: 400 }
       )
     }
@@ -123,7 +125,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Import CSV error:', error)
     return NextResponse.json(
-      { error: error.message || 'An unexpected error occurred.' },
+      { error: 'An unexpected error occurred during import.' },
       { status: 500 }
     )
   }
@@ -131,9 +133,10 @@ export async function POST(request: Request) {
 
 function generatePasscode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const bytes = crypto.randomBytes(10)
   let passcode = ''
-  for (let i = 0; i < 6; i++) {
-    passcode += chars.charAt(Math.floor(Math.random() * chars.length))
+  for (let i = 0; i < 10; i++) {
+    passcode += chars.charAt(bytes[i] % chars.length)
   }
   return passcode
 }

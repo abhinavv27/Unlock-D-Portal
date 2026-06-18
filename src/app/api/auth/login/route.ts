@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
+
+const loginSchema = z.object({
+  teamName: z.string().min(1, 'Team name is required').max(100),
+  passcode: z.string().min(1, 'Passcode is required').max(100),
+})
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { teamName, passcode } = body
-
-    if (!teamName || !passcode) {
+    const parsed = loginSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Both teamName and passcode are required fields.' },
         { status: 400 }
       )
     }
+
+    const { teamName, passcode } = parsed.data
 
     // Search for a registration matching team name (case-insensitive) and passcode
     const registration = await db.registration.findFirst({
@@ -46,7 +53,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies()
     cookieStore.delete('staff_token')
     cookieStore.set('team_token', registration.id, {
-      httpOnly: false, // Accessible client-side for dynamic fetch authorization
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week

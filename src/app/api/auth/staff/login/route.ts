@@ -2,18 +2,25 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { verifyPassword, encryptToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
+
+const loginSchema = z.object({
+  username: z.string().min(1, 'Username is required').max(100),
+  password: z.string().min(1, 'Password is required').max(200),
+})
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { username, password } = body
-
-    if (!username || !password) {
+    const parsed = loginSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Both username and password are required fields.' },
         { status: 400 }
       )
     }
+
+    const { username, password } = parsed.data
 
     // Retrieve staff user by username
     const user = await db.user.findUnique({
@@ -48,7 +55,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies()
     cookieStore.delete('team_token')
     cookieStore.set('staff_token', token, {
-      httpOnly: false, // Accessible client-side for dynamic fetch authorization
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week
