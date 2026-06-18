@@ -1,5 +1,5 @@
 // Universal Event Engine — Database Schema
-// Database: PostgreSQL / Supabase
+// Database: PostgreSQL / Neon
 
 generator client {
   provider = "prisma-client-js"

@@ -44,8 +44,15 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   }
 
   // 3. Determine the allowed step attributes
-  const nextStep = highestCompletedStep + 1
-  const nextStepObj = roadmap.find((r) => r.step === nextStep)
+  // ROUND-0 has no submissions — auto-skip it so teams unlock FEATURE-1 immediately
+  const NO_SUBMISSION_TASKS = ['ROUND-0']
+  let nextStep = highestCompletedStep + 1
+  let nextStepObj = roadmap.find((r) => r.step === nextStep)
+
+  while (nextStepObj && NO_SUBMISSION_TASKS.includes(nextStepObj.task_id)) {
+    nextStep += 1
+    nextStepObj = roadmap.find((r) => r.step === nextStep)
+  }
 
   let allowedTaskId: string
   let allowedRound: number
