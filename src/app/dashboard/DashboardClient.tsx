@@ -110,9 +110,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const handleLogout = () => {
     localStorage.removeItem('team_token')
     localStorage.removeItem('staff_token')
-    document.cookie = 'team_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    document.cookie = 'staff_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    window.location.href = '/login'
+    window.location.href = '/api/auth/logout'
   }
 
   if (!mounted) return null

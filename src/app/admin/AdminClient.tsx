@@ -27,9 +27,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
   const handleLogout = () => {
     localStorage.removeItem('staff_token')
     localStorage.removeItem('team_token')
-    document.cookie = 'staff_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    document.cookie = 'team_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    window.location.href = '/login'
+    window.location.href = '/api/auth/logout'
   }
 
   return (

@@ -321,9 +321,7 @@ export default function JudgingPage() {
             onClick={() => {
               localStorage.removeItem('staff_token')
               localStorage.removeItem('team_token')
-              document.cookie = 'staff_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-              document.cookie = 'team_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-              window.location.href = '/login'
+              window.location.href = '/api/auth/logout'
             }}
             className="w-full btn-ghost py-2 rounded-xl text-[8px] font-mono tracking-wider hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-center uppercase"
           >
