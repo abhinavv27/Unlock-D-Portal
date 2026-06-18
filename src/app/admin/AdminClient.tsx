@@ -126,21 +126,6 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
               <Link href="/admin/applications" className="btn-vibrant !py-2 md:!py-3 !px-6 md:!px-10 !rounded-full text-label-caps !text-[8px] md:!text-[9px] w-full md:w-auto text-center">
                 Manage Applications
               </Link>
-              {activeEvent && (
-                <>
-                  <div className="hidden md:block h-6 w-px bg-white/10" />
-                  <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-                    <span className="text-[10px] text-white/50 font-mono tracking-widest">ROUND {currentRound}</span>
-                    <button
-                      onClick={handleStartNextRound}
-                      disabled={advancing}
-                      className="btn-vibrant !py-2 md:!py-3 !px-6 md:!px-8 !rounded-full text-label-caps !text-[8px] md:!text-[9px] text-center w-full md:w-auto hover:scale-105 transition-transform"
-                    >
-                      {advancing ? 'ADVANCING...' : 'START NEXT ROUND'}
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           </header>
 
