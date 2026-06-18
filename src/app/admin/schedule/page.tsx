@@ -89,7 +89,7 @@ export default function AdminSchedulePage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {

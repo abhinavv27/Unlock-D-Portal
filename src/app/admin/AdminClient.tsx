@@ -3,9 +3,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import RefreshButton from '@/components/RefreshButton'
+import { api } from '@/trpc/react'
 
 export default function AdminClient({ session, stats, funnel }: { session: any, stats: any[], funnel: any[] }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [selectedRound, setSelectedRound] = useState<number | null>(null)
+  const { data: activeEvent, refetch: refetchActiveEvent } = api.application.getActiveEvent.useQuery()
+  const startRoundMutation = api.application.startRound.useMutation()
 
   const handleLogout = () => {
     localStorage.removeItem('staff_token')
@@ -57,7 +61,7 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => (
@@ -124,23 +128,152 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
             </div>
           </header>
 
+          {/* Round Control Panel */}
+          {activeEvent && (
+            <div className="glass-premium p-8 rounded-3xl border-white/5 relative overflow-hidden bg-black/30 backdrop-blur-xl">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                  <h3 className="text-label-caps !text-[10px] text-white/40 mb-2">Event Round Control</h3>
+                  <h4 className="text-2xl font-display font-medium text-white">
+                    Current Active: {activeEvent.stages.find((s: any) => s.stage === activeEvent.currentRound)?.name || `Round ${activeEvent.currentRound}`}
+                  </h4>
+                  <p className="text-xs text-white/40 mt-1 font-mono">
+                    Admins can unlock/start subsequent rounds for all participant teams.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                  {[0, 1, 2, 3].map((round) => {
+                    const isCurrent = activeEvent.currentRound === round
+                    const isSelected = selectedRound !== null ? selectedRound === round : isCurrent
+                    const isUpdating = startRoundMutation.isPending && startRoundMutation.variables?.round === round
+
+                    return (
+                      <button
+                        key={round}
+                        disabled={startRoundMutation.isPending}
+                        onClick={() => {
+                          setSelectedRound(round)
+                        }}
+                        className={`px-4 py-2.5 rounded-xl font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-primary text-black shadow-[0_0_20px_rgba(109,40,217,0.4)] border border-primary'
+                            : 'bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {isUpdating ? 'Updating...' : `Round ${round}`}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Confirmation area */}
+              {selectedRound !== null && selectedRound !== activeEvent.currentRound && (
+                <div className="mt-6 p-6 border border-white/5 rounded-2xl bg-white/[0.02] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <span className="text-label-caps !text-[9px] text-amber-400 block mb-1">Confirm Transition</span>
+                    <p className="text-xs text-white/80 font-mono">
+                      Proceed to Round {selectedRound}? (This will automatically end the previous round and advance eligible teams to the next round)
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await startRoundMutation.mutateAsync({ round: selectedRound })
+                        setSelectedRound(null)
+                        refetchActiveEvent()
+                      } catch (err) {
+                        console.error(err)
+                      }
+                    }}
+                    disabled={startRoundMutation.isPending}
+                    className="px-6 py-3 bg-amber-500 text-black hover:bg-amber-400 transition-all font-mono text-[10px] font-bold uppercase tracking-wider rounded-xl cursor-pointer w-full md:w-auto text-center font-bold"
+                  >
+                    {startRoundMutation.isPending ? 'Advancing...' : `Proceed to Next Round`}
+                  </button>
+                </div>
+              )}
+
+              {/* Visual timeline */}
+              <div className="mt-8 pt-6 border-t border-white/5">
+                <div className="flex flex-col md:flex-row gap-6 md:gap-12">
+                  {[0, 1, 2, 3].map((round) => {
+                    const isPast = round < activeEvent.currentRound
+                    const isCurrent = round === activeEvent.currentRound
+                    const isFuture = round > activeEvent.currentRound
+                    
+                    let statusText = 'Locked'
+                    let statusColor = 'text-white/20 border-white/5 bg-white/[0.01]'
+                    let dotColor = 'bg-white/10'
+                    
+                    if (isPast) {
+                      statusText = 'Previous Round Ended'
+                      statusColor = 'text-white/40 border-white/10 bg-white/[0.02]'
+                      dotColor = 'bg-white/30'
+                    } else if (isCurrent) {
+                      statusText = 'Active'
+                      statusColor = 'text-primary border-primary/20 bg-primary/5 shadow-[0_0_15px_rgba(109,40,217,0.15)] font-bold'
+                      dotColor = 'bg-primary'
+                    }
+                    
+                    return (
+                      <div key={round} className="flex-1 flex items-start gap-4">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border ${isCurrent ? 'border-primary' : 'border-white/10'} bg-black`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <h5 className="text-xs font-mono font-bold text-white/90">Round {round}</h5>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-md border text-[9px] font-mono tracking-tight uppercase ${statusColor}`}>
+                            {statusText}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {stats.map((stat, i) => (
-              <div key={i} className="glass-premium p-8 rounded-3xl border-white/5 group hover:bg-white/[0.04] transition-all cursor-default relative overflow-hidden">
-                <div className="flex justify-between items-start mb-6">
-                  <div className={`w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform shadow-lg`}>
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={stat.icon} />
-                    </svg>
+            {stats.map((stat, i) => {
+              const CardContent = (
+                <>
+                  <div className="flex justify-between items-start mb-6">
+                    <div className={`w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform shadow-lg`}>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={stat.icon} />
+                      </svg>
+                    </div>
                   </div>
+                  <p className="text-label-caps !text-[10px] text-white/40 mb-2">{stat.label}</p>
+                  <p className={`text-5xl text-stat ${stat.color}`}>
+                    {stat.value.toLocaleString()}
+                  </p>
+                </>
+              )
+
+              if (stat.href) {
+                return (
+                  <Link 
+                    key={i} 
+                    href={stat.href} 
+                    className="glass-premium p-8 rounded-3xl border-white/5 group hover:bg-white/[0.08] hover:border-white/20 hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden block"
+                  >
+                    {CardContent}
+                  </Link>
+                )
+              }
+
+              return (
+                <div key={i} className="glass-premium p-8 rounded-3xl border-white/5 group hover:bg-white/[0.04] transition-all cursor-default relative overflow-hidden">
+                  {CardContent}
                 </div>
-                <p className="text-label-caps !text-[10px] text-white/40 mb-2">{stat.label}</p>
-                <p className={`text-5xl text-stat ${stat.color}`}>
-                  {stat.value.toLocaleString()}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10">

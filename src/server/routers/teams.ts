@@ -23,6 +23,25 @@ export const teamsRouter = createTRPCRouter({
         })
       }
 
+      // Check if team is in the waiting room
+      const rawTeam = await ctx.db.registration.findUniqueOrThrow({
+        where: { id: ctx.team.id },
+        include: { event: true }
+      })
+      const eventConfig = (rawTeam.event.config as any) || {}
+      const eventRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 0
+      if (status.allowedRound < eventRound) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Your team did not advance to the next round.',
+        })
+      } else if (status.allowedRound > eventRound) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'The next round has not started yet.',
+        })
+      }
+
       const cleanGithub = input.githubUrl?.trim();
       const cleanDemo = input.liveDemoUrl?.trim();
 
@@ -140,6 +159,11 @@ export const teamsRouter = createTRPCRouter({
       }
     })
 
+    const eventConfig = (rawTeam.event.config as any) || {}
+    const eventRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 0
+    const inWaitingRoom = statusResult.allowedRound > eventRound
+    const isEliminated = statusResult.allowedRound < eventRound
+
     const progressState = {
       ...(rawTeam.progressState as any || {}),
       current_stage: statusResult.allowedRound,
@@ -161,6 +185,9 @@ export const teamsRouter = createTRPCRouter({
       allowedRound: statusResult.allowedRound,
       isPending: statusResult.isPending,
       highestState: statusResult.highestState,
+      inWaitingRoom,
+      isEliminated,
+      eventRound,
     }
   }),
 })
