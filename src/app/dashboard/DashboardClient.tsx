@@ -126,6 +126,73 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   // Find the most recent rejected submission for resubmit prompt
   const lastRejected = team?.submissions?.find((sub: any) => sub.status === 'REJECTED')
 
+  // Round 0: event hasn't started yet — show a simple landing page
+  if (team?.eventRound === 0) {
+    return (
+      <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
+        <motion.div
+          style={{ y: backgroundY }}
+          className="fixed inset-0 pointer-events-none z-0"
+        >
+          <div className="mesh-gradient !opacity-25">
+            <div className="mesh-blob w-[1200px] h-[1200px] bg-primary top-[-10%] left-[-10%]" />
+            <div className="mesh-blob w-[1000px] h-[1000px] bg-primary/40 bottom-[-10%] right-[-10%]" />
+          </div>
+          <div className="absolute inset-0 neural-grid opacity-[0.03]" />
+          <SplineRobot />
+        </motion.div>
+
+        <Navbar session={session as any} />
+
+        <div className="max-w-4xl mx-auto px-4 md:px-8 pt-32 md:pt-48 pb-16 relative z-10 flex flex-col items-center justify-center min-h-[80vh]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as any }}
+            className="w-full glass-premium rounded-3xl md:rounded-[2.5rem] p-8 md:p-14 border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] text-center relative overflow-hidden space-y-8"
+          >
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/25 blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-primary/10 blur-[80px] pointer-events-none" />
+
+            <div className="flex flex-col items-center gap-4">
+              <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-mono tracking-widest border border-primary/20 uppercase animate-pulse">
+                ⚡ Round 0 — Stand By
+              </span>
+              <h1 className="text-5xl md:text-7xl font-display font-black leading-tight text-white uppercase tracking-tight">
+                Welcome,<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-violet-400">
+                  {team.teamName}
+                </span>
+              </h1>
+              <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
+                You are checked in and registered for the event. Round 1 has not started yet. Please stand by for the administrator to open submissions.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white/[0.01] border border-white/5 text-xs text-white/45 max-w-lg mx-auto leading-relaxed">
+              💡 <strong>System Notice:</strong> Submissions open when the administrator advances the global round to Round 1.
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-4 pt-4">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-vibrant !py-3 !px-8 text-xs font-semibold rounded-xl"
+              >
+                🔄 Refresh Status
+              </button>
+              <button
+                onClick={handleLogout}
+                className="btn-ghost !py-3 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20"
+              >
+                DISCONNECT
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </main>
+    )
+  }
+
   if (team?.allowedTaskId === 'WAITING_ROOM') {
     return (
       <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
