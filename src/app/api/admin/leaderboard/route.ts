@@ -4,7 +4,7 @@ import { getStaffFromRequest } from '@/lib/auth-utils'
 
 export async function GET(request: Request) {
   try {
-    const staff = getStaffFromRequest(request)
+    const staff = await getStaffFromRequest(request)
     if (!staff || staff.role !== 'JUDGE') {
       return NextResponse.json(
         { error: 'Unauthorized.' },

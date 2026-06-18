@@ -6,8 +6,8 @@ import { getTeamStatus } from '@/lib/state-engine'
 export async function POST(request: Request) {
   try {
     // 1. Validate staff credentials (ADMIN or JUDGE)
-    const staff = getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'JUDGE' && staff.role !== 'ADMIN')) {
+    const staff = await getStaffFromRequest(request)
+    if (!staff || staff.role !== 'JUDGE') {
       return NextResponse.json(
         { error: 'Unauthorized. Judge or Admin credentials required.' },
         { status: 401 }
@@ -74,6 +74,13 @@ export async function POST(request: Request) {
     if (existingEvaluation) {
       return NextResponse.json(
         { error: 'You have already evaluated this submission.' },
+        { status: 400 }
+      )
+    }
+
+    if (submission.submissionType === 'DEMO') {
+      return NextResponse.json(
+        { error: 'Demo submissions are approved by admins, not graded by judges.' },
         { status: 400 }
       )
     }

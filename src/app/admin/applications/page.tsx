@@ -37,6 +37,10 @@ export default function AdminApplicationsPage() {
     },
     onError: (err) => alert(`Error removing teams: ${err.message}`),
   })
+  const approveMutation = api.application.updateStatus.useMutation({
+    onSuccess: () => refetch(),
+    onError: (err) => alert(`Error: ${err.message}`),
+  })
 
   const filtered = data?.applications ?? []
 
@@ -87,6 +91,7 @@ export default function AdminApplicationsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
+            { href: '/admin/presentations', label: 'Presentations', icon: '🎤' },
             { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
@@ -273,6 +278,23 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex items-center justify-end gap-3">
+                          {(app as any).manualStatus === 'APPROVED_FOR_NEXT' ? (
+                            <button
+                              onClick={() => approveMutation.mutate({ id: app.id, status: 'NONE' })}
+                              disabled={approveMutation.isPending}
+                              className="text-[10px] font-black text-emerald-400 hover:text-amber-400 uppercase tracking-widest transition-colors"
+                            >
+                              Approved
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => approveMutation.mutate({ id: app.id, status: 'APPROVED_FOR_NEXT' })}
+                              disabled={approveMutation.isPending}
+                              className="text-[10px] font-black text-white/30 hover:text-emerald-400 uppercase tracking-widest transition-colors"
+                            >
+                              Approve
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {

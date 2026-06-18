@@ -70,6 +70,7 @@ export const applicationRouter = createTRPCRouter({
             totalScore: score,
             currentStage,
             status: teamRoundStatus,
+            manualStatus: state?.manualStatus || null,
             submittedAt: reg.registeredAt,
             user: {
               email: `Unstop Team: ${reg.unstopTeamId}`,
@@ -154,14 +155,20 @@ export const applicationRouter = createTRPCRouter({
     }
   }),
 
-  // Add dummy mutations for client API backwards compatibility
   updateStatus: adminProcedure
     .input(z.object({
       id: z.string(),
       status: z.string(),
       notes: z.string().optional(),
     }))
-    .mutation(() => {
+    .mutation(async ({ ctx, input }) => {
+      const reg = await ctx.db.registration.findUnique({ where: { id: input.id } })
+      if (!reg) throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' })
+      const progress = (reg.progressState as any) || {}
+      await ctx.db.registration.update({
+        where: { id: input.id },
+        data: { progressState: { ...progress, manualStatus: input.status } },
+      })
       return { success: true }
     }),
 
@@ -233,4 +240,142 @@ export const applicationRouter = createTRPCRouter({
 
       return { success: true, currentRound: input.round }
     }),
+
+  getDemoQueue: adminProcedure.query(async ({ ctx }) => {
+    const activeEvent = await ctx.db.event.findFirst({ where: { isActive: true } })
+    if (!activeEvent) return { teams: [] }
+
+    const registrations = await ctx.db.registration.findMany({
+      where: { eventId: activeEvent.id },
+      include: {
+        submissions: {
+          where: { submissionType: 'DEMO' },
+          orderBy: { submittedAt: 'desc' },
+        },
+      },
+      orderBy: { registeredAt: 'asc' },
+    })
+
+    const teams = registrations.map((reg) => {
+      const progress = (reg.progressState as any) || {}
+      const latestDemo = reg.submissions[0] || null
+      return {
+        id: reg.id,
+        teamName: reg.teamName,
+        unstopTeamId: reg.unstopTeamId,
+        score: progress.score || 0,
+        currentStage: progress.current_stage || 0,
+        demoSubmission: latestDemo ? {
+          id: latestDemo.id,
+          status: latestDemo.status,
+          payload: latestDemo.payload,
+          submittedAt: latestDemo.submittedAt,
+        } : null,
+        meetLink: progress.meetLink || null,
+        presentationStatus: progress.presentationStatus || 'NONE',
+      }
+    })
+
+    return { teams }
+  }),
+
+  approveDemo: adminProcedure
+    .input(z.object({
+      registrationId: z.string(),
+      meetLink: z.string().url('Must be a valid URL'),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const reg = await ctx.db.registration.findUniqueOrThrow({ where: { id: input.registrationId } })
+      const progress = (reg.progressState as any) || {}
+
+      const demoSub = await ctx.db.submission.findFirst({
+        where: { registrationId: input.registrationId, submissionType: 'DEMO', status: 'PENDING' },
+      })
+      if (demoSub) {
+        await ctx.db.submission.update({
+          where: { id: demoSub.id },
+          data: { status: 'APPROVED' },
+        })
+      }
+
+      await ctx.db.registration.update({
+        where: { id: input.registrationId },
+        data: {
+          progressState: {
+            ...progress,
+            meetLink: input.meetLink,
+            presentationStatus: 'QUEUED',
+          },
+        },
+      })
+
+      return { success: true }
+    }),
+
+  updatePresentationStatus: adminProcedure
+    .input(z.object({
+      registrationId: z.string(),
+      status: z.enum(['QUEUED', 'ACTIVE', 'COMPLETED']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const reg = await ctx.db.registration.findUniqueOrThrow({ where: { id: input.registrationId } })
+      const progress = (reg.progressState as any) || {}
+
+      await ctx.db.registration.update({
+        where: { id: input.registrationId },
+        data: {
+          progressState: {
+            ...progress,
+            presentationStatus: input.status,
+          },
+        },
+      })
+
+      return { success: true }
+    }),
+
+  callNextTeam: adminProcedure.mutation(async ({ ctx }) => {
+    const currentActive = await ctx.db.registration.findFirst({
+      where: {
+        event: { isActive: true },
+        progressState: {
+          path: ['presentationStatus'],
+          equals: 'ACTIVE',
+        },
+      },
+    })
+    if (currentActive) {
+      const currentProgress = (currentActive.progressState as any) || {}
+      await ctx.db.registration.update({
+        where: { id: currentActive.id },
+        data: {
+          progressState: { ...currentProgress, presentationStatus: 'COMPLETED' },
+        },
+      })
+    }
+
+    const nextQueued = await ctx.db.registration.findFirst({
+      where: {
+        event: { isActive: true },
+        progressState: {
+          path: ['presentationStatus'],
+          equals: 'QUEUED',
+        },
+      },
+      orderBy: { registeredAt: 'asc' },
+    })
+    if (!nextQueued) {
+      return { success: true, message: 'No teams in queue.' }
+    }
+
+    const nextProgress = (nextQueued.progressState as any) || {}
+    await ctx.db.registration.update({
+      where: { id: nextQueued.id },
+      data: {
+        progressState: { ...nextProgress, presentationStatus: 'ACTIVE' },
+      },
+    })
+
+    return { success: true, teamName: nextQueued.teamName }
+  }),
 })

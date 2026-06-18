@@ -44,9 +44,6 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed.')
       }
 
-      // Save token in localStorage as backup
-      localStorage.setItem('team_token', data.sessionToken)
-      localStorage.removeItem('staff_token') // clear competing sessions
 
       // Redirect to participant dashboard
       router.push('/dashboard')

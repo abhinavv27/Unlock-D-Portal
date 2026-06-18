@@ -62,8 +62,8 @@ export default function AdminClient({ session, stats, funnel }: { session: any, 
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/presentations', label: 'Presentations', icon: '🎤' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
-            { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => (
             <Link 
               key={href} 

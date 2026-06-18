@@ -11,10 +11,10 @@ export const teamsRouter = createTRPCRouter({
         githubUrl: z.string().optional().or(z.literal('')),
         liveDemoUrl: z.string().optional().or(z.literal('')),
         description: z.string().max(1000).optional().default(''),
+        submissionType: z.enum(['COMMIT', 'DEMO']).optional().default('COMMIT'),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // 1. Fetch current Allowed State dynamically from db history
       const status = await getTeamStatus(ctx.team.id, ctx.db)
       if (status.isPending) {
         throw new TRPCError({
@@ -23,7 +23,6 @@ export const teamsRouter = createTRPCRouter({
         })
       }
 
-      // Check if team is in the waiting room
       const rawTeam = await ctx.db.registration.findUniqueOrThrow({
         where: { id: ctx.team.id },
         include: { event: true }
@@ -42,6 +41,39 @@ export const teamsRouter = createTRPCRouter({
         })
       }
 
+      const roundNumber = input.submissionType === 'DEMO' ? 2 : status.allowedRound
+
+      if (input.submissionType === 'DEMO') {
+        const cleanDemo = input.liveDemoUrl?.trim()
+        if (!cleanDemo) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'A demo/video URL is required for demo submissions.',
+          })
+        }
+        try { new URL(cleanDemo) } catch {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Please provide a valid URL for your demo.',
+          })
+        }
+        const submission = await ctx.db.submission.create({
+          data: {
+            registrationId: ctx.team.id,
+            roundNumber,
+            taskId: 'DEMO',
+            submissionType: 'DEMO',
+            status: 'PENDING',
+            payload: {
+              demoUrl: cleanDemo,
+              description: input.description || undefined,
+              submitted_at: new Date().toISOString(),
+            },
+          },
+        })
+        return { success: true, submission }
+      }
+
       const cleanGithub = input.githubUrl?.trim();
       const cleanDemo = input.liveDemoUrl?.trim();
 
@@ -52,11 +84,8 @@ export const teamsRouter = createTRPCRouter({
         })
       }
 
-      // If provided, validate as URL format
       if (cleanGithub) {
-        try {
-          new URL(cleanGithub)
-        } catch {
+        try { new URL(cleanGithub) } catch {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Please provide a valid GitHub URL.',
@@ -64,9 +93,7 @@ export const teamsRouter = createTRPCRouter({
         }
       }
       if (cleanDemo) {
-        try {
-          new URL(cleanDemo)
-        } catch {
+        try { new URL(cleanDemo) } catch {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Please provide a valid Live Demo URL.',
@@ -74,12 +101,12 @@ export const teamsRouter = createTRPCRouter({
         }
       }
 
-      // 2. Create the PENDING submission, locking down roundNumber & taskId
       const submission = await ctx.db.submission.create({
         data: {
           registrationId: ctx.team.id,
-          roundNumber: status.allowedRound,
+          roundNumber,
           taskId: status.allowedTaskId,
+          submissionType: 'COMMIT',
           status: 'PENDING',
           payload: {
             github: cleanGithub || undefined,
@@ -90,10 +117,7 @@ export const teamsRouter = createTRPCRouter({
         },
       })
 
-      return {
-        success: true,
-        submission,
-      }
+      return { success: true, submission }
     }),
 
   // Status query: Fetches team information and sequential submission history
@@ -184,7 +208,7 @@ export const teamsRouter = createTRPCRouter({
       allowedTaskId: statusResult.allowedTaskId,
       allowedRound: statusResult.allowedRound,
       isPending: statusResult.isPending,
-      highestState: statusResult.highestState,
+      highestRound: statusResult.highestRound,
       inWaitingRoom,
       isEliminated,
       eventRound,

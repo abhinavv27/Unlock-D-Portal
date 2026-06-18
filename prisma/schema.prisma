@@ -11,6 +11,11 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum SubmissionType {
+  COMMIT
+  DEMO
+}
+
 // ─── MODELS ───────────────────────────────────────────────────────────────
 
 model User {
@@ -60,6 +65,7 @@ model Submission {
   rejectionReason String?      @map("rejection_reason")
   payload         Json // JSONB: dynamic submission payload (e.g. GitHub URL, CTF flag submission)
   status          String       @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED'
+  submissionType  SubmissionType @default(COMMIT) @map("submission_type")
   submittedAt     DateTime     @default(now()) @map("submitted_at")
   evaluations     Evaluation[]
 
