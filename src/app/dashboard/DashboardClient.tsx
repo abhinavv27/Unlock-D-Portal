@@ -39,6 +39,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
+  // Demo submission form states
+  const [demoUrl, setDemoUrl] = useState('')
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [demoError, setDemoError] = useState<string | null>(null)
+  const [demoSuccess, setDemoSuccess] = useState(false)
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -104,6 +110,34 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       setSubmitError(err.message || 'An unexpected error occurred.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!demoUrl.trim()) return
+
+    setDemoLoading(true)
+    setDemoError(null)
+    setDemoSuccess(false)
+
+    try {
+      await submitMutation.mutateAsync({
+        liveDemoUrl: demoUrl.trim(),
+        submissionType: 'DEMO',
+        description: 'Demo / Documentation submission for Round 2',
+      })
+
+      setDemoSuccess(true)
+      setDemoUrl('')
+
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (err: any) {
+      setDemoError(err.message || 'An unexpected error occurred.')
+    } finally {
+      setDemoLoading(false)
     }
   }
 
@@ -401,6 +435,39 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                           </div>
                         </form>
                       )}
+                    </div>
+                  )}
+
+                  {/* DEMO SUBMISSION FORM (Round 2 only) */}
+                  {team && team.eventRound === 2 && !team.submissions?.some((s: any) => s.submissionType === 'DEMO' && (s.status === 'PENDING' || s.status === 'APPROVED')) && (
+                    <div className="mt-6 pt-6 border-t border-white/5">
+                      <h4 className="text-lg font-display font-medium text-white mb-3">Submit Project Demo / Documentation</h4>
+                      <p className="text-xs text-white/40 mb-4">Submit a video demo or documentation URL for final evaluation.</p>
+                      <form onSubmit={handleDemoSubmit} className="max-w-xl space-y-4">
+                        {demoError && (
+                          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">{demoError}</div>
+                        )}
+                        {demoSuccess && (
+                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Demo submitted! Refreshing dashboard...</div>
+                        )}
+                        <input
+                          type="url"
+                          value={demoUrl}
+                          onChange={(e) => setDemoUrl(e.target.value)}
+                          placeholder="Loom / YouTube / Google Drive / Documentation URL"
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                        />
+                        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+                          <button
+                            type="submit"
+                            disabled={demoLoading || !demoUrl.trim()}
+                            className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
+                          >
+                            {demoLoading ? 'Submitting...' : 'Submit Demo'}
+                          </button>
+                          <span className="text-[10px] text-white/20 font-mono">Upload a video walkthrough or project documentation</span>
+                        </div>
+                      </form>
                     </div>
                   )}
                 </>
