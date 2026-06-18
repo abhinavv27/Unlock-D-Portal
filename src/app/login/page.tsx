@@ -44,7 +44,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed.')
       }
 
-      localStorage.setItem('team_token', data.sessionToken)
+
 
       // Redirect to participant dashboard
       router.push('/dashboard')
