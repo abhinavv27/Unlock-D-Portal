@@ -4,6 +4,7 @@ import { judgingRouter } from './judging'
 import { scheduleRouter } from './schedule'
 import { scannerRouter } from './scanner'
 import { authRouter } from './auth'
+import { teamsRouter } from './teams'
 
 export const appRouter = createTRPCRouter({
   application: applicationRouter,
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   schedule: scheduleRouter,
   scanner: scannerRouter,
   auth: authRouter,
+  teams: teamsRouter,
 })
 
 export type AppRouter = typeof appRouter
