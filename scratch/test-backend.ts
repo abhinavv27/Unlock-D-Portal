@@ -183,25 +183,27 @@ async function testBackend() {
     }
     console.log('✅ Submission found in judge queue.')
 
-    // ─── STEP 7: GRADE SUBMISSION (APPROVE - FIRST JUDGE via tRPC) ───────────
-    console.log('\n[Test 7] Grading submission (First Judge: submitEvaluation via tRPC)...')
-    const gradeRes = await fetch(`${BASE_URL}/api/trpc/judging.submitEvaluation?batch=1`, {
+    // ─── STEP 7: GRADE SUBMISSION (APPROVE - FIRST JUDGE) ───────────────────
+    console.log('\n[Test 7] Grading submission (First Judge: Approve with score 35)...')
+    const gradeRes = await fetch(`${BASE_URL}/api/admin/grade`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${staffToken}`,
         'Content-Type': `application/json`,
       },
       body: JSON.stringify({
-        "0": {
-          "json": {
-            submissionId,
-            scoreBreakdown: {
-              functionality: 9,
-              code_quality: 8,
-            },
-            feedback: 'Fantastic prototype setup! Looking forward to stage 2.',
-          }
-        }
+        submissionId,
+        scoreBreakdown: {
+          functionality: 8,
+          codeQuality: 5,
+          integration: 5,
+          userExperience: 5,
+          deployment: 4,
+          teamwork: 5,
+          errorHandling: 3,
+        },
+        feedback: 'Fantastic prototype setup! Looking forward to stage 2.',
+        status: 'APPROVED',
       }),
     })
 
@@ -209,8 +211,8 @@ async function testBackend() {
       throw new Error(`Grading failed: ${await gradeRes.text()}`)
     }
 
-    const gradeBatchData = await gradeRes.json()
-    console.log(`✅ Submission graded by first judge.`)
+    const gradeData = await gradeRes.json()
+    console.log(`✅ Submission graded by first judge. Calculated total: ${gradeData.totalScore}`)
 
     // ─── STEP 7.1: LOGIN AS SECOND JUDGE ────────────────────────────────────
     console.log('\n[Test 7.1] Logging in as second judge...')
@@ -248,25 +250,27 @@ async function testBackend() {
     }
     console.log('✅ Submission found in second judge\'s queue.')
 
-    // ─── STEP 7.3: GRADE SUBMISSION (APPROVE - SECOND JUDGE via tRPC) ────────
-    console.log('\n[Test 7.3] Grading submission (Second Judge: submitEvaluation via tRPC)...')
-    const gradeRes2 = await fetch(`${BASE_URL}/api/trpc/judging.submitEvaluation?batch=1`, {
+    // ─── STEP 7.3: GRADE SUBMISSION (APPROVE - SECOND JUDGE) ────────────────
+    console.log('\n[Test 7.3] Grading submission (Second Judge: Approve with score 25)...')
+    const gradeRes2 = await fetch(`${BASE_URL}/api/admin/grade`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${judgeToken}`,
         'Content-Type': `application/json`,
       },
       body: JSON.stringify({
-        "0": {
-          "json": {
-            submissionId,
-            scoreBreakdown: {
-              functionality: 7,
-              code_quality: 6,
-            },
-            feedback: 'Good execution, but backend lacks styling.',
-          }
-        }
+        submissionId,
+        scoreBreakdown: {
+          functionality: 5,
+          codeQuality: 4,
+          integration: 3,
+          userExperience: 4,
+          deployment: 3,
+          teamwork: 3,
+          errorHandling: 3,
+        },
+        feedback: 'Good execution, but backend lacks styling.',
+        status: 'APPROVED',
       }),
     })
 
@@ -274,34 +278,10 @@ async function testBackend() {
       throw new Error(`Grading by second judge failed: ${await gradeRes2.text()}`)
     }
 
-    console.log(`✅ Submission graded by second judge.`)
+    const gradeData2 = await gradeRes2.json()
+    console.log(`✅ Submission graded by second judge. Calculated total: ${gradeData2.totalScore}`)
 
-    // ─── STEP 7.3.5: FINALIZE SUBMISSION (ADMIN via tRPC) ───────────────────
-    console.log('\n[Test 7.3.5] Finalizing submission (Admin: finalizeSubmission via tRPC)...')
-    const finalizeRes = await fetch(`${BASE_URL}/api/trpc/judging.finalizeSubmission?batch=1`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${staffToken}`,
-        'Content-Type': `application/json`,
-      },
-      body: JSON.stringify({
-        "0": {
-          "json": {
-            submissionId,
-          }
-        }
-      }),
-    })
-
-    if (!finalizeRes.ok) {
-      throw new Error(`Finalizing failed: ${await finalizeRes.text()}`)
-    }
-
-    const finalizeBatchData = await finalizeRes.json()
-    const finalizeData = finalizeBatchData[0].result.data.json
-    console.log(`✅ Submission finalized by admin. Status: ${finalizeData.status}, Average Score: ${finalizeData.averageScore}`)
-
-    // ─── STEP 7.4: VERIFY SUBMISSION REMOVED FROM JUDGE\'S QUEUE ────────────
+    // ─── STEP 7.4: VERIFY SUBMISSION REMOVED FROM SECOND JUDGE\'S QUEUE ──────
     console.log('\n[Test 7.4] Fetching queue for second judge again (should be empty)...')
     const queueRes3 = await fetch(`${BASE_URL}/api/admin/queue`, {
       headers: { 'Authorization': `Bearer ${judgeToken}` },
@@ -315,7 +295,7 @@ async function testBackend() {
     console.log('✅ Submission removed from second judge\'s queue.')
 
     // ─── STEP 8: VERIFY STAGE PROGRESSION & SCORE AVERAGING ─────────────────
-    console.log('\n[Test 8] Retrieving team status after dual grading (Should be allowed FEATURE-2)...')
+    console.log('\n[Test 8] Retrieving team status after dual grading (Should be Stage 1 in waiting room)...')
     const finalStatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
       headers: { 'Authorization': `Bearer ${teamToken}` },
     })
@@ -328,98 +308,21 @@ async function testBackend() {
     const finalStatusData = finalStatusBatchData[0].result.data.json
     console.log(`✅ Final team status retrieved.`)
     console.log(`- Current Stage: ${finalStatusData.progressState.current_stage} (Expected: 1)`)
-    console.log(`- Cumulative Score: ${finalStatusData.progressState.score} (Expected: 15)`)
-    console.log(`- Allowed Task ID: ${finalStatusData.allowedTaskId} (Expected: FEATURE-2)`)
-
-    if (finalStatusData.allowedRound !== 1) {
-      throw new Error(`Expected allowedRound to be 1, got ${finalStatusData.allowedRound}`)
-    }
-    if (finalStatusData.allowedTaskId !== 'FEATURE-2') {
-      throw new Error(`Expected allowedTaskId to be FEATURE-2, got ${finalStatusData.allowedTaskId}`)
-    }
-    if (finalStatusData.progressState.score !== 15) {
-      // (9+8) + (7+6) / 2 = 15.0
-      throw new Error(`Expected score to be 15, got ${finalStatusData.progressState.score}`)
-    }
-
-    // ─── STEP 9: SUBMIT AND APPROVE ALL REMAINING ROUND 1 TASKS TO TRIGGER CEILING ────
-    console.log('\n[Test 9] Simulating submissions to trigger global round ceiling (WAITING_ROOM)...')
+    console.log(`- Cumulative Score: ${finalStatusData.progressState.score} (Expected: 30)`)
+    console.log(`- In Waiting Room: ${finalStatusData.inWaitingRoom} (Expected: true)`)
     
-    // Submit FEATURE-2
-    const sub2Res = await fetch(`${BASE_URL}/api/trpc/teams.submit?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${teamToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": { githubUrl: 'https://github.com/cyber-titans/unlockd', description: 'FEATURE-2 submission' } } }),
-    })
-    const sub2Id = (await sub2Res.json())[0].result.data.json.submission.id
+    // Virtual evaluation should be in status response
+    const lastSub = finalStatusData.submissions.find((s: any) => s.id === submissionId)
+    console.log(`- Virtual Evaluation:`, lastSub?.evaluation)
 
-    // Grade and finalize FEATURE-2
-    await fetch(`${BASE_URL}/api/trpc/judging.submitEvaluation?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": { submissionId: sub2Id, scoreBreakdown: { functionality: 10, code_quality: 10 }, feedback: 'Superb step 2' } } }),
-    })
-    await fetch(`${BASE_URL}/api/trpc/judging.finalizeSubmission?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": { submissionId: sub2Id } } }),
-    })
-
-    // Submit FEATURE-3
-    const sub3Res = await fetch(`${BASE_URL}/api/trpc/teams.submit?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${teamToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": { githubUrl: 'https://github.com/cyber-titans/unlockd', description: 'FEATURE-3 submission' } } }),
-    })
-    const sub3Id = (await sub3Res.json())[0].result.data.json.submission.id
-
-    // Grade and finalize FEATURE-3
-    await fetch(`${BASE_URL}/api/trpc/judging.submitEvaluation?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": { submissionId: sub3Id, scoreBreakdown: { functionality: 10, code_quality: 10 }, feedback: 'Superb step 3' } } }),
-    })
-    await fetch(`${BASE_URL}/api/trpc/judging.finalizeSubmission?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": { submissionId: sub3Id } } }),
-    })
-
-    // Fetch team status: Should be locked in WAITING_ROOM since allowedRound is 2 but event round ceiling is 1
-    const ceilStatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
-      headers: { 'Authorization': `Bearer ${teamToken}` },
-    })
-    const ceilStatusData = (await ceilStatusRes.json())[0].result.data.json
-    console.log(`✅ Team status retrieved. Allowed Task ID: ${ceilStatusData.allowedTaskId} (Expected: WAITING_ROOM)`)
-    if (ceilStatusData.allowedTaskId !== 'WAITING_ROOM') {
-      throw new Error(`Expected team to be locked in WAITING_ROOM, got ${ceilStatusData.allowedTaskId}`)
+    if (finalStatusData.progressState.current_stage !== 1) {
+      throw new Error(`Expected stage to be 1, got ${finalStatusData.progressState.current_stage}`)
     }
-
-    // ─── STEP 10: ADMIN INCREMENTS GLOBAL ROUND CEILING ──────────────────────
-    console.log('\n[Test 10] Admin advancing current global round to 2...')
-    const nextRoundRes = await fetch(`${BASE_URL}/api/trpc/application.startNextRound?batch=1`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "0": { "json": {} } }),
-    })
-    if (!nextRoundRes.ok) {
-      throw new Error(`Failed to advance round: ${await nextRoundRes.text()}`)
+    if (finalStatusData.progressState.score !== 30) {
+      throw new Error(`Expected score to be 30 (average of 35 and 25), got ${finalStatusData.progressState.score}`)
     }
-    const nextRoundData = (await nextRoundRes.json())[0].result.data.json
-    console.log(`✅ Global round advanced. Current Global Round is now: ${nextRoundData.currentGlobalRound}`)
-    if (nextRoundData.currentGlobalRound !== 2) {
-      throw new Error(`Expected currentGlobalRound to be 2, got ${nextRoundData.currentGlobalRound}`)
-    }
-
-    // ─── STEP 11: VERIFY CEILING IS LIFTED FOR TEAM ─────────────────────────
-    console.log('\n[Test 11] Verifying team ceiling is lifted after admin action...')
-    const liftedStatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
-      headers: { 'Authorization': `Bearer ${teamToken}` },
-    })
-    const liftedStatusData = (await liftedStatusRes.json())[0].result.data.json
-    console.log(`✅ Team status retrieved. Allowed Task ID: ${liftedStatusData.allowedTaskId} (Expected: ROUND-2)`)
-    if (liftedStatusData.allowedTaskId !== 'ROUND-2') {
-      throw new Error(`Expected allowedTaskId to be ROUND-2, got ${liftedStatusData.allowedTaskId}`)
+    if (!lastSub?.evaluation || lastSub.evaluation.totalScore !== 30) {
+      throw new Error(`Expected virtual evaluation totalScore to be 30, got ${lastSub?.evaluation?.totalScore}`)
     }
     if (finalStatusData.inWaitingRoom !== true) {
       throw new Error(`Expected team to be in waiting room, but inWaitingRoom is ${finalStatusData.inWaitingRoom}`)
