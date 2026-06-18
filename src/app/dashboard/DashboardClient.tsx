@@ -122,8 +122,8 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
   // Extract stage data from event config for roadmap
   const stages: { stage: number; name: string; pointsRequired: number }[] = team?.event?.config?.stages || []
-  const currentStageNum: number = team?.progressState?.current_stage || 1
-  const currentStage = stages[currentStageNum - 1] || null
+  const currentStageNum: number = team?.progressState?.current_stage !== undefined ? team.progressState.current_stage : 0
+  const currentStage = stages.find(s => s.stage === currentStageNum) || null
 
   // Find the most recent rejected submission for resubmit prompt
   const lastRejected = team?.submissions?.find((sub: any) => sub.status === 'REJECTED')
@@ -262,87 +262,107 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 {config.message}
               </p>
 
-              {/* Current Objective */}
-              {team && currentStage && (
-                <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-white/[0.03] border border-white/5">
-                  <span className="text-[9px] text-white/30 uppercase font-mono tracking-widest">Current Objective</span>
-                  <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-2">
-                    {currentStage.name}
+              {team && team.isEliminated ? (
+                <div className="mt-10 p-10 rounded-2xl bg-rose-950/20 border border-rose-500/20 flex flex-col items-center text-center space-y-4">
+                  <h3 className="text-3xl font-display font-medium text-rose-400">
+                    Not Selected
                   </h3>
-                  <p className="text-sm text-white/50 mt-1">
-                    {currentStageNum <= stages.length
-                      ? `Round ${currentStageNum} — ${currentStage.pointsRequired} points required to advance`
-                      : 'All rounds completed'}
+                  <p className="text-sm text-rose-200/80 leading-relaxed font-mono max-w-md">
+                    The next round has started, but unfortunately your team was not selected to advance. Thank you for participating!
                   </p>
                 </div>
-              )}
-
-              {/* PARTICIPANT WORK SUBMISSION INPUT */}
-              {team && (
-                <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
-                  <h3 className="text-xl md:text-2xl font-display font-medium text-white mb-6">Submit Round Progress</h3>
-                  
-                  {/* Rejected submission feedback + resubmit prompt */}
-                  {lastRejected && lastRejected.evaluation && !hasPending && (
-                    <div className="mb-6 p-5 rounded-2xl bg-rose-500/5 border border-rose-500/15">
-                      <div className="flex items-start gap-3">
-                        <span className="text-rose-400 text-sm mt-0.5">!</span>
-                        <div className="flex-1">
-                          <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Submission Rejected</span>
-                          <p className="text-xs text-rose-300/80 mt-1 leading-relaxed">
-                            &ldquo;{lastRejected.evaluation.feedback}&rdquo;
-                          </p>
-                          <p className="text-[10px] text-white/40 mt-2">Fix the issues below and resubmit to advance.</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {hasPending ? (
-                    <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-400 text-sm leading-relaxed max-w-xl">
-                      ⚡ Your team&apos;s latest submission is currently queued for grading. Judging panel will inspect and score shortly.
-                    </div>
-                  ) : (
-                    <form onSubmit={handleWorkSubmit} className="max-w-xl space-y-4">
-                      {submitError && (
-                        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                          {submitError}
-                        </div>
-                      )}
-                      {submitSuccess && (
-                        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                          Submission uploaded successfully! Refreshing dashboard...
-                        </div>
-                      )}
-                      <div className="space-y-3">
-                        <input
-                          type="url"
-                          value={githubUrl}
-                          onChange={(e) => setGithubUrl(e.target.value)}
-                          placeholder="GitHub Repository URL"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
-                        />
-                        <input
-                          type="url"
-                          value={liveDemoUrl}
-                          onChange={(e) => setLiveDemoUrl(e.target.value)}
-                          placeholder="Live Demo URL (optional)"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
-                        />
-                      </div>
-                      <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-                        <button
-                          type="submit"
-                          disabled={loading || (!githubUrl.trim() && !liveDemoUrl.trim())}
-                          className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
-                        >
-                          {loading ? 'Submitting...' : 'Submit Entry'}
-                        </button>
-                        <span className="text-[10px] text-white/20 font-mono">Provide at least one URL to submit</span>
-                      </div>
-                    </form>
-                  )}
+              ) : team && team.inWaitingRoom ? (
+                <div className="mt-10 p-10 rounded-2xl bg-blue-950/20 border border-blue-500/20 flex flex-col items-center text-center space-y-4">
+                  <h3 className="text-3xl font-display font-medium text-blue-400">
+                    Waiting Room
+                  </h3>
+                  <p className="text-sm text-blue-200/80 leading-relaxed font-mono max-w-md">
+                    Congratulations on finishing the round early! Hang tight, the next round has not started yet.
+                  </p>
                 </div>
+              ) : (
+                <>
+                  {/* Current Objective */}
+                  {team && currentStage && (
+                    <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-white/[0.03] border border-white/5">
+                      <span className="text-[9px] text-white/30 uppercase font-mono tracking-widest">Current Objective</span>
+                      <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-2">
+                        {currentStage.name}
+                      </h3>
+                      <p className="text-sm text-white/50 mt-1">
+                        Round {currentStageNum} — {currentStage.pointsRequired} points required to advance
+                      </p>
+                    </div>
+                  )}
+
+                  {/* PARTICIPANT WORK SUBMISSION INPUT */}
+                  {team && (
+                    <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
+                      <h3 className="text-xl md:text-2xl font-display font-medium text-white mb-6">Submit Round Progress</h3>
+                      
+                      {/* Rejected submission feedback + resubmit prompt */}
+                      {lastRejected && lastRejected.evaluation && !hasPending && (
+                        <div className="mb-6 p-5 rounded-2xl bg-rose-500/5 border border-rose-500/15">
+                          <div className="flex items-start gap-3">
+                            <span className="text-rose-400 text-sm mt-0.5">!</span>
+                            <div className="flex-1">
+                              <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Submission Rejected</span>
+                              <p className="text-xs text-rose-300/80 mt-1 leading-relaxed">
+                                &ldquo;{lastRejected.evaluation.feedback}&rdquo;
+                              </p>
+                              <p className="text-[10px] text-white/40 mt-2">Fix the issues below and resubmit to advance.</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {hasPending ? (
+                        <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-400 text-sm leading-relaxed max-w-xl">
+                          ⚡ Your team&apos;s latest submission is currently queued for grading. Judging panel will inspect and score shortly.
+                        </div>
+                      ) : (
+                        <form onSubmit={handleWorkSubmit} className="max-w-xl space-y-4">
+                          {submitError && (
+                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                              {submitError}
+                            </div>
+                          )}
+                          {submitSuccess && (
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                              Submission uploaded successfully! Refreshing dashboard...
+                            </div>
+                          )}
+                          <div className="space-y-3">
+                            <input
+                              type="url"
+                              value={githubUrl}
+                              onChange={(e) => setGithubUrl(e.target.value)}
+                              placeholder="GitHub Commit / Repository URL"
+                              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                            />
+                            <input
+                              type="url"
+                              value={liveDemoUrl}
+                              onChange={(e) => setLiveDemoUrl(e.target.value)}
+                              placeholder="Loom / Google Drive Video URL"
+                              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                            />
+                          </div>
+                          <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+                            <button
+                              type="submit"
+                              disabled={loading || (!githubUrl.trim() && !liveDemoUrl.trim())}
+                              className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
+                            >
+                              {loading ? 'Submitting...' : 'Submit Entry'}
+                            </button>
+                            <span className="text-[10px] text-white/20 font-mono">Provide your code repository and working demo video URL</span>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* STAFF LINKS */}

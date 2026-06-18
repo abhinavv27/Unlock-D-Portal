@@ -20,10 +20,20 @@ export default function AdminProjectsPage() {
 
   const { data: projects, isLoading } = api.judging.leaderboard.useQuery()
 
-  const filtered = projects?.filter(p => 
+  const mapped = projects?.map(p => {
+    const roundScores = Object.values(p.roundBreakdown || {}) as number[]
+    const avgScore = roundScores.length > 0 
+      ? Math.round((roundScores.reduce((sum, s) => sum + s, 0) / roundScores.length) * 10) / 10
+      : 0
+    return { ...p, avgScore }
+  })
+
+  const filtered = mapped?.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     p.tableNumber?.toString().toLowerCase().includes(search.toLowerCase())
   ) ?? []
+
+  const sortedProjects = [...filtered].sort((a, b) => b.avgScore - a.avgScore)
 
   return (
     <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-hidden">
@@ -61,7 +71,7 @@ export default function AdminProjectsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
@@ -101,11 +111,11 @@ export default function AdminProjectsPage() {
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-4">
               <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-label-caps !text-primary">
-                Project_Database
+                Leaderboard
               </div>
               <h1 className="text-5xl text-hero leading-[0.9]">
-                Hacker <br />
-                <span className="text-white/20">Projects.</span>
+                Global <br />
+                <span className="text-white/20">Leaderboard.</span>
               </h1>
             </div>
           </header>
@@ -116,7 +126,7 @@ export default function AdminProjectsPage() {
               <input
                 id="admin-search"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-white/20"
-                placeholder="Search by name, table..."
+                placeholder="Search by team, table..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -132,33 +142,34 @@ export default function AdminProjectsPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/5 bg-white/[0.02]">
-                    <th className="p-6 text-label-caps">Project Name</th>
+                    <th className="p-6 text-label-caps w-16">Rank</th>
+                    <th className="p-6 text-label-caps">Team Name</th>
                     <th className="p-6 text-label-caps">Table</th>
-                    <th className="p-6 text-label-caps">Track</th>
-                    <th className="p-6 text-label-caps text-center">Judges</th>
                     <th className="p-6 text-label-caps text-right">Avg Score</th>
+                    <th className="p-6 text-label-caps text-right">Total Score</th>
+                    <th className="p-6 text-label-caps text-right">Round Scores</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="p-20 text-center">
+                      <td colSpan={6} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Loading_Projects...</span>
+                          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Loading_Leaderboard...</span>
                         </div>
                       </td>
                     </tr>
-                  ) : filtered.length === 0 ? (
+                  ) : sortedProjects.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-20 text-center">
+                      <td colSpan={6} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-2 opacity-20">
                           <span className="text-4xl">📁</span>
                           <span className="text-[10px] font-black uppercase tracking-[0.3em]">No_Matching_Entries</span>
                         </div>
                       </td>
                     </tr>
-                  ) : filtered.map((project, idx) => (
+                  ) : sortedProjects.map((project, idx) => (
                     <motion.tr 
                       key={project.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -166,6 +177,9 @@ export default function AdminProjectsPage() {
                       transition={{ delay: idx * 0.03 }}
                       className="group hover:bg-white/[0.03] transition-colors cursor-pointer"
                     >
+                      <td className="p-6 text-xs font-mono text-white/40 font-bold">
+                        #{idx + 1}
+                      </td>
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{project.name}</span>
@@ -175,20 +189,31 @@ export default function AdminProjectsPage() {
                       <td className="p-6">
                         <span className="text-xs font-bold text-white/60 tracking-tight">{project.tableNumber || 'N/A'}</span>
                       </td>
-                      <td className="p-6">
-                        <span className="inline-flex px-3 py-1 rounded-lg text-label-caps !text-[9px] border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                          {project.track?.name || 'General'}
-                        </span>
-                      </td>
-                      <td className="p-6 text-center">
-                        <span className="text-value-mono !text-white/40">
-                          {project.judgeCount}
+                      <td className="p-6 text-right">
+                        <span className="text-sm font-black text-emerald-400">
+                          {project.avgScore ? project.avgScore.toFixed(1) : '-.--'}
                         </span>
                       </td>
                       <td className="p-6 text-right">
-                        <span className={`text-sm font-black ${project.avgScore ? 'text-primary' : 'text-white/20'}`}>
-                          {project.avgScore ? project.avgScore.toFixed(2) : '-.--'}
+                        <span className={`text-sm font-black ${project.totalScore ? 'text-primary' : 'text-white/20'}`}>
+                          {project.totalScore ? project.totalScore.toFixed(1) : '-.--'}
                         </span>
+                      </td>
+                      <td className="p-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {(project.roundBreakdown ? Object.entries(project.roundBreakdown) : []).sort(([a], [b]) => Number(a) - Number(b)).map(([r, roundScore]) => (
+                            <span
+                              key={r}
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                                roundScore
+                                  ? 'bg-primary/10 border-primary/20 text-primary'
+                                  : 'bg-white/5 border-white/10 text-white/20'
+                              }`}
+                            >
+                              R{r}: {roundScore ?? '-'}
+                            </span>
+                          ))}
+                        </div>
                       </td>
                     </motion.tr>
                   ))}
@@ -199,7 +224,7 @@ export default function AdminProjectsPage() {
             {/* Footer Pagination Stats */}
             <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
               <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
-                Showing <span className="text-white/40">{filtered.length}</span> of <span className="text-white/40">{projects?.length ?? 0}</span> Entries
+                Showing <span className="text-white/40">{sortedProjects.length}</span> of <span className="text-white/40">{projects?.length ?? 0}</span> Entries
               </p>
             </div>
           </div>

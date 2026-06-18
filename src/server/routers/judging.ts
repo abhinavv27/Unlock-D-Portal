@@ -51,12 +51,38 @@ export const judgingRouter = createTRPCRouter({
   // Admin: leaderboard mapping to registrations progress state score
   leaderboard: adminProcedure.query(async ({ ctx }) => {
     const registrations = await ctx.db.registration.findMany({
-      include: { event: true }
+      include: {
+        event: true,
+        submissions: {
+          where: { status: 'APPROVED' },
+          select: {
+            roundNumber: true,
+            evaluations: {
+              select: {
+                totalScore: true,
+              },
+            },
+          },
+        },
+      },
     })
     return registrations
       .map(reg => {
         const state = reg.progressState as any
         const score = state?.score || 0
+
+        // Compute per-round score breakdown
+        const roundMap: Record<number, number> = {}
+        for (const sub of reg.submissions) {
+          const round = sub.roundNumber
+          if (round === undefined || round === null) continue
+          const evals = sub.evaluations
+          if (evals.length > 0) {
+            const avgScore = evals.reduce((sum, e) => sum + e.totalScore, 0) / evals.length
+            roundMap[round] = (roundMap[round] || 0) + Math.round(avgScore * 10) / 10
+          }
+        }
+
         return {
           id: reg.id,
           name: reg.teamName,
@@ -64,9 +90,10 @@ export const judgingRouter = createTRPCRouter({
           tableNumber: reg.unstopTeamId,
           track: { name: reg.event.name },
           judgeCount: 0,
-          avgScore: score,
+          totalScore: score,
+          roundBreakdown: roundMap,
         }
       })
-      .sort((a, b) => b.avgScore - a.avgScore)
+      .sort((a, b) => b.totalScore - a.totalScore)
   }),
 })

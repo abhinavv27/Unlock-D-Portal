@@ -26,9 +26,19 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   // 2. Fallback to cookies
   if (!staffToken && !teamToken) {
     try {
-      const cookieStore = await cookies()
-      staffToken = cookieStore.get('staff_token')?.value
-      teamToken = cookieStore.get('team_token')?.value
+      const cookieHeader = opts.headers.get('cookie')
+      if (cookieHeader) {
+        const staffMatch = cookieHeader.match(/staff_token=([^;]+)/)
+        const teamMatch = cookieHeader.match(/team_token=([^;]+)/)
+        if (staffMatch) staffToken = decodeURIComponent(staffMatch[1])
+        if (teamMatch) teamToken = decodeURIComponent(teamMatch[1])
+      }
+
+      if (!staffToken && !teamToken) {
+        const cookieStore = await cookies()
+        staffToken = cookieStore.get('staff_token')?.value
+        teamToken = cookieStore.get('team_token')?.value
+      }
     } catch {
       // cookies() might throw if run outside request context
     }

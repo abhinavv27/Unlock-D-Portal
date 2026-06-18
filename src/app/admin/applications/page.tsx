@@ -87,7 +87,7 @@ export default function AdminApplicationsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
@@ -194,6 +194,7 @@ export default function AdminApplicationsPage() {
                     <th className="p-6 text-label-caps">Team</th>
                     <th className="p-6 text-label-caps">University</th>
                     <th className="p-6 text-label-caps">Submitted</th>
+                    <th className="p-6 text-label-caps text-right">Score</th>
                     <th className="p-6 text-label-caps text-right">Operations</th>
                   </tr>
                 </thead>
@@ -236,7 +237,26 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{app.firstName} {app.lastName}</span>
+                          <div className="flex items-center gap-3">
+                            <Link href={`/admin/applications/${app.id}`} className="text-sm font-black text-white hover:text-primary transition-colors font-display uppercase tracking-tight">
+                              {app.firstName} {app.lastName}
+                            </Link>
+                            {app.status === 'ELIMINATED' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-widest">
+                                Eliminated
+                              </span>
+                            )}
+                            {app.status === 'WAITING_ROOM' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-widest">
+                                Waiting Room
+                              </span>
+                            )}
+                            {app.status === 'ACTIVE' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">
+                                Active
+                              </span>
+                            )}
+                          </div>
                           <span className="text-value-mono !text-white/20 !text-[9px]">{app.user?.email}</span>
                         </div>
                       </td>
@@ -247,6 +267,9 @@ export default function AdminApplicationsPage() {
                         <span className="text-value-mono !text-white/20">
                           {new Date(app.submittedAt).toLocaleDateString()}
                         </span>
+                      </td>
+                      <td className="p-6 text-right">
+                        <span className="text-sm font-black text-primary">{app.totalScore}</span>
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex items-center justify-end gap-3">

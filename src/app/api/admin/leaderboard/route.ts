@@ -5,7 +5,7 @@ import { getStaffFromRequest } from '@/lib/auth-utils'
 export async function GET(request: Request) {
   try {
     const staff = getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
+    if (!staff || staff.role !== 'JUDGE') {
       return NextResponse.json(
         { error: 'Unauthorized.' },
         { status: 401 }
@@ -26,8 +26,14 @@ export async function GET(request: Request) {
         teamName: true,
         progressState: true,
         submissions: {
+          where: { status: 'APPROVED' },
           select: {
-            status: true,
+            roundNumber: true,
+            evaluations: {
+              select: {
+                totalScore: true,
+              },
+            },
           },
         },
       },
@@ -36,23 +42,36 @@ export async function GET(request: Request) {
     const stages = (activeEvent.config as any)?.stages || []
     const maxStage = stages.length > 0 ? Math.max(...stages.map((s: any) => s.stage)) : 3
 
-    const teams = registrations
-      .map((reg) => {
-        const ps = reg.progressState as any
-        const currentStage = ps?.current_stage ?? 0
-        const score = ps?.score ?? 0
-        const approvedCount = reg.submissions.filter((s) => s.status === 'APPROVED').length
-        const stageName = stages.find((s: any) => s.stage === currentStage)?.name || `Stage ${currentStage}`
-        return {
-          teamName: reg.teamName,
-          currentStage,
-          stageName,
-          score,
-          approvedCount,
-          maxStage,
+    const teams = registrations.map((reg) => {
+      const ps = reg.progressState as any
+      const currentStage = ps?.current_stage ?? 0
+      const cumulativeScore = ps?.score ?? 0
+      const approvedSubs = reg.submissions
+      const approvedCount = approvedSubs.length
+      const stageName = stages.find((s: any) => s.stage === currentStage)?.name || `Stage ${currentStage}`
+
+      // Compute per-round score: for each round, sum the per-submission average evaluation score
+      const roundMap: Record<number, number> = {}
+      for (const sub of approvedSubs) {
+        const round = sub.roundNumber
+        if (round === undefined || round === null) continue
+        const evals = sub.evaluations
+        if (evals.length > 0) {
+          const avgScore = evals.reduce((sum, e) => sum + e.totalScore, 0) / evals.length
+          roundMap[round] = (roundMap[round] || 0) + Math.round(avgScore * 10) / 10
         }
-      })
-      .sort((a, b) => b.score - a.score || b.currentStage - a.currentStage)
+      }
+
+      return {
+        teamName: reg.teamName,
+        currentStage,
+        stageName,
+        totalScore: cumulativeScore,
+        approvedCount,
+        maxStage,
+        roundBreakdown: roundMap,
+      }
+    }).sort((a, b) => b.totalScore - a.totalScore || b.currentStage - a.currentStage)
 
     return NextResponse.json({ teams })
   } catch (error) {
