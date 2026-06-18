@@ -6,7 +6,12 @@ const IV_LENGTH = 12
 const SALT_LENGTH = 16
 const KEY_LENGTH = 32
 
-const SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-at-least-32-chars-long'
+const SECRET = (() => {
+  if (!process.env.NEXTAUTH_SECRET) {
+    throw new Error('NEXTAUTH_SECRET environment variable is not set. Staff token encryption cannot proceed.')
+  }
+  return process.env.NEXTAUTH_SECRET
+})()
 
 // Derive encryption key from salt and secret to prevent static key usage
 const deriveKey = (salt: Buffer): Buffer => {
