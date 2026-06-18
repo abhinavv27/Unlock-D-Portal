@@ -66,29 +66,43 @@ export function decryptToken(token: string): any | null {
 }
 
 /**
- * Hashes a password asynchronously using PBKDF2 with a unique salt.
+ * Hashes a password asynchronously using PBKDF2 with a unique salt and 600,000 iterations.
  */
 export function hashPassword(password: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(SALT_LENGTH).toString('hex')
-    crypto.pbkdf2(password, salt, 1000, 64, 'sha512', (err, derivedKey) => {
+    const iterations = 600000
+    crypto.pbkdf2(password, salt, iterations, 64, 'sha512', (err, derivedKey) => {
       if (err) return reject(err)
-      resolve(`${salt}:${derivedKey.toString('hex')}`)
+      resolve(`${iterations}:${salt}:${derivedKey.toString('hex')}`)
     })
   })
 }
 
 /**
  * Verifies a password against a stored PBKDF2 hash using a timing-safe comparison.
+ * Supports legacy 1000 iteration hashes (2 parts) and modern 600000 iteration hashes (3 parts).
  */
 export function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     try {
       const parts = storedHash.split(':')
-      if (parts.length !== 2) return resolve(false)
-      
-      const [salt, hash] = parts
-      crypto.pbkdf2(password, salt, 1000, 64, 'sha512', (err, derivedKey) => {
+      let iterations = 1000
+      let salt = ''
+      let hash = ''
+
+      if (parts.length === 3) {
+        iterations = parseInt(parts[0], 10)
+        salt = parts[1]
+        hash = parts[2]
+      } else if (parts.length === 2) {
+        salt = parts[0]
+        hash = parts[1]
+      } else {
+        return resolve(false)
+      }
+
+      crypto.pbkdf2(password, salt, iterations, 64, 'sha512', (err, derivedKey) => {
         if (err) return reject(err)
         const inputHash = derivedKey.toString('hex')
         
@@ -142,7 +156,7 @@ export async function getStaffFromRequest(request: Request): Promise<{ userId: n
 }
 
 /**
- * Validates the team session token (UUID) in request headers and returns the registration details.
+ * Validates the team session token (Session UUID) in request headers or cookies and returns the registration details.
  */
 export async function getTeamFromRequest(request: Request) {
   let token = request.headers.get('x-team-token')
@@ -154,16 +168,33 @@ export async function getTeamFromRequest(request: Request) {
     }
   }
 
+  if (!token) {
+    const cookieHeader = request.headers.get('cookie')
+    if (cookieHeader) {
+      const match = cookieHeader.match(/team_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1].trim())
+      }
+    }
+  }
+
   if (!token) return null
 
   try {
-    const registration = await db.registration.findUnique({
+    const dbSession = await db.session.findUnique({
       where: { id: token },
       include: {
-        event: true,
+        registration: {
+          include: {
+            event: true,
+          },
+        },
       },
     })
-    return registration
+    if (!dbSession || dbSession.expiresAt < new Date()) {
+      return null
+    }
+    return dbSession.registration
   } catch (error) {
     console.error('getTeamFromRequest db error:', error)
     return null

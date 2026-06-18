@@ -27,12 +27,13 @@ export const auth = async () => {
         }
       }
     }
-
     if (teamToken) {
-      const team = await db.registration.findUnique({
+      const dbSession = await db.session.findUnique({
         where: { id: teamToken },
+        include: { registration: true },
       })
-      if (team) {
+      if (dbSession && dbSession.expiresAt > new Date()) {
+        const team = dbSession.registration
         return {
           user: {
             id: team.id,
@@ -40,7 +41,7 @@ export const auth = async () => {
             email: "",
             role: "TEAM",
           },
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+          expires: dbSession.expiresAt.toISOString(),
         }
       }
     }

@@ -37,17 +37,18 @@ model Event {
 }
 
 model Registration {
-  id            String       @id @default(uuid()) @db.Uuid
-  eventId       Int          @map("event_id")
-  event         Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  unstopTeamId  String       @map("unstop_team_id")
-  teamName      String       @map("team_name")
-  teamPasscode  String       @map("team_passcode")
-  memberDetails Json?        @map("member_details")
-  progressState Json         @default("{}") @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
-  totalScore    Float        @default(0.0) @map("total_score")
-  registeredAt  DateTime     @default(now()) @map("registered_at")
-  submissions   Submission[]
+  id               String       @id @default(uuid()) @db.Uuid
+  eventId          Int          @map("event_id")
+  event            Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  unstopTeamId     String       @map("unstop_team_id")
+  teamName         String       @map("team_name")
+  teamPasscodeHash String       @map("team_passcode_hash")
+  memberDetails    Json?        @map("member_details")
+  progressState    Json         @default("{}") @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
+  totalScore       Float        @default(0.0) @map("total_score")
+  registeredAt     DateTime     @default(now()) @map("registered_at")
+  submissions      Submission[]
+  sessions         Session[]
 
   @@unique([eventId, unstopTeamId])
   @@map("registrations")
@@ -82,4 +83,14 @@ model Evaluation {
 
   @@unique([submissionId, judgeId])
   @@map("evaluations")
+}
+
+model Session {
+  id             String       @id @default(uuid()) @db.Uuid
+  registrationId String       @map("registration_id") @db.Uuid
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime     @map("expires_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("sessions")
 }

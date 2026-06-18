@@ -64,7 +64,7 @@ export const applicationRouter = createTRPCRouter({
           return {
             id: reg.id,
             firstName: reg.teamName,
-            lastName: `(Passcode: ${reg.teamPasscode})`,
+            lastName: `(Passcode: [HIDDEN])`,
             university: reg.event.name,
             major: `Stage ${currentStage}`,
             totalScore: score,
@@ -111,7 +111,7 @@ export const applicationRouter = createTRPCRouter({
         id: reg.id,
         teamName: reg.teamName,
         unstopTeamId: reg.unstopTeamId,
-        teamPasscode: reg.teamPasscode,
+        teamPasscode: '[HIDDEN]',
         memberDetails: reg.memberDetails,
         progressState: state,
         eventName: reg.event.name,

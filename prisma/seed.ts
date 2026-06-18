@@ -3,11 +3,11 @@ import crypto from 'crypto'
 
 const prisma = new PrismaClient()
 
-// Standard password hashing function matching our backend auth utilities
+// Standard password hashing function matching our backend auth utilities (600,000 iterations)
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex')
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
-  return `${salt}:${hash}`
+  const hash = crypto.pbkdf2Sync(password, salt, 600000, 64, 'sha512').toString('hex')
+  return `600000:${salt}:${hash}`
 }
 
 async function main() {

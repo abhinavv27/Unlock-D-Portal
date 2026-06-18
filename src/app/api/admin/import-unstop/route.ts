@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
-import { getStaffFromRequest } from '@/lib/auth-utils'
+import { getStaffFromRequest, hashPassword } from '@/lib/auth-utils'
 import { parseUnstopCSV } from '@/lib/csv-parser'
 import { Resend } from 'resend'
 import crypto from 'crypto'
@@ -100,13 +100,14 @@ export async function POST(request: Request) {
 
       if (!existing) {
         const passcode = generatePasscode()
+        const passcodeHash = await hashPassword(passcode)
         
         await db.registration.create({
           data: {
             eventId,
             unstopTeamId: team.teamId,
             teamName: team.teamName,
-            teamPasscode: passcode,
+            teamPasscodeHash: passcodeHash,
             memberDetails: team.email ? [{ email: team.email }] : [],
             progressState: initialProgress,
           },
