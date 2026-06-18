@@ -11,10 +11,14 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   const isPending = submissions.some((sub) => sub.status === 'PENDING')
 
   // 2. Calculate Highest State by looping through only APPROVED submissions
-  let highestState = 0
+  let highestState = -1
   for (const sub of submissions) {
     if (sub.status === 'APPROVED') {
-      if (sub.taskId.startsWith('FEATURE-')) {
+      if (sub.taskId === 'ROUND-0') {
+        if (highestState < 0) {
+          highestState = 0
+        }
+      } else if (sub.taskId.startsWith('FEATURE-')) {
         const num = parseInt(sub.taskId.substring(8), 10)
         if (!isNaN(num) && num > highestState) {
           highestState = num
@@ -32,15 +36,20 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   }
 
   // 3. Determine allowedTaskId and allowedRound based on highestState + 1
-  const allowedState = highestState + 1
-  let allowedTaskId = `FEATURE-${allowedState}`
-  let allowedRound = 1
+  let allowedTaskId = 'ROUND-0'
+  let allowedRound = 0
 
-  if (allowedState === 6) {
+  if (highestState >= 0 && highestState < 5) {
+    allowedTaskId = `FEATURE-${highestState + 1}`
+    allowedRound = 1
+  } else if (highestState === 5) {
     allowedTaskId = 'ROUND-2'
     allowedRound = 2
-  } else if (allowedState >= 7) {
+  } else if (highestState === 6) {
     allowedTaskId = 'ROUND-3'
+    allowedRound = 3
+  } else if (highestState >= 7) {
+    allowedTaskId = 'FINISHED'
     allowedRound = 3
   }
 

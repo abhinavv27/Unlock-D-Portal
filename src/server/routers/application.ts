@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, adminProcedure } from '@/server/trpc'
+import { TRPCError } from '@trpc/server'
+import { getTeamStatus } from '@/lib/state-engine'
 
 export const applicationRouter = createTRPCRouter({
   // Admin: get all registered teams (mapped to old applications list)
@@ -40,27 +42,99 @@ export const applicationRouter = createTRPCRouter({
       ])
 
       // Map to old "application" structure so frontend client doesn't break
-      const applications = registrations.map(reg => {
-        const state = reg.progressState as any
-        const currentStage = state?.current_stage || 1
-        const score = state?.score || 0
+      const activeEvent = await ctx.db.event.findFirst({
+        where: { isActive: true }
+      })
+      const eventRound = activeEvent ? ((activeEvent.config as any)?.currentRound !== undefined ? Number((activeEvent.config as any).currentRound) : 0) : 0
 
-        return {
-          id: reg.id,
-          firstName: reg.teamName,
-          lastName: `(Passcode: ${reg.teamPasscode})`,
-          university: reg.event.name,
-          major: `Stage ${currentStage} // Score: ${score}`,
-          status: 'ACCEPTED', // teams are registered and active
-          submittedAt: reg.registeredAt,
-          user: {
-            email: `Unstop Team: ${reg.unstopTeamId}`,
-            image: null,
+      const applications = await Promise.all(
+        registrations.map(async (reg) => {
+          const state = reg.progressState as any
+          const currentStage = state?.current_stage || 1
+          const score = state?.score || 0
+
+          const teamStatus = await getTeamStatus(reg.id, ctx.db)
+          let teamRoundStatus = 'ACTIVE'
+          if (teamStatus.allowedRound < eventRound) {
+            teamRoundStatus = 'ELIMINATED'
+          } else if (teamStatus.allowedRound > eventRound) {
+            teamRoundStatus = 'WAITING_ROOM'
+          }
+
+          return {
+            id: reg.id,
+            firstName: reg.teamName,
+            lastName: `(Passcode: ${reg.teamPasscode})`,
+            university: reg.event.name,
+            major: `Stage ${currentStage}`,
+            totalScore: score,
+            currentStage,
+            status: teamRoundStatus,
+            submittedAt: reg.registeredAt,
+            user: {
+              email: `Unstop Team: ${reg.unstopTeamId}`,
+              image: null,
+            }
+          }
+        })
+      )
+
+      return { applications, total, pages: Math.ceil(total / limit) }
+    }),
+
+  // Admin: get full team detail with submissions and evaluations
+  getById: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const reg = await ctx.db.registration.findUniqueOrThrow({
+        where: { id: input.id },
+        include: {
+          event: true,
+          submissions: {
+            orderBy: { roundNumber: 'asc' },
+            include: {
+              evaluations: {
+                include: {
+                  judge: {
+                    select: { username: true, systemRole: true }
+                  }
+                }
+              }
+            }
           }
         }
       })
 
-      return { applications, total, pages: Math.ceil(total / limit) }
+      const state = reg.progressState as any
+
+      return {
+        id: reg.id,
+        teamName: reg.teamName,
+        unstopTeamId: reg.unstopTeamId,
+        teamPasscode: reg.teamPasscode,
+        memberDetails: reg.memberDetails,
+        progressState: state,
+        eventName: reg.event.name,
+        eventConfig: reg.event.config,
+        submissions: reg.submissions.map(sub => ({
+          id: sub.id,
+          roundNumber: sub.roundNumber,
+          taskId: sub.taskId,
+          status: sub.status,
+          rejectionReason: sub.rejectionReason,
+          payload: sub.payload,
+          submittedAt: sub.submittedAt,
+          evaluations: sub.evaluations.map(ev => ({
+            id: ev.id,
+            scoreBreakdown: ev.scoreBreakdown,
+            totalScore: ev.totalScore,
+            feedback: ev.feedback,
+            gradedAt: ev.gradedAt,
+            judgeName: ev.judge.username,
+            judgeRole: ev.judge.systemRole,
+          })),
+        })),
+      }
     }),
 
   // Admin: pipeline stats mapping for quick counts on dashboard
@@ -112,5 +186,51 @@ export const applicationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ctx.db.registration.deleteMany({ where: { id: { in: input.ids } } })
       return { success: true }
+    }),
+
+  getActiveEvent: adminProcedure.query(async ({ ctx }) => {
+    const activeEvent = await ctx.db.event.findFirst({
+      where: { isActive: true }
+    })
+    if (!activeEvent) return null
+
+    const config = (activeEvent.config as any) || {}
+    const currentRound = config.currentRound !== undefined ? Number(config.currentRound) : 0
+
+    return {
+      id: activeEvent.id,
+      name: activeEvent.name,
+      slug: activeEvent.slug,
+      eventType: activeEvent.eventType,
+      currentRound,
+      stages: config.stages || []
+    }
+  }),
+
+  startRound: adminProcedure
+    .input(z.object({ round: z.number().int().min(0).max(3) }))
+    .mutation(async ({ ctx, input }) => {
+      const activeEvent = await ctx.db.event.findFirst({
+        where: { isActive: true }
+      })
+      if (!activeEvent) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No active event found'
+        })
+      }
+
+      const currentConfig = (activeEvent.config as any) || {}
+      const updatedConfig = {
+        ...currentConfig,
+        currentRound: input.round
+      }
+
+      await ctx.db.event.update({
+        where: { id: activeEvent.id },
+        data: { config: updatedConfig }
+      })
+
+      return { success: true, currentRound: input.round }
     }),
 })

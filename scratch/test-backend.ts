@@ -37,6 +37,20 @@ async function testBackend() {
     if (!activeEvent) {
       throw new Error('No active PROGRESSIVE_HACKATHON event found in the database. Run seed first.')
     }
+    
+    // Reset currentRound to 0 for idempotency
+    const currentConfig = (activeEvent.config as any) || {}
+    await prisma.event.update({
+      where: { id: activeEvent.id },
+      data: {
+        config: {
+          ...currentConfig,
+          currentRound: 0
+        }
+      }
+    })
+    console.log('🔄 Reset active event currentRound to 0 for idempotency.')
+
     const eventId = activeEvent.id.toString()
     console.log(`ℹ️ Resolved target active event ID: ${eventId} ("${activeEvent.name}")`)
 
@@ -121,8 +135,8 @@ async function testBackend() {
     const statusBatchData = await statusRes.json()
     const statusData = statusBatchData[0].result.data.json
     console.log(`✅ Team status retrieved. Current Stage: ${statusData.progressState.current_stage}, Score: ${statusData.progressState.score}`)
-    if (statusData.progressState.current_stage !== 1) {
-      throw new Error(`Expected initial stage to be 1, got ${statusData.progressState.current_stage}`)
+    if (statusData.progressState.current_stage !== 0) {
+      throw new Error(`Expected initial stage to be 0, got ${statusData.progressState.current_stage}`)
     }
 
     // ─── STEP 5: SUBMIT WORK PAYLOAD ───────────────────────────────────────
@@ -180,10 +194,13 @@ async function testBackend() {
       body: JSON.stringify({
         submissionId,
         scoreBreakdown: {
-          innovation: 9,
-          technical: 8,
-          presentation: 10,
-          impact: 8,
+          functionality: 8,
+          codeQuality: 5,
+          integration: 5,
+          userExperience: 5,
+          deployment: 4,
+          teamwork: 5,
+          errorHandling: 3,
         },
         feedback: 'Fantastic prototype setup! Looking forward to stage 2.',
         status: 'APPROVED',
@@ -244,10 +261,13 @@ async function testBackend() {
       body: JSON.stringify({
         submissionId,
         scoreBreakdown: {
-          innovation: 6,
-          technical: 6,
-          presentation: 7,
-          impact: 6,
+          functionality: 5,
+          codeQuality: 4,
+          integration: 3,
+          userExperience: 4,
+          deployment: 3,
+          teamwork: 3,
+          errorHandling: 3,
         },
         feedback: 'Good execution, but backend lacks styling.',
         status: 'APPROVED',
@@ -275,7 +295,7 @@ async function testBackend() {
     console.log('✅ Submission removed from second judge\'s queue.')
 
     // ─── STEP 8: VERIFY STAGE PROGRESSION & SCORE AVERAGING ─────────────────
-    console.log('\n[Test 8] Retrieving team status after dual grading (Should be Stage 2 with averaged score)...')
+    console.log('\n[Test 8] Retrieving team status after dual grading (Should be Stage 1 in waiting room)...')
     const finalStatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
       headers: { 'Authorization': `Bearer ${teamToken}` },
     })
@@ -289,13 +309,14 @@ async function testBackend() {
     console.log(`✅ Final team status retrieved.`)
     console.log(`- Current Stage: ${finalStatusData.progressState.current_stage} (Expected: 1)`)
     console.log(`- Cumulative Score: ${finalStatusData.progressState.score} (Expected: 30)`)
+    console.log(`- In Waiting Room: ${finalStatusData.inWaitingRoom} (Expected: true)`)
     
     // Virtual evaluation should be in status response
     const lastSub = finalStatusData.submissions.find((s: any) => s.id === submissionId)
     console.log(`- Virtual Evaluation:`, lastSub?.evaluation)
 
     if (finalStatusData.progressState.current_stage !== 1) {
-      throw new Error(`Expected stage to remain 1, got ${finalStatusData.progressState.current_stage}`)
+      throw new Error(`Expected stage to be 1, got ${finalStatusData.progressState.current_stage}`)
     }
     if (finalStatusData.progressState.score !== 30) {
       throw new Error(`Expected score to be 30 (average of 35 and 25), got ${finalStatusData.progressState.score}`)
@@ -303,6 +324,115 @@ async function testBackend() {
     if (!lastSub?.evaluation || lastSub.evaluation.totalScore !== 30) {
       throw new Error(`Expected virtual evaluation totalScore to be 30, got ${lastSub?.evaluation?.totalScore}`)
     }
+    if (finalStatusData.inWaitingRoom !== true) {
+      throw new Error(`Expected team to be in waiting room, but inWaitingRoom is ${finalStatusData.inWaitingRoom}`)
+    }
+
+    // ─── STEP 9: ADMIN UNLOCKS ROUND 1 ──────────────────────────────────────
+    console.log('\n[Test 9] Admin starting/unlocking Round 1...')
+    const startRoundRes = await fetch(`${BASE_URL}/api/trpc/application.startRound?batch=1`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${staffToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "0": {
+          "json": {
+            round: 1
+          }
+        }
+      })
+    })
+
+    if (!startRoundRes.ok) {
+      throw new Error(`Admin startRound failed: ${await startRoundRes.text()}`)
+    }
+
+    console.log('✅ Round 1 started by admin.')
+
+    // ─── STEP 10: VERIFY WAITING ROOM CLEARED ───────────────────────────────
+    console.log('\n[Test 10] Verifying waiting room is cleared...')
+    const clearedStatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
+      headers: { 'Authorization': `Bearer ${teamToken}` },
+    })
+
+    const clearedBatchData = await clearedStatusRes.json()
+    const clearedData = clearedBatchData[0].result.data.json
+    console.log(`- inWaitingRoom after unlock: ${clearedData.inWaitingRoom} (Expected: false)`)
+    if (clearedData.inWaitingRoom !== false) {
+      throw new Error(`Expected inWaitingRoom to be false after starting Round 1, got ${clearedData.inWaitingRoom}`)
+    }
+    console.log('✅ Waiting room cleared successfully.')
+
+    // ─── STEP 11: LOGIN AS TEAM 2 (DELTA FORCE) ──────────────────────────────
+    const deltaTeamName = `DeltaForce_${uniqueSuffix}`
+    const deltaTeam = importData.teams.find((t: any) => t.teamName === deltaTeamName)
+    if (!deltaTeam) {
+      throw new Error(`Expected "${deltaTeamName}" to be in the imported list.`)
+    }
+
+    console.log(`\n[Test 11] Logging in as team 2 "${deltaTeamName}" (never submitted Round 0)...`)
+    const team2LoginRes = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teamName: deltaTeamName,
+        passcode: deltaTeam.passcode,
+      }),
+    })
+
+    if (!team2LoginRes.ok) {
+      throw new Error(`Team 2 login failed: ${await team2LoginRes.text()}`)
+    }
+
+    const team2Data = await team2LoginRes.json()
+    const team2Token = team2Data.sessionToken
+    console.log(`✅ Team 2 logged in. UUID acquired: "${team2Token}"`)
+
+    // ─── STEP 12: VERIFY TEAM 2 IS ELIMINATED ───────────────────────────────
+    console.log('\n[Test 12] Fetching status for Team 2 (should be eliminated)...')
+    const team2StatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
+      headers: { 'Authorization': `Bearer ${team2Token}` },
+    })
+
+    const team2BatchData = await team2StatusRes.json()
+    const team2StatusData = team2BatchData[0].result.data.json
+    console.log(`- Team 2 isEliminated: ${team2StatusData.isEliminated} (Expected: true)`)
+    if (team2StatusData.isEliminated !== true) {
+      throw new Error(`Expected Team 2 to be eliminated, got ${team2StatusData.isEliminated}`)
+    }
+    console.log('✅ Team 2 confirmed eliminated.')
+
+    // ─── STEP 13: VERIFY TEAM 2 SUBMISSION BLOCKED ──────────────────────────
+    console.log('\n[Test 13] Verifying Team 2 submission is blocked...')
+    const team2SubmitRes = await fetch(`${BASE_URL}/api/trpc/teams.submit?batch=1`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${team2Token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "0": {
+          "json": {
+            githubUrl: 'https://github.com/delta-force/unlockd',
+            description: 'Trying to submit while eliminated',
+          }
+        }
+      }),
+    })
+
+    if (team2SubmitRes.ok) {
+      throw new Error('Expected submission to fail for eliminated team, but it succeeded.')
+    }
+
+    const team2SubmitData = await team2SubmitRes.json()
+    const errMessage = team2SubmitData[0].error?.json?.message
+    console.log(`- Submission rejection message: "${errMessage}" (Expected: "Your team did not advance to the next round.")`)
+    if (errMessage !== 'Your team did not advance to the next round.') {
+      throw new Error(`Expected error message "Your team did not advance to the next round.", got "${errMessage}"`)
+    }
+    console.log('✅ Team 2 submission blocked successfully.')
 
     console.log('\n🎉 ALL INTEGRATION TESTS PASSED SUCCESSFULLY! 🎉')
   } catch (error) {

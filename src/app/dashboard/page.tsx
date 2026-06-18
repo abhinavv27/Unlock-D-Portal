@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     }
 
     const state = team.progressState as any
-    const currentStage = state?.current_stage || 1
+    const currentStage = state?.current_stage !== undefined ? state.current_stage : 0
 
     // Construct session payload for front-end compatibility
     const mockSession = {

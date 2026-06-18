@@ -406,10 +406,10 @@ export default function LandingPage() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {[
-                { round: "0", title: "Environment Setup", desc: "Foundation & architecture planning. Choose your stack, set up CI/CD, and design your schema." },
-                { round: "1", title: "Core Implementation", desc: "Build the backbone — database models, API endpoints, and core business logic." },
-                { round: "2", title: "Feature Integration", desc: "Connect services, add auth, polish UI, and integrate third-party APIs." },
-                { round: "3", title: "Deployment", desc: "Ship to production. Configure domains, SSL, monitoring, and final testing." },
+                { round: "0", title: "System Setup & Comprehension", desc: "Teams initialise the starter repository, configure local environments, and complete a technical checkpoint to demonstrate understanding of base architecture." },
+                { round: "1", title: "Progressive Feature Sprints", desc: "Sequential development rounds implementing core functional modules (Easy: 1hr, Medium: 1.5hr, Hard: 2-2.5hrs) with judges reviewing features before subsequent phases unlock." },
+                { round: "2", title: "Optimisation & Open Innovation", desc: "Participants focus on system performance, UI/UX refinement, cloud deployment, and integration of optional innovative features." },
+                { round: "3", title: "Final Demo & Evaluation", desc: "Teams present their fully deployed applications to the judging panel. Structured technical Q&A session (5 mins presentation + 5 mins Q&A)." },
               ].map((r) => (
                 <div key={r.round} className="border border-white/10 rounded-2xl p-8 hover:border-primary/30 transition-all duration-300 hover:bg-primary/5">
                   <div className="text-5xl text-primary font-bold mb-4">{r.round}</div>
@@ -472,15 +472,16 @@ export default function LandingPage() {
               <div className="glass-premium rounded-[var(--radius)] p-10 border-white/10">
                 <div className="text-3xl text-headline mb-8 flex items-center gap-4">
                   <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_10px_rgba(109,40,217,0.5)]" />
-                  Day 1 — Saturday
+                  Day 1 — 3rd July
                 </div>
                 <div className="space-y-6">
                   {[
-                    { time: "9:00 AM", event: "Opening Ceremony & Problem Statement Release" },
-                    { time: "10:00 AM", event: "Round 0 Begins — Environment Setup & Architecture Planning" },
-                    { time: "12:00 PM", event: "Round 1 Begins — Core Implementation & API Development" },
-                    { time: "4:00 PM", event: "Round 2 Begins — Feature Integration & UI Polish" },
-                    { time: "8:00 PM", event: "Round 3 Begins — Deployment & Final Polish" },
+                    { time: "9:00 AM", event: "Participant Reporting & Registration" },
+                    { time: "9:45 AM", event: "Opening Ceremony, Rules Briefing & Problem Statement Reveal" },
+                    { time: "9:45 AM - 10:15 AM", event: "Round 0 Begins — System Setup & Comprehension" },
+                    { time: "10:30 AM - 8:30 PM", event: "Round 1 Begins — Progressive Feature Sprints" },
+                    { time: "8:30 PM - 11:30 PM", event: "Elimination Phase & Evaluation" },
+                    { time: "11:30 PM", event: "Announcement of Results (50 teams remain)" },
                   ].map((s, i) => (
                     <div key={i} className="flex gap-6">
                       <div className="w-24 shrink-0 text-label-caps text-primary/70">{s.time}</div>
@@ -494,13 +495,15 @@ export default function LandingPage() {
               <div className="glass-premium rounded-[var(--radius)] p-10 border-white/10">
                 <div className="text-3xl text-headline mb-8 flex items-center gap-4">
                   <div className="w-3 h-3 rounded-full bg-primary/50 border border-primary/50" />
-                  Day 2 — Sunday
+                  Day 2 — 4th July
                 </div>
                 <div className="space-y-6">
                   {[
-                    { time: "9:00 AM", event: "Submission Deadline — All projects due" },
-                    { time: "10:00 AM", event: "Presentations Begin — 5 min demo per team" },
-                    { time: "1:00 PM", event: "Closing Ceremony & Results Announcement" },
+                    { time: "12:00 AM - 6:00 AM", event: "Round 2 Begins — Optimisation and Open Innovation" },
+                    { time: "6:00 AM - 8:00 AM", event: "Elimination Phase & Evaluation (10 teams remain)" },
+                    { time: "8:00 AM", event: "Announcement of Finalists" },
+                    { time: "8:30 AM - 10:30 AM", event: "Round 3 Begins — Final Demonstration & Evaluation" },
+                    { time: "11:00 AM", event: "End of Event & Closing Ceremony" },
                   ].map((s, i) => (
                     <div key={i} className="flex gap-6">
                       <div className="w-24 shrink-0 text-label-caps text-primary/70">{s.time}</div>
