@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { db } from '@/server/db'
+import { api } from '@/trpc/server'
 import DashboardClient from './DashboardClient'
 import { decryptToken } from '@/lib/auth-utils'
 
@@ -13,76 +13,21 @@ export default async function DashboardPage() {
 
   // 1. Participant Team Login Session
   if (teamToken) {
-    const rawTeam = await db.registration.findUnique({
-      where: { id: teamToken },
-      include: {
-        event: true,
-        submissions: {
-          include: {
-            evaluations: true,
-          },
-          orderBy: {
-            submittedAt: 'desc',
-          },
-        },
-      },
-    })
-
-    if (!rawTeam) {
-      // Clear invalid cookie and redirect
-      redirect('/login')
+    let team
+    let failed = false
+    try {
+      team = await api.teams.status()
+    } catch (err) {
+      console.error('Error fetching team status:', err)
+      failed = true
     }
 
-    const state = rawTeam.progressState as any
+    if (failed || !team) {
+      redirect('/api/auth/logout')
+    }
+
+    const state = team.progressState as any
     const currentStage = state?.current_stage || 1
-
-    const mappedSubmissions = rawTeam.submissions.map((sub: any) => {
-      const { evaluations, ...rest } = sub
-      let virtualEvaluation = null
-
-      if (evaluations && evaluations.length > 0) {
-        const count = evaluations.length
-        const totalScoreSum = evaluations.reduce((sum: number, e: any) => sum + e.totalScore, 0)
-        const averageTotalScore = Math.round((totalScoreSum / count) * 10) / 10
-
-        const scoreBreakdownAverage: Record<string, number> = {}
-        evaluations.forEach((evaluation: any) => {
-          const breakdown = evaluation.scoreBreakdown as Record<string, number> || {}
-          Object.entries(breakdown).forEach(([key, val]) => {
-            scoreBreakdownAverage[key] = (scoreBreakdownAverage[key] || 0) + Number(val)
-          })
-        })
-        Object.keys(scoreBreakdownAverage).forEach((key) => {
-          scoreBreakdownAverage[key] = Math.round((scoreBreakdownAverage[key] / count) * 10) / 10
-        })
-
-        const feedbacks = evaluations
-          .map((e: any) => e.feedback?.trim())
-          .filter(Boolean)
-        const consolidatedFeedback = feedbacks.join(' | ')
-
-        const latestGradedAt = new Date(
-          Math.max(...evaluations.map((e: any) => new Date(e.gradedAt).getTime()))
-        )
-
-        virtualEvaluation = {
-          totalScore: averageTotalScore,
-          scoreBreakdown: scoreBreakdownAverage,
-          feedback: consolidatedFeedback,
-          gradedAt: latestGradedAt,
-        }
-      }
-
-      return {
-        ...rest,
-        evaluation: virtualEvaluation,
-      }
-    })
-
-    const team = {
-      ...rawTeam,
-      submissions: mappedSubmissions,
-    }
 
     // Construct session payload for front-end compatibility
     const mockSession = {
@@ -106,7 +51,7 @@ export default async function DashboardPage() {
   if (staffToken) {
     const staff = decryptToken(staffToken)
     if (!staff) {
-      redirect('/login')
+      redirect('/api/auth/logout')
     }
 
     if (staff.role === 'ADMIN' || staff.role === 'SUPER_ADMIN') {

@@ -28,7 +28,7 @@ model Event {
   slug          String         @unique
   name          String
   eventType     String         @map("event_type") // e.g., 'PROGRESSIVE_HACKATHON', 'CTF'
-  config        Json           // JSONB: stores rules, stages, grading rubrics, etc.
+  config        Json // JSONB: stores rules, stages, grading rubrics, etc.
   isActive      Boolean        @default(true) @map("is_active")
   registrations Registration[]
 
@@ -43,7 +43,7 @@ model Registration {
   teamName      String       @map("team_name")
   teamPasscode  String       @map("team_passcode")
   memberDetails Json?        @map("member_details")
-  progressState Json         @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
+  progressState Json         @default("{}") @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
   registeredAt  DateTime     @default(now()) @map("registered_at")
   submissions   Submission[]
 
@@ -52,13 +52,16 @@ model Registration {
 }
 
 model Submission {
-  id             Int          @id @default(autoincrement())
-  registrationId String       @map("registration_id") @db.Uuid
-  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  payload        Json         // JSONB: dynamic submission payload (e.g. GitHub URL, CTF flag submission)
-  status         String       @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED'
-  submittedAt    DateTime     @default(now()) @map("submitted_at")
-  evaluations    Evaluation[]
+  id              Int          @id @default(autoincrement())
+  registrationId  String       @map("registration_id") @db.Uuid
+  registration    Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  roundNumber     Int          @map("round_number")
+  taskId          String       @map("task_id")
+  rejectionReason String?      @map("rejection_reason")
+  payload         Json // JSONB: dynamic submission payload (e.g. GitHub URL, CTF flag submission)
+  status          String       @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED'
+  submittedAt     DateTime     @default(now()) @map("submitted_at")
+  evaluations     Evaluation[]
 
   @@map("submissions")
 }

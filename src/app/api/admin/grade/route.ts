@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
+import { getTeamStatus } from '@/lib/state-engine'
 
 export async function POST(request: Request) {
   try {
@@ -101,21 +102,16 @@ export async function POST(request: Request) {
       // Update submission status
       await tx.submission.update({
         where: { id: submission.id },
-        data: { status: nextStatus },
+        data: { 
+          status: nextStatus,
+          rejectionReason: gradeStatus === 'REJECTED' ? feedback : null,
+        },
       })
 
       const reg = submission.registration
-      const eventConfig = reg.event.config as any
-      const stages = eventConfig?.stages || []
-      const maxStage = stages.length > 0 ? Math.max(...stages.map((s: any) => s.stage)) : 4
 
-      const stateObj = reg.progressState as any
-      const currentStage = stateObj?.current_stage || 1
-
-      // Advance stage only if the submission was PENDING and the new grade is APPROVED
-      const nextStage = (submission.status === 'PENDING' && gradeStatus === 'APPROVED')
-        ? (currentStage < maxStage ? currentStage + 1 : currentStage)
-        : currentStage
+      // Calculate dynamic allowed state using the state engine (passing transaction client)
+      const teamStatus = await getTeamStatus(reg.id, tx as any)
 
       // Query all approved submissions of this team to calculate the updated cumulative score
       const approvedSubmissions = await tx.submission.findMany({
@@ -137,9 +133,10 @@ export async function POST(request: Request) {
         }
       }
 
+      const stateObj = reg.progressState as any
       const updatedProgress = {
         ...stateObj,
-        current_stage: nextStage,
+        current_stage: teamStatus.allowedRound,
         score: cumulativeScore,
         updated_at: new Date().toISOString(),
       }

@@ -4,10 +4,68 @@ import { auth } from '@/server/auth'
 import { db } from '@/server/db'
 import superjson from 'superjson'
 import { ZodError } from 'zod'
+import { decryptToken } from '@/lib/auth-utils'
+import { cookies } from 'next/headers'
 
 // Context
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const session = await auth()
+  let staffToken: string | undefined
+  let teamToken: string | undefined
+
+  // 1. Try reading authorization header (key for integration tests & api calls)
+  const authHeader = opts.headers.get('authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    if (token.includes(':')) {
+      staffToken = token
+    } else {
+      teamToken = token
+    }
+  }
+
+  // 2. Fallback to cookies
+  if (!staffToken && !teamToken) {
+    try {
+      const cookieStore = await cookies()
+      staffToken = cookieStore.get('staff_token')?.value
+      teamToken = cookieStore.get('team_token')?.value
+    } catch {
+      // cookies() might throw if run outside request context
+    }
+  }
+
+  let session = null
+
+  if (staffToken) {
+    const decoded = decryptToken(staffToken)
+    if (decoded && decoded.userId && decoded.role) {
+      session = {
+        user: {
+          id: String(decoded.userId),
+          name: decoded.username,
+          email: `${decoded.username}@ras.test`,
+          role: decoded.role as string, // 'ADMIN' or 'JUDGE'
+        },
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+      }
+    }
+  } else if (teamToken) {
+    const team = await db.registration.findUnique({
+      where: { id: teamToken },
+    })
+    if (team) {
+      session = {
+        user: {
+          id: team.id,
+          name: team.teamName,
+          email: '',
+          role: 'TEAM',
+        },
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+      }
+    }
+  }
+
   return {
     db,
     session,
@@ -69,6 +127,21 @@ const isStaff = t.middleware(({ ctx, next }) => {
   return next({ ctx })
 })
 
+const isTeam = t.middleware(({ ctx, next }) => {
+  const user = ctx.session?.user
+  if (!user || user.role !== 'TEAM') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Team access required.' })
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      team: {
+        id: user.id,
+      },
+    },
+  })
+})
+
 // ─── Exports ──────────────────────────────────────────────────────────────
 export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
@@ -77,3 +150,4 @@ export const protectedProcedure = t.procedure.use(isAuthed)
 export const adminProcedure = t.procedure.use(isAuthed).use(isAdmin)
 export const judgeProcedure = t.procedure.use(isAuthed).use(isJudge)
 export const staffProcedure = t.procedure.use(isAuthed).use(isStaff)
+export const teamProcedure = t.procedure.use(isAuthed).use(isTeam)

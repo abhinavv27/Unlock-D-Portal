@@ -110,7 +110,7 @@ async function testBackend() {
 
     // ─── STEP 4: VERIFY TEAM INITIAL STATUS ───────────────────────────────
     console.log('\n[Test 4] Retrieving team status (Initial Stage 1)...')
-    const statusRes = await fetch(`${BASE_URL}/api/teams/me/status`, {
+    const statusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
       headers: { 'Authorization': `Bearer ${teamToken}` },
     })
 
@@ -118,7 +118,8 @@ async function testBackend() {
       throw new Error(`Fetch status failed: ${await statusRes.text()}`)
     }
 
-    const statusData = await statusRes.json()
+    const statusBatchData = await statusRes.json()
+    const statusData = statusBatchData[0].result.data.json
     console.log(`✅ Team status retrieved. Current Stage: ${statusData.progressState.current_stage}, Score: ${statusData.progressState.score}`)
     if (statusData.progressState.current_stage !== 1) {
       throw new Error(`Expected initial stage to be 1, got ${statusData.progressState.current_stage}`)
@@ -126,17 +127,19 @@ async function testBackend() {
 
     // ─── STEP 5: SUBMIT WORK PAYLOAD ───────────────────────────────────────
     console.log('\n[Test 5] Uploading work submission payload...')
-    const submitRes = await fetch(`${BASE_URL}/api/teams/submit`, {
+    const submitRes = await fetch(`${BASE_URL}/api/trpc/teams.submit?batch=1`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${teamToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        payload: {
-          github: 'https://github.com/cyber-titans/unlockd',
-          demo: 'https://unlockd-demo.vercel.app',
-        },
+        "0": {
+          "json": {
+            githubUrl: 'https://github.com/cyber-titans/unlockd',
+            description: 'Submission for Allowed Round',
+          }
+        }
       }),
     })
 
@@ -144,7 +147,8 @@ async function testBackend() {
       throw new Error(`Work submission failed: ${await submitRes.text()}`)
     }
 
-    const submitData = await submitRes.json()
+    const submitBatchData = await submitRes.json()
+    const submitData = submitBatchData[0].result.data.json
     const submissionId = submitData.submission.id
     console.log(`✅ Submission uploaded. ID: ${submissionId}`)
 
@@ -272,7 +276,7 @@ async function testBackend() {
 
     // ─── STEP 8: VERIFY STAGE PROGRESSION & SCORE AVERAGING ─────────────────
     console.log('\n[Test 8] Retrieving team status after dual grading (Should be Stage 2 with averaged score)...')
-    const finalStatusRes = await fetch(`${BASE_URL}/api/teams/me/status`, {
+    const finalStatusRes = await fetch(`${BASE_URL}/api/trpc/teams.status?batch=1`, {
       headers: { 'Authorization': `Bearer ${teamToken}` },
     })
 
@@ -280,17 +284,18 @@ async function testBackend() {
       throw new Error(`Fetch final status failed: ${await finalStatusRes.text()}`)
     }
 
-    const finalStatusData = await finalStatusRes.json()
+    const finalStatusBatchData = await finalStatusRes.json()
+    const finalStatusData = finalStatusBatchData[0].result.data.json
     console.log(`✅ Final team status retrieved.`)
-    console.log(`- Current Stage: ${finalStatusData.progressState.current_stage} (Expected: 2)`)
+    console.log(`- Current Stage: ${finalStatusData.progressState.current_stage} (Expected: 1)`)
     console.log(`- Cumulative Score: ${finalStatusData.progressState.score} (Expected: 30)`)
     
     // Virtual evaluation should be in status response
     const lastSub = finalStatusData.submissions.find((s: any) => s.id === submissionId)
     console.log(`- Virtual Evaluation:`, lastSub?.evaluation)
 
-    if (finalStatusData.progressState.current_stage !== 2) {
-      throw new Error(`Expected stage to advance to 2, got ${finalStatusData.progressState.current_stage}`)
+    if (finalStatusData.progressState.current_stage !== 1) {
+      throw new Error(`Expected stage to remain 1, got ${finalStatusData.progressState.current_stage}`)
     }
     if (finalStatusData.progressState.score !== 30) {
       throw new Error(`Expected score to be 30 (average of 35 and 25), got ${finalStatusData.progressState.score}`)

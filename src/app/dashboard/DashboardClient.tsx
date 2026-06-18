@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
 import SplineRobot from '@/components/SplineRobot'
+import { api } from '@/trpc/react'
 
 interface DashboardClientProps {
   session: {
@@ -20,6 +21,7 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ session, status, team, staff }: DashboardClientProps) {
+  const submitMutation = api.teams.submit.useMutation()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"])
@@ -85,25 +87,11 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
     setSubmitSuccess(false)
 
     try {
-      const res = await fetch('/api/teams/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${team.id}`
-        },
-        body: JSON.stringify({
-          payload: {
-            github: githubUrl.trim() || undefined,
-            liveDemo: liveDemoUrl.trim() || undefined,
-            submitted_at: new Date().toISOString()
-          }
-        })
+      await submitMutation.mutateAsync({
+        githubUrl: githubUrl.trim(),
+        liveDemoUrl: liveDemoUrl.trim(),
+        description: 'Submission for allowed round',
       })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit.')
-      }
 
       setSubmitSuccess(true)
       setGithubUrl('')
