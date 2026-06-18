@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     // 1. Validate staff credentials (ADMIN or JUDGE)
     const staff = await getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
+    if (!staff || staff.role !== 'JUDGE') {
       return NextResponse.json(
         { error: 'Unauthorized. Judge or Admin credentials required.' },
         { status: 401 }
@@ -84,6 +84,20 @@ export async function POST(request: Request) {
     if (existingEvaluation) {
       return NextResponse.json(
         { error: 'You have already evaluated this submission.' },
+        { status: 400 }
+      )
+    }
+
+    if (submission.submissionType === 'DEMO') {
+      return NextResponse.json(
+        { error: 'Demo submissions are approved by admins, not graded by judges.' },
+        { status: 400 }
+      )
+    }
+
+    if (submission.status !== 'PENDING' && submission.status !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'This submission is not open for grading (already rejected or finalized).' },
         { status: 400 }
       )
     }

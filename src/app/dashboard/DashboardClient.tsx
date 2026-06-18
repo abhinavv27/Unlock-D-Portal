@@ -39,6 +39,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
+  // Demo submission form states
+  const [demoUrl, setDemoUrl] = useState('')
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [demoError, setDemoError] = useState<string | null>(null)
+  const [demoSuccess, setDemoSuccess] = useState(false)
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -104,6 +110,34 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       setSubmitError(err.message || 'An unexpected error occurred.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!demoUrl.trim()) return
+
+    setDemoLoading(true)
+    setDemoError(null)
+    setDemoSuccess(false)
+
+    try {
+      await submitMutation.mutateAsync({
+        liveDemoUrl: demoUrl.trim(),
+        submissionType: 'DEMO',
+        description: 'Demo / Documentation submission for Round 2',
+      })
+
+      setDemoSuccess(true)
+      setDemoUrl('')
+
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (err: any) {
+      setDemoError(err.message || 'An unexpected error occurred.')
+    } finally {
+      setDemoLoading(false)
     }
   }
 
@@ -490,6 +524,47 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
                   )}
 
+                  {/* Presentation Status (Round 2) */}
+                  {team && team.eventRound === 2 && team.progressState?.presentationStatus && team.progressState.presentationStatus !== 'NONE' && (
+                    <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-primary/5 border border-primary/20">
+                      <span className="text-[9px] text-primary uppercase font-mono tracking-widest">Presentation</span>
+                      {team.progressState.presentationStatus === 'QUEUED' && (
+                        <div className="mt-3 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
+                            <span className="text-sm text-blue-400">Demo approved. Waiting for your turn...</span>
+                          </div>
+                          {team.progressState.meetLink && (
+                            <a href={team.progressState.meetLink} target="_blank" rel="noopener noreferrer"
+                               className="inline-block px-6 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all text-sm font-bold">
+                              Join Meet Room
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {team.progressState.presentationStatus === 'ACTIVE' && (
+                        <div className="mt-3 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shadow-[0_0_10px_rgba(52,211,153,0.3)]" />
+                            <span className="text-sm text-emerald-400 font-bold">Your turn! Join the meeting now.</span>
+                          </div>
+                          {team.progressState.meetLink && (
+                            <a href={team.progressState.meetLink} target="_blank" rel="noopener noreferrer"
+                               className="inline-block px-6 py-3 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500/30 transition-all text-sm font-bold">
+                              Join Meet Room
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {team.progressState.presentationStatus === 'COMPLETED' && (
+                        <div className="mt-3 flex items-center gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
+                          <span className="text-sm text-white/40">Presentation completed. Thank you!</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* PARTICIPANT WORK SUBMISSION INPUT */}
                   {team && (
                     <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
@@ -555,6 +630,39 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                           </div>
                         </form>
                       )}
+                    </div>
+                  )}
+
+                  {/* DEMO SUBMISSION FORM (Round 2 only) */}
+                  {team && team.eventRound === 2 && !team.submissions?.some((s: any) => s.submissionType === 'DEMO' && (s.status === 'PENDING' || s.status === 'APPROVED')) && (
+                    <div className="mt-6 pt-6 border-t border-white/5">
+                      <h4 className="text-lg font-display font-medium text-white mb-3">Submit Project Demo / Documentation</h4>
+                      <p className="text-xs text-white/40 mb-4">Submit a video demo or documentation URL for final evaluation.</p>
+                      <form onSubmit={handleDemoSubmit} className="max-w-xl space-y-4">
+                        {demoError && (
+                          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">{demoError}</div>
+                        )}
+                        {demoSuccess && (
+                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Demo submitted! Refreshing dashboard...</div>
+                        )}
+                        <input
+                          type="url"
+                          value={demoUrl}
+                          onChange={(e) => setDemoUrl(e.target.value)}
+                          placeholder="Loom / YouTube / Google Drive / Documentation URL"
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                        />
+                        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+                          <button
+                            type="submit"
+                            disabled={demoLoading || !demoUrl.trim()}
+                            className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
+                          >
+                            {demoLoading ? 'Submitting...' : 'Submit Demo'}
+                          </button>
+                          <span className="text-[10px] text-white/20 font-mono">Upload a video walkthrough or project documentation</span>
+                        </div>
+                      </form>
                     </div>
                   )}
                 </>
