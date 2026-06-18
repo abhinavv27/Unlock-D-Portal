@@ -9,7 +9,19 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedRound, setSelectedRound] = useState<number | null>(null)
   const { data: activeEventQueryResult, refetch: refetchActiveEvent } = api.application.getActiveEvent.useQuery()
-  const activeEvent = activeEventQueryResult || initialActiveEvent
+  const rawActiveEvent = activeEventQueryResult || initialActiveEvent
+  const activeEvent = rawActiveEvent ? {
+    ...rawActiveEvent,
+    currentRound: rawActiveEvent.currentRound !== undefined
+      ? rawActiveEvent.currentRound
+      : (rawActiveEvent.config && typeof rawActiveEvent.config === 'object' && (rawActiveEvent.config as any).currentRound !== undefined
+          ? Number((rawActiveEvent.config as any).currentRound)
+          : rawActiveEvent.currentGlobalRound),
+    stages: rawActiveEvent.stages !== undefined
+      ? rawActiveEvent.stages
+      : (rawActiveEvent.config && typeof rawActiveEvent.config === 'object' ? ((rawActiveEvent.config as any).stages || []) : [])
+  } : null
+
   const startRoundMutation = api.application.startRound.useMutation()
 
   const handleLogout = () => {

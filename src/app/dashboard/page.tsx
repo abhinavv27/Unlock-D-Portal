@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { api } from '@/trpc/server'
 import DashboardClient from './DashboardClient'
 import { decryptToken } from '@/lib/auth-utils'
+import { db } from '@/server/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,19 @@ export default async function DashboardPage() {
 
   // 1. Participant Team Login Session
   if (teamToken) {
+    let exists = null
+    try {
+      exists = await db.registration.findUnique({
+        where: { id: teamToken },
+      })
+    } catch {
+      // handles invalid UUID format or query error
+    }
+
+    if (!exists) {
+      redirect('/api/auth/logout')
+    }
+
     let team
     let failed = false
     try {
