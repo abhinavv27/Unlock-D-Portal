@@ -30,13 +30,10 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   const config = EventConfigSchema.parse(event.config || {})
   const roadmap = config.roadmap
 
-  // 2. Iterate over the team's APPROVED submissions to find the highest completed step
-  const approvedSubmissions = registration.submissions.filter(
-    (sub) => sub.status === 'APPROVED'
-  )
-
+  // 2. Iterate over all the team's submissions to find the highest completed step
+  // Since progression is unlocked immediately upon submission, any submission counts as completed.
   let highestCompletedStep = 0
-  for (const sub of approvedSubmissions) {
+  for (const sub of registration.submissions) {
     const stepObj = roadmap.find((r) => r.task_id === sub.taskId)
     if (stepObj && stepObj.step > highestCompletedStep) {
       highestCompletedStep = stepObj.step
@@ -72,8 +69,8 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
     allowedRound = event.currentGlobalRound
   }
 
-  // 5. Determine isPending: If any submission is currently PENDING
-  const isPending = registration.submissions.some((sub) => sub.status === 'PENDING')
+  // 5. Determine isPending: Set to false so teams can proceed immediately
+  const isPending = false
 
   return {
     allowedTaskId,

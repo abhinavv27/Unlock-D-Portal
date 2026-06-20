@@ -111,7 +111,7 @@ export const applicationRouter = createTRPCRouter({
         id: reg.id,
         teamName: reg.teamName,
         unstopTeamId: reg.unstopTeamId,
-        teamPasscode: '[HIDDEN]',
+        teamPasscode: reg.teamPasscodeHash.includes(':') ? '[Hashed]' : reg.teamPasscodeHash,
         memberDetails: reg.memberDetails,
         progressState: state,
         eventName: reg.event.name,
@@ -235,5 +235,183 @@ export const applicationRouter = createTRPCRouter({
       })
 
       return { success: true, currentRound: input.round }
+    }),
+
+  updateTeam: adminProcedure
+    .input(z.object({
+      id: z.string(),
+      teamName: z.string().min(1),
+      passcode: z.string().optional(),
+      currentStage: z.number().int().min(0),
+      score: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const reg = await ctx.db.registration.findUnique({
+        where: { id: input.id },
+      })
+      if (!reg) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Team registration not found.',
+        })
+      }
+
+      const updateData: any = {
+        teamName: input.teamName,
+        totalScore: input.score,
+      }
+
+      if (input.passcode && input.passcode.trim() !== '') {
+        updateData.teamPasscodeHash = input.passcode.trim()
+      }
+
+      const oldState = (reg.progressState as any) || {}
+      updateData.progressState = {
+        ...oldState,
+        current_stage: input.currentStage,
+        score: input.score,
+        updated_at: new Date().toISOString(),
+      }
+
+      await ctx.db.registration.update({
+        where: { id: input.id },
+        data: updateData,
+      })
+
+      return { success: true }
+    }),
+
+  updateEvaluation: adminProcedure
+    .input(z.object({
+      evaluationId: z.number().int(),
+      scoreBreakdown: z.record(z.string(), z.number()),
+      feedback: z.string().max(2000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const evaluation = await ctx.db.evaluation.findUnique({
+        where: { id: input.evaluationId },
+        include: {
+          submission: {
+            include: {
+              registration: {
+                include: {
+                  event: true,
+                },
+              },
+            },
+          },
+        },
+      })
+
+      if (!evaluation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Evaluation not found.',
+        })
+      }
+
+      const numSubId = evaluation.submissionId
+      const submission = evaluation.submission
+      const registrationId = submission.registrationId
+
+      // 1. Calculate total score
+      const totalScore = Object.values(input.scoreBreakdown).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0
+      )
+
+      // 2. Perform updates in transaction
+      await ctx.db.$transaction(async (tx) => {
+        // Log previous evaluation state to evaluation_audits
+        await tx.evaluationAudit.create({
+          data: {
+            evaluationId: evaluation.id,
+            oldScoreBreakdown: evaluation.scoreBreakdown as any,
+            oldTotalScore: evaluation.totalScore,
+            oldFeedback: evaluation.feedback,
+          },
+        })
+
+        // Update the evaluation record
+        await tx.evaluation.update({
+          where: { id: input.evaluationId },
+          data: {
+            scoreBreakdown: input.scoreBreakdown,
+            totalScore,
+            feedback: input.feedback,
+            gradedAt: new Date(),
+          },
+        })
+
+        // Fetch all evaluations for this submission to calculate average
+        const evaluations = await tx.evaluation.findMany({
+          where: { submissionId: numSubId },
+        })
+
+        const totalScoreSum = evaluations.reduce((sum, e) => sum + e.totalScore, 0)
+        const averageScore = Math.round((totalScoreSum / evaluations.length) * 10) / 10
+
+        // Read passing_threshold from config
+        const eventConfig = submission.registration.event.config as any
+        const roadmap = eventConfig?.roadmap || []
+        const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
+        const rubric = stepObj?.rubric || ['functionality', 'code_quality']
+        const maxScore = rubric.length * 10
+        const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
+        const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
+
+        let finalStatus: 'APPROVED' | 'REJECTED'
+        let rejectionReason: string | null = null
+
+        if (averageScore >= passingThresholdScore) {
+          finalStatus = 'APPROVED'
+        } else {
+          finalStatus = 'REJECTED'
+          rejectionReason = evaluations
+            .map((e) => e.feedback?.trim())
+            .filter(Boolean)
+            .join(' | ')
+        }
+
+        await tx.submission.update({
+          where: { id: numSubId },
+          data: {
+            status: 'APPROVED',
+            averageScore,
+            rejectionReason: null,
+          },
+        })
+
+        // Fetch new state engine status using transaction client
+        const teamStatus = await getTeamStatus(registrationId, tx as any)
+
+        // Fetch cumulative totalScore from all APPROVED submissions
+        const approvedSubs = await tx.submission.findMany({
+          where: {
+            registrationId,
+            status: 'APPROVED',
+          },
+        })
+        const cumulativeScore = approvedSubs.reduce((sum, s) => sum + (s.averageScore || 0), 0)
+        const roundedCumulative = Math.round(cumulativeScore * 10) / 10
+
+        const stateObj = submission.registration.progressState as any || {}
+        const updatedProgress = {
+          ...stateObj,
+          current_stage: teamStatus.allowedRound,
+          score: roundedCumulative,
+          updated_at: new Date().toISOString(),
+        }
+
+        await tx.registration.update({
+          where: { id: registrationId },
+          data: {
+            totalScore: roundedCumulative,
+            progressState: updatedProgress,
+          },
+        })
+      })
+
+      return { success: true }
     }),
 })

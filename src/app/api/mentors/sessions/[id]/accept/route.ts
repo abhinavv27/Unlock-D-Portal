@@ -58,6 +58,14 @@ export async function PUT(
       )
     }
 
+    // Verify authorization: only the requested mentor or an admin can accept a targeted request
+    if (session.mentorId && session.mentorId !== staff.userId && !['ADMIN', 'SUPER_ADMIN'].includes(staff.role)) {
+      return NextResponse.json(
+        { error: 'Only the requested mentor or an administrator can accept this request.' },
+        { status: 403 }
+      )
+    }
+
     // Process accept operation in a transaction
     const updatedSession = await db.$transaction(async (tx) => {
       // Update mentor session

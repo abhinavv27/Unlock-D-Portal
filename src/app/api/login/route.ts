@@ -36,7 +36,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const isPasscodeValid = await verifyPassword(userPasscode, registration.teamPasscodeHash)
+    const isPasscodeValid = registration.teamPasscodeHash.includes(':')
+      ? await verifyPassword(userPasscode, registration.teamPasscodeHash)
+      : userPasscode === registration.teamPasscodeHash
     if (!isPasscodeValid) {
       return NextResponse.json(
         { error: 'Invalid team name or passcode.' },
