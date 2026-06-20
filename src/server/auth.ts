@@ -39,20 +39,21 @@ export const auth = async () => {
       }
     }
     if (teamToken) {
-      const dbSession = await db.session.findUnique({
-        where: { id: teamToken },
-        include: { registration: true },
-      })
-      if (dbSession && dbSession.expiresAt > new Date()) {
-        const team = dbSession.registration
-        return {
-          user: {
-            id: team.id,
-            name: team.teamName,
-            email: "",
-            role: "TEAM",
-          },
-          expires: dbSession.expiresAt.toISOString(),
+      const decoded = verifyJwt(teamToken)
+      if (decoded?.type === 'team' && decoded.id) {
+        const team = await db.registration.findUnique({
+          where: { id: decoded.id }
+        })
+        if (team && !team.isBlocked) {
+          return {
+            user: {
+              id: team.id,
+              name: team.teamName,
+              email: "",
+              role: "TEAM",
+            },
+            expires: new Date(decoded.exp * 1000).toISOString(),
+          }
         }
       }
     }

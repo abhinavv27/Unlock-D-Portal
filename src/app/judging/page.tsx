@@ -58,7 +58,52 @@ export default function JudgingPage() {
 
   // Active submission
   const [activeSubmission, setActiveSubmission] = useState<any | null>(null)
-  const [scores, setScores] = useState(INITIAL_SCORES)
+  const [scores, setScores] = useState<Record<string, number>>(INITIAL_SCORES)
+
+  const currentCriteria = useMemo(() => {
+    if (!activeSubmission) return []
+    const taskId = activeSubmission.taskId
+    if (taskId === 'FEATURE-1' || taskId === 'FEATURE-2') {
+      return []
+    }
+    if (taskId === 'FEATURE-3') {
+      return [
+        { key: 'feature_1_functionality', label: 'Feature 1 Functionality', desc: 'Functionality of Feature 1 sprint', max: 10 },
+        { key: 'feature_1_code_quality', label: 'Feature 1 Code Quality', desc: 'Code Quality of Feature 1 sprint', max: 10 },
+        { key: 'feature_2_functionality', label: 'Feature 2 Functionality', desc: 'Functionality of Feature 2 sprint', max: 10 },
+        { key: 'feature_2_code_quality', label: 'Feature 2 Code Quality', desc: 'Code Quality of Feature 2 sprint', max: 10 },
+        { key: 'feature_3_functionality', label: 'Feature 3 Functionality', desc: 'Functionality of Feature 3 sprint', max: 10 },
+        { key: 'feature_3_code_quality', label: 'Feature 3 Code Quality', desc: 'Code Quality of Feature 3 sprint', max: 10 },
+      ]
+    }
+    return [
+      { key: 'functionality', label: 'Functionality', desc: 'Does the application work as intended?', max: 20 },
+      { key: 'codeQuality', label: 'Code Quality', desc: 'Is the code well-structured and maintainable?', max: 15 },
+      { key: 'integration', label: 'Integration', desc: 'Do components and APIs work together?', max: 15 },
+      { key: 'userExperience', label: 'User Experience', desc: 'Is the interface intuitive and polished?', max: 15 },
+      { key: 'deployment', label: 'Deployment', desc: 'Is the app deployed and accessible?', max: 10 },
+      { key: 'teamwork', label: 'Teamwork', desc: 'Clear roles, collaboration, and presentation?', max: 15 },
+      { key: 'errorHandling', label: 'Error Handling', desc: 'Are edge cases and errors managed?', max: 10 },
+    ]
+  }, [activeSubmission])
+
+  const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
+    const taskId = sub.taskId
+    if (taskId === 'FEATURE-1' || taskId === 'FEATURE-2') {
+      return {}
+    }
+    if (taskId === 'FEATURE-3') {
+      return {
+        feature_1_functionality: 8,
+        feature_1_code_quality: 8,
+        feature_2_functionality: 8,
+        feature_2_code_quality: 8,
+        feature_3_functionality: 8,
+        feature_3_code_quality: 8,
+      }
+    }
+    return { ...INITIAL_SCORES }
+  }, [])
   const [notes, setNotes] = useState('')
   const [gradeStatus, setGradeStatus] = useState<'APPROVED' | 'REJECTED'>('APPROVED')
   const [submitLoading, setSubmitLoading] = useState(false)
@@ -196,9 +241,11 @@ export default function JudgingPage() {
     }
   }
 
-  const overall = (
-    CRITERIA.reduce((sum, c) => sum + scores[c.key], 0)
-  ).toFixed(0)
+  const overall = useMemo(() => {
+    return (
+      currentCriteria.reduce((sum, c) => sum + (scores[c.key] || 0), 0)
+    ).toFixed(0)
+  }, [currentCriteria, scores])
 
   const filteredTeams = useMemo(() => {
     if (!teamSearch.trim()) return teamLogs
@@ -230,18 +277,31 @@ export default function JudgingPage() {
     if (myEval) {
       // Pre-populate with existing evaluation
       const breakdown = myEval.scoreBreakdown || {}
-      setScores({
-        functionality: Number(breakdown.functionality) || 0,
-        codeQuality: Number(breakdown.codeQuality) || 0,
-        integration: Number(breakdown.integration) || 0,
-        userExperience: Number(breakdown.userExperience) || 0,
-        deployment: Number(breakdown.deployment) || 0,
-        teamwork: Number(breakdown.teamwork) || 0,
-        errorHandling: Number(breakdown.errorHandling) || 0,
-      })
+      if (sub.taskId === 'FEATURE-3') {
+        setScores({
+          feature_1_functionality: Number(breakdown.feature_1_functionality) || 0,
+          feature_1_code_quality: Number(breakdown.feature_1_code_quality) || 0,
+          feature_2_functionality: Number(breakdown.feature_2_functionality) || 0,
+          feature_2_code_quality: Number(breakdown.feature_2_code_quality) || 0,
+          feature_3_functionality: Number(breakdown.feature_3_functionality) || 0,
+          feature_3_code_quality: Number(breakdown.feature_3_code_quality) || 0,
+        })
+      } else if (sub.taskId === 'FEATURE-1' || sub.taskId === 'FEATURE-2') {
+        setScores({})
+      } else {
+        setScores({
+          functionality: Number(breakdown.functionality) || 0,
+          codeQuality: Number(breakdown.codeQuality) || 0,
+          integration: Number(breakdown.integration) || 0,
+          userExperience: Number(breakdown.userExperience) || 0,
+          deployment: Number(breakdown.deployment) || 0,
+          teamwork: Number(breakdown.teamwork) || 0,
+          errorHandling: Number(breakdown.errorHandling) || 0,
+        })
+      }
       setNotes(myEval.feedback || '')
     } else {
-      setScores(INITIAL_SCORES)
+      setScores(initializeScoresForSubmission(sub))
       setNotes('')
     }
     setGradeStatus('APPROVED')
@@ -338,7 +398,7 @@ export default function JudgingPage() {
                 onClick={() => {
                   setActiveSubmission(sub)
                   setSubmitSuccess(false)
-                  setScores(INITIAL_SCORES)
+                  setScores(initializeScoresForSubmission(sub))
                   setNotes('')
                   setGradeStatus('APPROVED')
                   setSidebarOpen(false)
@@ -635,7 +695,7 @@ export default function JudgingPage() {
               <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-8 md:space-y-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
                 <form onSubmit={handleGradeSubmit} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                    {CRITERIA.map(({ key, label, desc, max }) => (
+                    {currentCriteria.map(({ key, label, desc, max }) => (
                       <div key={key} className="space-y-1 group">
                         <div className="flex items-end justify-between">
                           <div>
@@ -684,19 +744,23 @@ export default function JudgingPage() {
                   </div>
  
                   {/* Overall Score */}
-                  <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
-                    <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
-                    <div className="relative z-10">
-                      <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
-                      <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
+                  {currentCriteria.length > 0 && (
+                    <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
+                      <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
+                      <div className="relative z-10">
+                        <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
+                        <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
+                      </div>
+                      <div className="relative z-10 text-right">
+                        <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
+                          {overall}
+                        </span>
+                        <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ {
+                          activeSubmission?.taskId === 'FEATURE-3' ? 60 : 100
+                        }</span>
+                      </div>
                     </div>
-                    <div className="relative z-10 text-right">
-                      <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
-                        {overall}
-                      </span>
-                      <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ 100</span>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Feedback */}
                   <div className="space-y-3">

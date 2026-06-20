@@ -66,6 +66,10 @@ export default function AdminApplicationsPage() {
     },
     onError: (err) => alert(`Error removing teams: ${err.message}`),
   })
+  const toggleBlockMutation = api.application.toggleBlockTeam.useMutation({
+    onSuccess: () => refetch(),
+    onError: (err) => alert(`Error toggling block status: ${err.message}`),
+  })
 
   const filtered = data?.applications ?? []
 
@@ -166,7 +170,7 @@ export default function AdminApplicationsPage() {
             </div>
 
             <AnimatePresence>
-              {selected.size > 0 && (
+              {selected.size > 0 && staffUser?.role === 'ADMIN' && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -286,6 +290,11 @@ export default function AdminApplicationsPage() {
                                 Active
                               </span>
                             )}
+                            {app.isBlocked && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-500/20 uppercase tracking-widest">
+                                Suspended
+                              </span>
+                            )}
                           </div>
                           <span className="text-value-mono !text-white/20 !text-[9px]">{app.user?.email}</span>
                         </div>
@@ -309,17 +318,34 @@ export default function AdminApplicationsPage() {
                           >
                             Edit
                           </Link>
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
-                                removeTeamMutation.mutate({ id: app.id })
-                              }
-                            }}
-                            disabled={removeTeamMutation.isPending}
-                            className="text-[10px] font-black text-rose-500/60 hover:text-rose-400 uppercase tracking-widest transition-colors cursor-pointer"
-                          >
-                            Remove
-                          </button>
+                          {staffUser?.role === 'ADMIN' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  toggleBlockMutation.mutate({ id: app.id, isBlocked: !app.isBlocked })
+                                }}
+                                disabled={toggleBlockMutation.isPending}
+                                className={`text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer ${
+                                  app.isBlocked
+                                    ? 'text-emerald-500/60 hover:text-emerald-400'
+                                    : 'text-amber-500/60 hover:text-amber-400'
+                                }`}
+                              >
+                                {app.isBlocked ? 'Unblock' : 'Block'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
+                                    removeTeamMutation.mutate({ id: app.id })
+                                  }
+                                }}
+                                disabled={removeTeamMutation.isPending}
+                                className="text-[10px] font-black text-rose-500/60 hover:text-rose-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
