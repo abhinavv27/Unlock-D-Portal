@@ -12,9 +12,9 @@ export async function POST(request: Request) {
   try {
     // 1. Authenticate and authorize (Admin only)
     const staff = await getStaffFromRequest(request)
-    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
+    if (!staff || staff.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Unauthorized. Staff access required.' },
+        { error: 'Unauthorized. Staff Admin access required.' },
         { status: 401 }
       )
     }
