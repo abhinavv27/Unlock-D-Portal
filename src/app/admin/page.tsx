@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role as string)) redirect('/dashboard')
+  if (!['ADMIN', 'SUPER_ADMIN', 'JUDGE'].includes(session.user.role as string)) redirect('/dashboard')
 
   const activeEvent = await db.event.findFirst({
     where: { isActive: true },

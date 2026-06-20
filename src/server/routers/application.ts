@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createTRPCRouter, adminProcedure } from '@/server/trpc'
+import { createTRPCRouter, adminProcedure, strictAdminProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
 
@@ -207,7 +207,7 @@ export const applicationRouter = createTRPCRouter({
     }
   }),
 
-  startRound: adminProcedure
+  startRound: strictAdminProcedure
     .input(z.object({ round: z.number().int().min(0).max(3) }))
     .mutation(async ({ ctx, input }) => {
       const activeEvent = await ctx.db.event.findFirst({

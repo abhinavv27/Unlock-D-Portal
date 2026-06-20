@@ -44,7 +44,7 @@ export default async function DashboardPage() {
   }
 
   // Staff Login Session
-  if (['ADMIN', 'SUPER_ADMIN'].includes(session.user.role as string)) {
+  if (['ADMIN', 'SUPER_ADMIN', 'JUDGE'].includes(session.user.role as string)) {
     redirect('/admin')
   } else {
     redirect('/judging')
