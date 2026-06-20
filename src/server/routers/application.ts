@@ -71,6 +71,7 @@ export const applicationRouter = createTRPCRouter({
             currentStage,
             status: teamRoundStatus,
             submittedAt: reg.registeredAt,
+            isBlocked: reg.isBlocked,
             user: {
               email: `Unstop Team: ${reg.unstopTeamId}`,
               image: null,
@@ -116,6 +117,7 @@ export const applicationRouter = createTRPCRouter({
         progressState: state,
         eventName: reg.event.name,
         eventConfig: reg.event.config,
+        isBlocked: reg.isBlocked,
         submissions: reg.submissions.map(sub => ({
           id: sub.id,
           roundNumber: sub.roundNumber,
@@ -174,17 +176,41 @@ export const applicationRouter = createTRPCRouter({
       return { success: true }
     }),
 
-  removeTeam: adminProcedure
+  removeTeam: strictAdminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.registration.delete({ where: { id: input.id } })
       return { success: true }
     }),
 
-  bulkRemoveTeams: adminProcedure
+  bulkRemoveTeams: strictAdminProcedure
     .input(z.object({ ids: z.array(z.string()) }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.registration.deleteMany({ where: { id: { in: input.ids } } })
+      return { success: true }
+    }),
+
+  toggleBlockTeam: strictAdminProcedure
+    .input(z.object({
+      id: z.string(),
+      isBlocked: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const registration = await ctx.db.registration.findUnique({
+        where: { id: input.id }
+      })
+      if (!registration) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Team registration not found.'
+        })
+      }
+
+      await ctx.db.registration.update({
+        where: { id: input.id },
+        data: { isBlocked: input.isBlocked }
+      })
+
       return { success: true }
     }),
 

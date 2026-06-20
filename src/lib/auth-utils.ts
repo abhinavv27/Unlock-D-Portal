@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { db } from '@/server/db'
+import { verifyJwt } from './jwt'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
@@ -181,22 +182,19 @@ export async function getTeamFromRequest(request: Request) {
   if (!token) return null
 
   try {
-    const dbSession = await db.session.findUnique({
-      where: { id: token },
-      include: {
-        registration: {
-          include: {
-            event: true,
-          },
-        },
-      },
+    const decoded = verifyJwt(token)
+    if (!decoded || decoded.type !== 'team' || !decoded.id) return null
+
+    const registration = await db.registration.findUnique({
+      where: { id: decoded.id },
+      include: { event: true },
     })
-    if (!dbSession || dbSession.expiresAt < new Date()) {
-      return null
-    }
-    return dbSession.registration
+
+    if (!registration || !registration.event.isActive || registration.isBlocked) return null
+
+    return registration
   } catch (error) {
-    console.error('getTeamFromRequest db error:', error)
+    console.error('getTeamFromRequest db/jwt error:', error)
     return null
   }
 }

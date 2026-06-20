@@ -45,6 +45,7 @@ model Registration {
   progressState    Json            @default("{}") @map("progress_state")
   totalScore       Float           @default(0.0) @map("total_score")
   registeredAt     DateTime        @default(now()) @map("registered_at")
+  isBlocked        Boolean         @default(false) @map("is_blocked")
   event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sessions         Session[]
   submissions      Submission[]

@@ -521,13 +521,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 ⏳ Synchronized Waiting Room
               </span>
               <h1 className="text-5xl md:text-7xl font-display font-black leading-tight text-white uppercase tracking-tight">
-                Round 1 <br />
+                Round {team?.allowedRound} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
                   Completed.
                 </span>
               </h1>
               <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
-                Excellent work, <strong>{team.teamName}</strong>! Your team has successfully submitted and passed all milestones for Round 1. You are currently in the workspace waiting room.
+                Excellent work, <strong>{team.teamName}</strong>! Your team has successfully submitted and passed all milestones for Round {team?.allowedRound}. You are currently in the workspace waiting room.
               </p>
             </div>
 
@@ -542,13 +542,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Global Status</span>
                 <span className="text-sm font-bold text-emerald-400 mt-3 uppercase tracking-wider">
-                  Waiting for Round 2
+                  Waiting for Round {(team?.allowedRound || 0) + 1}
                 </span>
               </div>
             </div>
 
             <div className="p-6 rounded-2xl bg-white/[0.01] border border-white/5 text-xs text-white/45 max-w-lg mx-auto leading-relaxed">
-              💡 <strong>System Notice:</strong> Progression in this event is synchronized. The administrator must advance the global event ceiling before you can access Round 2 objectives.
+              💡 <strong>System Notice:</strong> Progression in this event is synchronized. The administrator must advance the global event ceiling before you can access Round {(team?.allowedRound || 0) + 1} objectives.
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">

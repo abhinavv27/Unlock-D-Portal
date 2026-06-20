@@ -46,6 +46,13 @@ export async function POST(request: Request) {
       )
     }
 
+    if (registration.isBlocked) {
+      return NextResponse.json(
+        { error: 'This team has been blocked/suspended.' },
+        { status: 403 }
+      )
+    }
+
     if (!registration.event.isActive) {
       return NextResponse.json(
         { error: 'The event associated with this team is currently inactive.' },
@@ -58,15 +65,6 @@ export async function POST(request: Request) {
       id: registration.id,
       teamName: registration.teamName,
       eventId: registration.eventId,
-    })
-
-    // Create session record in db using the token as the session id
-    await db.session.create({
-      data: {
-        id: token,
-        registrationId: registration.id,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 1 week
-      },
     })
 
     // Save team session token in secure HTTP-only cookie

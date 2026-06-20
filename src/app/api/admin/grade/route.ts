@@ -152,7 +152,16 @@ export async function POST(request: Request) {
       const eventConfig = submission.registration.event.config as any
       const roadmap = eventConfig?.roadmap || []
       const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
-      const rubric = stepObj?.rubric || ['functionality', 'code_quality']
+      
+      let rubric = stepObj?.rubric || ['functionality', 'code_quality']
+      if (submission.taskId === 'FEATURE-3') {
+        rubric = [
+          'feature_1_functionality', 'feature_1_code_quality',
+          'feature_2_functionality', 'feature_2_code_quality',
+          'feature_3_functionality', 'feature_3_code_quality'
+        ]
+      }
+      
       const maxScore = rubric.length * 10
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
@@ -160,14 +169,18 @@ export async function POST(request: Request) {
       let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
 
-      if (averageScore >= passingThresholdScore) {
+      if (submission.taskId === 'FEATURE-1' || submission.taskId === 'FEATURE-2') {
         finalStatus = 'APPROVED'
       } else {
-        finalStatus = 'REJECTED'
-        rejectionReason = evaluations
-          .map((e) => e.feedback?.trim())
-          .filter(Boolean)
-          .join(' | ')
+        if (averageScore >= passingThresholdScore) {
+          finalStatus = 'APPROVED'
+        } else {
+          finalStatus = 'REJECTED'
+          rejectionReason = evaluations
+            .map((e) => e.feedback?.trim())
+            .filter(Boolean)
+            .join(' | ')
+        }
       }
 
       await tx.submission.update({
