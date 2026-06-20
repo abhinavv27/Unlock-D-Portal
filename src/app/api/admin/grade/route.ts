@@ -157,12 +157,25 @@ export async function POST(request: Request) {
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
+      let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
+      let rejectionReason: string | null = null
+
+      if (averageScore >= passingThresholdScore) {
+        finalStatus = 'APPROVED'
+      } else {
+        finalStatus = 'REJECTED'
+        rejectionReason = evaluations
+          .map((e) => e.feedback?.trim())
+          .filter(Boolean)
+          .join(' | ')
+      }
+
       await tx.submission.update({
         where: { id: numSubId },
         data: {
-          status: 'APPROVED',
+          status: finalStatus,
           averageScore,
-          rejectionReason: null,
+          rejectionReason,
         },
       })
 

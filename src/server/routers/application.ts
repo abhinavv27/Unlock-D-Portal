@@ -376,9 +376,9 @@ export const applicationRouter = createTRPCRouter({
         await tx.submission.update({
           where: { id: numSubId },
           data: {
-            status: 'APPROVED',
+            status: finalStatus,
             averageScore,
-            rejectionReason: null,
+            rejectionReason,
           },
         })
 

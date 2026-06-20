@@ -31,9 +31,10 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   const roadmap = config.roadmap
 
   // 2. Iterate over all the team's submissions to find the highest completed step
-  // Since progression is unlocked immediately upon submission, any submission counts as completed.
+  // Since progression is unlocked immediately upon submission, any submission counts as completed except for REJECTED ones.
   let highestCompletedStep = 0
   for (const sub of registration.submissions) {
+    if (sub.status === 'REJECTED') continue
     const stepObj = roadmap.find((r) => r.task_id === sub.taskId)
     if (stepObj && stepObj.step > highestCompletedStep) {
       highestCompletedStep = stepObj.step
