@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { api } from '@/trpc/react'
 
-export default function AdminProjectsPage() {
+export default function AdminLeaderboardPage() {
   const pathname = usePathname()
 
   const handleLogout = () => {
@@ -69,7 +69,8 @@ export default function AdminProjectsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {

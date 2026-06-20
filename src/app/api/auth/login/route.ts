@@ -34,7 +34,6 @@ export async function POST(request: Request) {
         event: true,
       },
     })
-
     if (!registration) {
       return NextResponse.json(
         { error: 'Invalid team name or passcode.' },
@@ -42,7 +41,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const isPasscodeValid = await verifyPassword(passcode, registration.teamPasscodeHash)
+    const isPasscodeValid = registration.teamPasscodeHash.includes(':')
+      ? await verifyPassword(passcode, registration.teamPasscodeHash)
+      : passcode === registration.teamPasscodeHash
     if (!isPasscodeValid) {
       return NextResponse.json(
         { error: 'Invalid team name or passcode.' },

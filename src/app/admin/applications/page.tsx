@@ -85,7 +85,8 @@ export default function AdminApplicationsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
             { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
@@ -270,7 +271,13 @@ export default function AdminApplicationsPage() {
                         <span className="text-sm font-black text-primary">{app.totalScore}</span>
                       </td>
                       <td className="p-6 text-right">
-                        <div className="flex items-center justify-end gap-3">
+                        <div className="flex items-center justify-end gap-4">
+                          <Link
+                            href={`/admin/applications/${app.id}`}
+                            className="text-[10px] font-black text-white/40 hover:text-primary uppercase tracking-widest transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </Link>
                           <button
                             onClick={() => {
                               if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
@@ -278,7 +285,7 @@ export default function AdminApplicationsPage() {
                               }
                             }}
                             disabled={removeTeamMutation.isPending}
-                            className="text-[10px] font-black text-rose-400/60 hover:text-rose-400 uppercase tracking-widest transition-colors"
+                            className="text-[10px] font-black text-rose-500/60 hover:text-rose-400 uppercase tracking-widest transition-colors cursor-pointer"
                           >
                             Remove
                           </button>

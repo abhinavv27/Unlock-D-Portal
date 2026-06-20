@@ -28,6 +28,7 @@ export default function MentorTeamPanel() {
   const [mentors, setMentors] = useState<MentorProfile[]>([])
   const [sessions, setSessions] = useState<MentorSession[]>([])
   const [issueDescription, setIssueDescription] = useState('')
+  const [selectedMentorId, setSelectedMentorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -79,12 +80,16 @@ export default function MentorTeamPanel() {
       const res = await fetch('/api/mentors/sessions/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issueDescription: issueDescription.trim() }),
+        body: JSON.stringify({ 
+          issueDescription: issueDescription.trim(),
+          mentorId: selectedMentorId 
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to request a mentor.')
 
       setIssueDescription('')
+      setSelectedMentorId(null)
       setMessage('Mentor request sent.')
       await fetchMentorState()
     } catch (err: any) {
@@ -155,11 +160,10 @@ export default function MentorTeamPanel() {
         <div className="space-y-5">
           <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
             <div className="flex items-center justify-between gap-4">
-              <span className={`text-[9px] font-mono px-2.5 py-1 rounded-lg border ${
-                activeSession.status === 'ACCEPTED'
+              <span className={`text-[9px] font-mono px-2.5 py-1 rounded-lg border ${activeSession.status === 'ACCEPTED'
                   ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                   : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-              }`}>
+                }`}>
                 {activeSession.status}
               </span>
               <span className="text-[10px] text-white/25 font-mono">
@@ -168,7 +172,10 @@ export default function MentorTeamPanel() {
             </div>
             <p className="text-sm text-white/70 mt-4 leading-relaxed">{activeSession.issueDescription}</p>
             {activeSession.mentor?.username && (
-              <p className="text-[10px] text-white/35 font-mono mt-4">Mentor: {activeSession.mentor.username}</p>
+              <p className="text-[10px] text-white/35 font-mono mt-4 font-bold text-cyan-300">
+                {activeSession.status === 'REQUESTED' ? 'Requested Mentor: ' : 'Assigned Mentor: '}
+                {activeSession.mentor.username}
+              </p>
             )}
             {activeSession.meetingLink && (
               <a
@@ -194,13 +201,31 @@ export default function MentorTeamPanel() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <form onSubmit={handleRequest} className="lg:col-span-3 space-y-4">
-            <textarea
-              value={issueDescription}
-              onChange={(event) => setIssueDescription(event.target.value)}
-              placeholder="Describe the blocker your team needs help with."
-              maxLength={1000}
-              className="w-full min-h-[132px] bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white/75 focus:outline-none focus:border-cyan-400/40 placeholder:text-white/15"
-            />
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-white/35 font-mono uppercase ml-1 block">Choose Mentor (Optional)</label>
+              <select
+                value={selectedMentorId || ''}
+                onChange={(event) => setSelectedMentorId(event.target.value ? Number(event.target.value) : null)}
+                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-cyan-400/40"
+              >
+                <option value="" className="bg-[#0f0f0f] text-white/40">Request Any Available Mentor</option>
+                {mentors.map((mentor) => (
+                  <option key={mentor.userId} value={mentor.userId} className="bg-[#0f0f0f] text-white">
+                    {mentor.user?.username || `Mentor ${mentor.userId}`} {mentor.skills ? `(${mentor.skills})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-white/35 font-mono uppercase ml-1 block">Issue Description</label>
+              <textarea
+                value={issueDescription}
+                onChange={(event) => setIssueDescription(event.target.value)}
+                placeholder="Describe the blocker your team needs help with."
+                maxLength={1000}
+                className="w-full min-h-[100px] bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white/75 focus:outline-none focus:border-cyan-400/40 placeholder:text-white/15"
+              />
+            </div>
             <button
               type="submit"
               disabled={submitting || issueDescription.trim().length < 5}

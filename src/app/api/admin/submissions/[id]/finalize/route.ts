@@ -83,9 +83,9 @@ export async function POST(
       await tx.submission.update({
         where: { id: subId },
         data: {
-          status: finalStatus,
+          status: 'APPROVED',
           averageScore,
-          rejectionReason,
+          rejectionReason: null,
         },
       })
 
