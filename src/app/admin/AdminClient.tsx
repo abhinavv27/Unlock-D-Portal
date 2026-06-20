@@ -157,7 +157,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
-            { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
+            ...(session?.user?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => (
             <Link 

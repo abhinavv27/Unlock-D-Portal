@@ -48,6 +48,7 @@ type MentorSession = {
 export default function AdminMentorshipPage() {
   const pathname = usePathname()
   const [token, setToken] = useState<string | null>(null)
+  const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
   
   // Data state
   const [mentors, setMentors] = useState<MentorProfile[]>([])
@@ -115,6 +116,21 @@ export default function AdminMentorshipPage() {
     }
   }, [])
 
+  const fetchStaffUser = useCallback(async (authToken: string) => {
+    try {
+      const res = await fetch('/api/auth/staff/me', {
+        headers: { Authorization: `Bearer ${authToken}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffUser(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err)
+    }
+  }, [])
+
   // Initialize token and trigger initial fetch
   useEffect(() => {
     let storedToken = localStorage.getItem('staff_token')
@@ -130,10 +146,11 @@ export default function AdminMentorshipPage() {
       setToken(storedToken)
       fetchData(storedToken)
       fetchMyStatus(storedToken)
+      fetchStaffUser(storedToken)
     } else {
       window.location.href = '/login'
     }
-  }, [fetchData, fetchMyStatus])
+  }, [fetchData, fetchMyStatus, fetchStaffUser])
 
   // Update my availability status
   const updateMyStatus = async (nextActive: boolean) => {
@@ -282,7 +299,7 @@ export default function AdminMentorshipPage() {
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
             { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
             { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
-            { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
+            ...(staffUser?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
             const isActive = pathname === href
