@@ -1028,7 +1028,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                       </a>
                     </>
                   )}
-                  {staff.role === 'ADMIN' && (
+                  {(staff.role === 'ADMIN' || staff.role === 'JUDGE') && (
                     <a href="/admin/import" className="btn-ghost !py-3.5 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20">
                       Import Unstop CSV
                     </a>

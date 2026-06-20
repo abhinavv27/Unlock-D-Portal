@@ -381,7 +381,7 @@ export default function JudgingPage() {
             </button>
             <span className="text-[7px] font-mono text-white/10 uppercase">Panel Active</span>
           </div>
-          {staffUser?.role === 'ADMIN' && (
+          {(staffUser?.role === 'ADMIN' || staffUser?.role === 'JUDGE') && (
             <Link
               href="/admin"
               className="w-full btn-ghost py-2 rounded-xl text-[8px] font-mono tracking-wider hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-center uppercase block"
