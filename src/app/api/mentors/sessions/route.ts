@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ sessions })
     }
 
-    const isUserAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(staff!.role)
+    const isUserAdmin = staff!.role === 'ADMIN'
 
     const sessions = await db.mentorSession.findMany({
       where: {

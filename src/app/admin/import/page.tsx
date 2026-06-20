@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminImportPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role as string)) redirect('/dashboard')
+  if (session.user.role !== 'ADMIN') redirect('/dashboard')
 
   // Retrieve active events from the database
   const events = await db.event.findMany({

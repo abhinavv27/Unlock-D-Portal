@@ -133,7 +133,7 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 
 const isAdmin = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'JUDGE') {
+  if (role !== 'ADMIN' && role !== 'JUDGE') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required.' })
   }
   return next({ ctx })
@@ -141,15 +141,15 @@ const isAdmin = t.middleware(({ ctx, next }) => {
 
 const isStrictAdmin = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Super admin or Admin access required.' })
+  if (role !== 'ADMIN') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required.' })
   }
   return next({ ctx })
 })
 
 const isJudge = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (role !== 'JUDGE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+  if (role !== 'JUDGE' && role !== 'ADMIN') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Judge access required.' })
   }
   return next({ ctx })
@@ -157,7 +157,7 @@ const isJudge = t.middleware(({ ctx, next }) => {
 
 const isStaff = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (!['STAFF', 'ADMIN', 'SUPER_ADMIN', 'JUDGE'].includes(role ?? '')) {
+  if (!['STAFF', 'ADMIN', 'JUDGE'].includes(role ?? '')) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Staff access required.' })
   }
   return next({ ctx })

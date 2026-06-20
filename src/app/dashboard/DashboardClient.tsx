@@ -106,7 +106,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       border: 'border-emerald-400/20',
       message: 'Deliver your payload below to advance to the next round of the challenge.'
     }
-  } else if (status === 'ADMIN' || status === 'SUPER_ADMIN') {
+  } else if (status === 'ADMIN') {
     config = {
       label: 'Admin Control',
       color: 'text-indigo-400',
