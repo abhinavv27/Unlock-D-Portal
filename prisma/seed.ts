@@ -29,6 +29,7 @@ async function main() {
     data: {
       username: 'admin',
       passwordHash: adminPassword,
+      plainPassword: 'admin123',
       systemRole: 'ADMIN',
     },
   })
@@ -37,6 +38,7 @@ async function main() {
     data: {
       username: 'judge',
       passwordHash: judgePassword,
+      plainPassword: 'judge123',
       systemRole: 'JUDGE',
     },
   })
