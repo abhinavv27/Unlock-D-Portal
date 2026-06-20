@@ -29,9 +29,9 @@ export const auth = async () => {
           return {
             user: {
               id: String(decoded.userId),
-              name: decoded.username,
-              email: `${decoded.username}@ras.test`,
-              role: decoded.role as string, // 'ADMIN' or 'JUDGE'
+              name: userExists.username,
+              email: `${userExists.username}@ras.test`,
+              role: userExists.systemRole as string,
             },
             expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
           }
