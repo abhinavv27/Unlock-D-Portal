@@ -182,7 +182,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-label-caps !text-[10px] text-white truncate">{session.user.name}</span>
-              <span className="text-value-mono !text-[8px] text-primary uppercase">Super_Admin</span>
+              <span className="text-value-mono !text-[8px] text-primary uppercase">{session?.user?.role || 'Admin'}</span>
             </div>
           </div>
           <button
@@ -233,7 +233,9 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                     Current Active: {activeEvent.stages.find((s: any) => s.stage === activeEvent.currentRound)?.name || `Round ${activeEvent.currentRound}`}
                   </h4>
                   <p className="text-xs text-white/40 mt-1 font-mono">
-                    Admins can unlock/start subsequent rounds for all participant teams.
+                    {session?.user?.role === 'JUDGE'
+                      ? 'Judges cannot change rounds (view-only mode).'
+                      : 'Admins can unlock/start subsequent rounds for all participant teams.'}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -245,7 +247,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                     return (
                       <button
                         key={round}
-                        disabled={startRoundMutation.isPending}
+                        disabled={startRoundMutation.isPending || session?.user?.role === 'JUDGE'}
                         onClick={() => {
                           setSelectedRound(round)
                         }}
@@ -253,7 +255,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                           isSelected
                             ? 'bg-primary text-black shadow-[0_0_20px_rgba(109,40,217,0.4)] border border-primary'
                             : 'bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10'
-                        }`}
+                        } ${session?.user?.role === 'JUDGE' ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {isUpdating ? 'Updating...' : `Round ${round}`}
                       </button>
@@ -263,7 +265,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
               </div>
 
               {/* Confirmation area */}
-              {selectedRound !== null && selectedRound !== activeEvent.currentRound && (
+              {selectedRound !== null && selectedRound !== activeEvent.currentRound && session?.user?.role !== 'JUDGE' && (
                 <div className="mt-6 p-6 border border-white/5 rounded-2xl bg-white/[0.02] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1">
                     <span className="text-label-caps !text-[9px] text-amber-400 block mb-1">Confirm Transition</span>

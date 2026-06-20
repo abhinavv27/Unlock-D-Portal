@@ -37,9 +37,9 @@ export async function PUT(
       )
     }
 
-    if (staff && session.mentorId !== staff.userId && staff.role !== 'ADMIN') {
+    if (staff && session.mentorId !== staff.userId && staff.role !== 'ADMIN' && staff.role !== 'JUDGE') {
       return NextResponse.json(
-        { error: 'Only the assigned mentor or an admin can resolve this session.' },
+        { error: 'Only the assigned mentor or staff can resolve this session.' },
         { status: 403 }
       )
     }

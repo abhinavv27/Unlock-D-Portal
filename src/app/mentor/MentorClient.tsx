@@ -359,7 +359,7 @@ export default function MentorClient({ session }: MentorClientProps) {
             <div className="glass-premium rounded-3xl p-6 border-white/5 space-y-4">
               <h4 className="text-xs text-white/40 font-mono uppercase tracking-wider pl-1">System Audit Console</h4>
               <div className="grid grid-cols-1 gap-2">
-                {session.user.role === 'ADMIN' && (
+                {(session.user.role === 'ADMIN' || session.user.role === 'JUDGE') && (
                   <a href="/admin" className="w-full py-3.5 px-5 rounded-xl border border-white/5 hover:border-white/15 bg-white/[0.01] hover:bg-white/[0.03] text-white/80 hover:text-white text-xs font-semibold flex items-center gap-3 transition-all">
                     <Terminal className="w-4 h-4 text-white/40" /> Admin Workspace
                   </a>
