@@ -59,7 +59,7 @@ export async function PUT(
     }
 
     // Verify authorization: only the requested mentor or staff override can accept a targeted request
-    if (session.mentorId && session.mentorId !== staff.userId && !['ADMIN', 'SUPER_ADMIN', 'JUDGE'].includes(staff.role)) {
+    if (session.mentorId && session.mentorId !== staff.userId && !['ADMIN', 'JUDGE'].includes(staff.role)) {
       return NextResponse.json(
         { error: 'Only the requested mentor or staff can accept this request.' },
         { status: 403 }
