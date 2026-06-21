@@ -7,6 +7,7 @@ import { api } from '@/trpc/react'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
+  if (taskId === 'FINAL-SUBMISSION') return 'Final Submission'
   if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
   if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
   return taskId
@@ -374,6 +375,12 @@ export default function TeamDetailPage() {
                                   </a>
                                 )}
                               </div>
+
+                              {(sub.payload as any)?.description && (
+                                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-mono text-white/60 whitespace-pre-wrap">
+                                  Description: {(sub.payload as any).description}
+                                </div>
+                              )}
 
                               {sub.rejectionReason && (
                                 <p className="text-[10px] font-mono text-rose-400/70 bg-rose-500/5 rounded-xl px-4 py-2 border border-rose-500/10">

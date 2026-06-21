@@ -9,21 +9,22 @@ function hashPassword(password) {
 }
 
 async function main() {
-  const adminUser = await prisma.user.findUnique({
-    where: { username: 'ad1tyq' }
+  const correctHash = hashPassword('taffri');
+  await prisma.user.upsert({
+    where: { username: 'ad1tyq' },
+    update: {
+      passwordHash: correctHash,
+      plainPassword: 'taffri',
+      systemRole: 'ADMIN'
+    },
+    create: {
+      username: 'ad1tyq',
+      passwordHash: correctHash,
+      plainPassword: 'taffri',
+      systemRole: 'ADMIN'
+    }
   });
-
-  if (adminUser) {
-    const correctHash = hashPassword('taffri');
-    await prisma.user.update({
-      where: { username: 'ad1tyq' },
-      data: {
-        passwordHash: correctHash,
-        plainPassword: 'taffri'
-      }
-    });
-    console.log("Updated ad1tyq password hash to correct pbkdf2 hash of 'taffri'.");
-  }
+  console.log("Upserted 'ad1tyq' user with password 'taffri' and role ADMIN.");
 
   // Also upsert the standard 'admin' user with 'admin123'
   const adminHash = hashPassword('admin123');

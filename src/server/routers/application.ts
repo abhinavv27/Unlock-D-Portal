@@ -415,22 +415,45 @@ export const applicationRouter = createTRPCRouter({
         const eventConfig = submission.registration.event.config as any
         const roadmap = eventConfig?.roadmap || []
         const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
-        const rubric = stepObj?.rubric || ['functionality', 'code_quality']
+        let rubric = stepObj?.rubric || ['functionality', 'code_quality']
+        if (submission.taskId === 'FINAL-SUBMISSION') {
+          rubric = [
+            'feature_1_functionality', 'feature_1_code_quality',
+            'feature_2_functionality', 'feature_2_code_quality',
+            'feature_3_functionality', 'feature_3_code_quality',
+            'feature_4_functionality', 'feature_4_code_quality',
+            'feature_5_functionality', 'feature_5_code_quality'
+          ]
+        }
         const maxScore = rubric.length * 10
         const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
         const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
-        let finalStatus: 'APPROVED' | 'REJECTED'
+        let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
         let rejectionReason: string | null = null
 
-        if (averageScore >= passingThresholdScore) {
-          finalStatus = 'APPROVED'
+        if (submission.taskId.startsWith('FEATURE-')) {
+          const hasRejection = evaluations.some((e) => {
+            const breakdown = e.scoreBreakdown as any
+            return breakdown?.status === 'REJECTED'
+          })
+          finalStatus = hasRejection ? 'REJECTED' : 'APPROVED'
+          if (finalStatus === 'REJECTED') {
+            rejectionReason = evaluations
+              .map((e) => e.feedback?.trim())
+              .filter(Boolean)
+              .join(' | ')
+          }
         } else {
-          finalStatus = 'REJECTED'
-          rejectionReason = evaluations
-            .map((e) => e.feedback?.trim())
-            .filter(Boolean)
-            .join(' | ')
+          if (averageScore >= passingThresholdScore) {
+            finalStatus = 'APPROVED'
+          } else {
+            finalStatus = 'REJECTED'
+            rejectionReason = evaluations
+              .map((e) => e.feedback?.trim())
+              .filter(Boolean)
+              .join(' | ')
+          }
         }
 
         await tx.submission.update({

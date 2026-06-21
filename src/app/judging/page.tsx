@@ -9,6 +9,7 @@ import sliderStyles from './JudgeSlider.module.css'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
+  if (taskId === 'FINAL-SUBMISSION') return 'Final Submission'
   if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
   if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
   return taskId
@@ -63,10 +64,10 @@ export default function JudgingPage() {
   const currentCriteria = useMemo(() => {
     if (!activeSubmission) return []
     const taskId = activeSubmission.taskId
-    if (taskId === 'FEATURE-1' || taskId === 'FEATURE-2') {
+    if (taskId.startsWith('FEATURE-')) {
       return []
     }
-    if (taskId === 'FEATURE-3') {
+    if (taskId === 'FINAL-SUBMISSION') {
       return [
         { key: 'feature_1_functionality', label: 'Feature 1 Functionality', desc: 'Functionality of Feature 1 sprint', max: 10 },
         { key: 'feature_1_code_quality', label: 'Feature 1 Code Quality', desc: 'Code Quality of Feature 1 sprint', max: 10 },
@@ -74,6 +75,10 @@ export default function JudgingPage() {
         { key: 'feature_2_code_quality', label: 'Feature 2 Code Quality', desc: 'Code Quality of Feature 2 sprint', max: 10 },
         { key: 'feature_3_functionality', label: 'Feature 3 Functionality', desc: 'Functionality of Feature 3 sprint', max: 10 },
         { key: 'feature_3_code_quality', label: 'Feature 3 Code Quality', desc: 'Code Quality of Feature 3 sprint', max: 10 },
+        { key: 'feature_4_functionality', label: 'Feature 4 Functionality', desc: 'Functionality of Feature 4 sprint', max: 10 },
+        { key: 'feature_4_code_quality', label: 'Feature 4 Code Quality', desc: 'Code Quality of Feature 4 sprint', max: 10 },
+        { key: 'feature_5_functionality', label: 'Feature 5 Functionality', desc: 'Functionality of Feature 5 sprint', max: 10 },
+        { key: 'feature_5_code_quality', label: 'Feature 5 Code Quality', desc: 'Code Quality of Feature 5 sprint', max: 10 },
       ]
     }
     return [
@@ -89,10 +94,10 @@ export default function JudgingPage() {
 
   const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
     const taskId = sub.taskId
-    if (taskId === 'FEATURE-1' || taskId === 'FEATURE-2') {
+    if (taskId.startsWith('FEATURE-')) {
       return {}
     }
-    if (taskId === 'FEATURE-3') {
+    if (taskId === 'FINAL-SUBMISSION') {
       return {
         feature_1_functionality: 8,
         feature_1_code_quality: 8,
@@ -100,6 +105,10 @@ export default function JudgingPage() {
         feature_2_code_quality: 8,
         feature_3_functionality: 8,
         feature_3_code_quality: 8,
+        feature_4_functionality: 8,
+        feature_4_code_quality: 8,
+        feature_5_functionality: 8,
+        feature_5_code_quality: 8,
       }
     }
     return { ...INITIAL_SCORES }
@@ -307,7 +316,7 @@ export default function JudgingPage() {
     if (myEval) {
       // Pre-populate with existing evaluation
       const breakdown = myEval.scoreBreakdown || {}
-      if (sub.taskId === 'FEATURE-3') {
+      if (sub.taskId === 'FINAL-SUBMISSION') {
         setScores({
           feature_1_functionality: Number(breakdown.feature_1_functionality) || 0,
           feature_1_code_quality: Number(breakdown.feature_1_code_quality) || 0,
@@ -315,8 +324,12 @@ export default function JudgingPage() {
           feature_2_code_quality: Number(breakdown.feature_2_code_quality) || 0,
           feature_3_functionality: Number(breakdown.feature_3_functionality) || 0,
           feature_3_code_quality: Number(breakdown.feature_3_code_quality) || 0,
+          feature_4_functionality: Number(breakdown.feature_4_functionality) || 0,
+          feature_4_code_quality: Number(breakdown.feature_4_code_quality) || 0,
+          feature_5_functionality: Number(breakdown.feature_5_functionality) || 0,
+          feature_5_code_quality: Number(breakdown.feature_5_code_quality) || 0,
         })
-      } else if (sub.taskId === 'FEATURE-1' || sub.taskId === 'FEATURE-2') {
+      } else if (sub.taskId.startsWith('FEATURE-')) {
         setScores({})
       } else {
         setScores({
@@ -422,6 +435,7 @@ export default function JudgingPage() {
                 <option value="FEATURE-3">Feature 3</option>
                 <option value="FEATURE-4">Feature 4</option>
                 <option value="FEATURE-5">Feature 5</option>
+                <option value="FINAL-SUBMISSION">Final Submission</option>
                 <option value="ROUND-2">Round 2</option>
                 <option value="ROUND-3">Round 3</option>
               </select>
@@ -648,6 +662,29 @@ export default function JudgingPage() {
                                       <p className="text-[10px] text-white/25 font-mono truncate">
                                         Task: {getFeatureLabel(sub.taskId)} · {new Date(sub.submittedAt).toLocaleString()}
                                       </p>
+                                      <div className="flex flex-col gap-1 mt-1.5 text-xs text-white/60">
+                                        {sub.payload?.github && (
+                                          <div>
+                                            <span className="text-[8px] text-white/20 uppercase font-mono mr-1">Code:</span>
+                                            <a href={sub.payload.github} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline font-mono text-[10px]">
+                                              {sub.payload.github}
+                                            </a>
+                                          </div>
+                                        )}
+                                        {sub.payload?.liveDemo && (
+                                          <div>
+                                            <span className="text-[8px] text-white/20 uppercase font-mono mr-1">Demo:</span>
+                                            <a href={sub.payload.liveDemo} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline font-mono text-[10px]">
+                                              {sub.payload.liveDemo}
+                                            </a>
+                                          </div>
+                                        )}
+                                        {sub.payload?.description && (
+                                          <div className="mt-1 p-2 rounded bg-white/[0.02] border border-white/5 text-[11px] text-white/70 font-mono whitespace-pre-wrap max-w-2xl">
+                                            {sub.payload.description}
+                                          </div>
+                                        )}
+                                      </div>
                                       {sub.evaluations.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-1">
                                           {sub.evaluations.map((ev: any) => (
@@ -747,6 +784,15 @@ export default function JudgingPage() {
                       </a>
                     </div>
                   </div>
+
+                  {activeSubmission.payload?.description && (
+                    <div className="space-y-1.5 pt-2">
+                      <span className="text-[8px] text-white/20 uppercase font-mono block">Team Submission Description</span>
+                      <div className="text-sm text-white/80 whitespace-pre-wrap bg-white/[0.02] border border-white/5 rounded-xl p-4 font-mono">
+                        {activeSubmission.payload.description}
+                      </div>
+                    </div>
+                  )}
                 </header>
 
                 {/* Scoring form */}
@@ -813,10 +859,23 @@ export default function JudgingPage() {
                           <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
                             {overall}
                           </span>
-                          <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ {
-                            activeSubmission?.taskId === 'FEATURE-3' ? 60 : 100
-                          }</span>
+                          <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ 100</span>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Decision Selection (only for features 1-5 which are not scored) */}
+                    {currentCriteria.length === 0 && (
+                      <div className="space-y-3">
+                        <label className="text-label-caps !text-[9px] text-white/30 px-2 italic font-mono">Decision</label>
+                        <select
+                          value={gradeStatus}
+                          onChange={(e) => setGradeStatus(e.target.value as 'APPROVED' | 'REJECTED')}
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-primary/50 text-white placeholder:text-white/20 text-xs font-mono"
+                        >
+                          <option value="APPROVED" className="bg-[#050505] text-emerald-400">Approve & Advance</option>
+                          <option value="REJECTED" className="bg-[#050505] text-rose-400">Reject / Request Changes</option>
+                        </select>
                       </div>
                     )}
 

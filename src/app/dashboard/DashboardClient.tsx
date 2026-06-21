@@ -10,6 +10,7 @@ import MentorTeamPanel from '@/components/MentorTeamPanel'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
+  if (taskId === 'FINAL-SUBMISSION') return 'Final Submission'
   if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
   if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
   return taskId
@@ -47,6 +48,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
   // Submission form states
   const [githubUrl, setGithubUrl] = useState('')
   const [liveDemoUrl, setLiveDemoUrl] = useState('')
+  const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -147,12 +149,13 @@ export default function DashboardClient({ session, status, team: initialTeam, st
       await submitMutation.mutateAsync({
         githubUrl: githubUrl.trim(),
         liveDemoUrl: liveDemoUrl.trim(),
-        description: 'Submission for allowed round',
+        description: description.trim(),
       })
 
       setSubmitSuccess(true)
       setGithubUrl('')
       setLiveDemoUrl('')
+      setDescription('')
 
       setTimeout(() => {
         window.location.reload()
@@ -626,6 +629,14 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                             </a>
                           </div>
                         )}
+                        {sub.payload?.description && (
+                          <div>
+                            <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Description</span>
+                            <div className="text-xs text-white/70 font-mono whitespace-pre-wrap bg-white/[0.02] border border-white/5 rounded-xl p-3 mt-1">
+                              {sub.payload.description}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <p className="text-xs text-white/50 mt-4 font-mono">
@@ -741,6 +752,17 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         onChange={(e) => setEditLiveDemoUrl(e.target.value)}
                         placeholder="Loom / Google Drive Video URL"
                         className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="Describe your progress and what you built in this feature..."
+                        maxLength={1000}
+                        rows={3}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-primary/50 text-white placeholder:text-white/20 text-xs"
                       />
                     </div>
                   </div>
@@ -993,6 +1015,14 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                               placeholder={team?.allowedRound === 1 ? "Drive Video Link (Mandatory)" : "Loom / Google Drive Video URL"}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
+                            <textarea
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                              placeholder="Describe your progress and what you built in this feature..."
+                              maxLength={1000}
+                              rows={3}
+                              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-primary/50 text-white placeholder:text-white/20 text-xs"
+                            />
                           </div>
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
@@ -1198,6 +1228,14 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                           >
                             {sub.payload.liveDemo}
                           </a>
+                        </>
+                      )}
+                      {sub.payload?.description && (
+                        <>
+                          <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Description</span>
+                          <div className="text-xs text-white/70 font-mono whitespace-pre-wrap bg-white/[0.02] border border-white/5 rounded-xl p-3 mt-1">
+                            {sub.payload.description}
+                          </div>
                         </>
                       )}
                       {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
