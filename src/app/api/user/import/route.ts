@@ -88,7 +88,6 @@ export async function POST(request: Request) {
     // 6. Bulk upsert registrations
     for (const team of importedTeams) {
       const passcode = generatePasscode()
-      const passcodeHash = await hashPassword(passcode)
       const memberDetails = team.email ? [{ email: team.email }] : []
 
       // Securely Upsert the record into the database
@@ -120,7 +119,7 @@ export async function POST(request: Request) {
             eventId,
             unstopTeamId: team.teamId,
             teamName: team.teamName,
-            teamPasscodeHash: passcodeHash,
+            teamPasscodeHash: passcode,
             memberDetails,
             progressState: initialProgress,
           },

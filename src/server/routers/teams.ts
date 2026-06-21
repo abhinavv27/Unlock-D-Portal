@@ -11,69 +11,13 @@ export const teamsRouter = createTRPCRouter({
         githubUrl: z.string().optional().or(z.literal('')),
         liveDemoUrl: z.string().optional().or(z.literal('')),
         description: z.string().max(1000).optional().default(''),
+        taskId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // 1. Fetch current Allowed State dynamically from db history
-      const status = await getTeamStatus(ctx.team.id, ctx.db)
-      if (status.isPending) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'A submission is already being evaluated.',
-        })
-      }
+      const cleanGithub = input.githubUrl?.trim()
+      const cleanDemo = input.liveDemoUrl?.trim()
 
-      // Check if team did not advance (eliminated)
-      const rawTeam = await ctx.db.registration.findUniqueOrThrow({
-        where: { id: ctx.team.id },
-        include: { event: true }
-      })
-      const eventConfig = (rawTeam.event.config as any) || {}
-      const eventRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : (rawTeam.event as any).currentGlobalRound
-
-      if (status.allowedRound < eventRound) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Your team did not advance to the next round.',
-        })
-      }
-
-      if (status.allowedTaskId === 'WAITING_ROOM') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You have reached the global ceiling for the current round. Please wait in the waiting room.',
-        })
-      }
-
-      if (status.allowedTaskId === 'COMPLETED') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You have already completed all tasks for this event.',
-        })
-      }
-
-      const cleanGithub = input.githubUrl?.trim();
-      const cleanDemo = input.liveDemoUrl?.trim();
-
-      const isRound1 = status.allowedRound === 1;
-
-      if (isRound1) {
-        if (!cleanDemo) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Drive video link is mandatory for Stage 1.',
-          })
-        }
-      } else {
-        if (!cleanGithub && !cleanDemo) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'At least one URL (GitHub or Live Demo) must be provided.',
-          })
-        }
-      }
-
-      // If provided, validate as URL format
       if (cleanGithub) {
         try {
           new URL(cleanGithub)
@@ -95,31 +39,214 @@ export const teamsRouter = createTRPCRouter({
         }
       }
 
-      // 2. Create the PENDING submission, locking down roundNumber & taskId
-      const submission = await ctx.db.submission.create({
-        data: {
+      // Check if we are updating an existing submission (resubmit/edit)
+      const status = await getTeamStatus(ctx.team.id, ctx.db)
+      const targetTaskId = input.taskId || status.allowedTaskId
+
+      const existingSubmission = await ctx.db.submission.findFirst({
+        where: {
           registrationId: ctx.team.id,
-          roundNumber: status.allowedRound,
-          taskId: status.allowedTaskId,
-          status: 'PENDING',
-          payload: {
-            github: cleanGithub || undefined,
-            liveDemo: cleanDemo || undefined,
-            description: input.description || undefined,
-            submitted_at: new Date().toISOString(),
-          },
+          taskId: targetTaskId,
         },
+      })
+
+      if (existingSubmission) {
+        const result = await ctx.db.$transaction(async (tx) => {
+          // Fetch existing evaluations to archive
+          const prevEvaluations = await tx.evaluation.findMany({
+            where: { submissionId: existingSubmission.id },
+          })
+          const archivedEvals = prevEvaluations.map((ev) => ({
+            judgeId: ev.judgeId,
+            totalScore: ev.totalScore,
+            scoreBreakdown: ev.scoreBreakdown,
+            feedback: ev.feedback,
+            gradedAt: ev.gradedAt.toISOString(),
+          }))
+
+          // Clear old evaluations
+          await tx.evaluation.deleteMany({
+            where: { submissionId: existingSubmission.id },
+          })
+
+          const currentPayload = (existingSubmission.payload as any) || {}
+          const editHistory = currentPayload.editHistory || []
+          const newHistoryItem = {
+            editedAt: new Date().toISOString(),
+            previousGithub: currentPayload.github || '',
+            previousLiveDemo: currentPayload.liveDemo || '',
+            previousDescription: currentPayload.description || '',
+            previousEvaluations: archivedEvals,
+          }
+          const updatedHistory = [...editHistory, newHistoryItem]
+
+          // Update submission payload, status back to APPROVED, and reset score
+          const updatedSub = await tx.submission.update({
+            where: { id: existingSubmission.id },
+            data: {
+              status: 'APPROVED',
+              averageScore: null,
+              rejectionReason: null,
+              payload: {
+                github: cleanGithub || undefined,
+                liveDemo: cleanDemo || undefined,
+                description: input.description || undefined,
+                submitted_at: currentPayload.submitted_at || new Date().toISOString(),
+                editHistory: updatedHistory,
+              },
+            },
+          })
+
+          // Recalculate team total score
+          const approvedSubs = await tx.submission.findMany({
+            where: {
+              registrationId: ctx.team.id,
+              status: 'APPROVED',
+              id: { not: existingSubmission.id },
+            },
+          })
+          const cumulativeScore = approvedSubs.reduce((sum, s) => sum + (s.averageScore || 0), 0)
+          const roundedCumulative = Math.round(cumulativeScore * 10) / 10
+
+          const reg = await tx.registration.findUniqueOrThrow({
+            where: { id: ctx.team.id },
+          })
+          const stateObj = (reg.progressState as any) || {}
+          const updatedProgress = {
+            ...stateObj,
+            score: roundedCumulative,
+            updated_at: new Date().toISOString(),
+          }
+
+          await tx.registration.update({
+            where: { id: ctx.team.id },
+            data: {
+              totalScore: roundedCumulative,
+              progressState: updatedProgress,
+            },
+          })
+
+          return updatedSub
+        })
+
+        return {
+          success: true,
+          submission: result,
+        }
+      }
+
+      // Creating a new submission
+      if (status.allowedTaskId === 'WAITING_ROOM') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You have reached the global ceiling for the current round. Please wait in the waiting room.',
+        })
+      }
+
+      if (status.allowedTaskId === 'COMPLETED') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You have already completed all tasks for this event.',
+        })
+      }
+
+      const isRound1 = status.allowedRound === 1
+      const isRound3 = status.allowedTaskId === 'ROUND-3'
+
+      // Round 3 is a demo-only round — no URLs required
+      if (!isRound3) {
+        if (isRound1) {
+          if (!cleanDemo) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Drive video link is mandatory for Stage 1.',
+            })
+          }
+        } else {
+          if (!cleanGithub && !cleanDemo) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'At least one URL (GitHub or Live Demo) must be provided.',
+            })
+          }
+        }
+      }
+
+      const newSub = await ctx.db.$transaction(async (tx) => {
+        const sub = await tx.submission.create({
+          data: {
+            registrationId: ctx.team.id,
+            roundNumber: status.allowedRound,
+            taskId: status.allowedTaskId,
+            status: 'APPROVED',
+            submission_type: isRound3 ? 'DEMO' : 'COMMIT',
+            payload: {
+              github: cleanGithub || undefined,
+              liveDemo: cleanDemo || undefined,
+              description: input.description || undefined,
+              submitted_at: new Date().toISOString(),
+            },
+          },
+        })
+
+        // Fetch new state engine status using transaction client
+        const teamStatus = await getTeamStatus(ctx.team.id, tx as any)
+
+        const reg = await tx.registration.findUniqueOrThrow({
+          where: { id: ctx.team.id },
+        })
+        const stateObj = (reg.progressState as any) || {}
+        const updatedProgress = {
+          ...stateObj,
+          current_stage: teamStatus.allowedRound,
+          updated_at: new Date().toISOString(),
+        }
+
+        await tx.registration.update({
+          where: { id: ctx.team.id },
+          data: {
+            progressState: updatedProgress,
+          },
+        })
+
+        return sub
       })
 
       return {
         success: true,
-        submission,
+        submission: newSub,
       }
     }),
 
   // Status query: Fetches team information and sequential submission history
   status: teamProcedure.query(async ({ ctx }) => {
     const statusResult = await getTeamStatus(ctx.team.id, ctx.db)
+
+    if (statusResult.allowedTaskId === 'ROUND-3') {
+      const existing = await ctx.db.submission.findFirst({
+        where: {
+          registrationId: ctx.team.id,
+          taskId: 'ROUND-3',
+        },
+      })
+      if (!existing) {
+        await ctx.db.submission.create({
+          data: {
+            registrationId: ctx.team.id,
+            roundNumber: 3,
+            taskId: 'ROUND-3',
+            status: 'APPROVED',
+            submission_type: 'DEMO',
+            payload: {
+              github: '',
+              liveDemo: '',
+              description: 'Round 3 — Final Demonstration entry',
+              submitted_at: new Date().toISOString(),
+            },
+          },
+        })
+      }
+    }
 
     const rawTeam = await ctx.db.registration.findUniqueOrThrow({
       where: { id: ctx.team.id },
@@ -191,6 +318,30 @@ export const teamsRouter = createTRPCRouter({
       score: rawTeam.totalScore,
     }
 
+    // Fetch DemoCall data if the team is in Round 3
+    let demoCall = null
+    if (statusResult.allowedTaskId === 'ROUND-3' || rawTeam.submissions.some((s: any) => s.taskId === 'ROUND-3')) {
+      const r3Submission = rawTeam.submissions.find((s: any) => s.taskId === 'ROUND-3')
+      if (r3Submission) {
+        const dc = await ctx.db.demoCall.findUnique({
+          where: { submissionId: r3Submission.id },
+          include: {
+            judge: { select: { id: true, username: true } },
+          },
+        })
+        if (dc) {
+          demoCall = {
+            id: dc.id,
+            status: dc.status,
+            meetingLink: dc.meetingLink,
+            calledAt: dc.calledAt,
+            completedAt: dc.completedAt,
+            judgeName: dc.judge.username,
+          }
+        }
+      }
+    }
+
     return {
       id: rawTeam.id,
       teamId: rawTeam.id,
@@ -209,6 +360,7 @@ export const teamsRouter = createTRPCRouter({
       inWaitingRoom,
       isEliminated,
       eventRound,
+      demoCall,
     }
   }),
 })

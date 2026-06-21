@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 const requestSchema = z.object({
   issueDescription: z.string().min(5, 'Issue description must be at least 5 characters long.').max(1000),
+  mentorId: z.union([z.number(), z.string().transform(Number)]).nullable().optional(),
 })
 
 export async function POST(request: Request) {
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { issueDescription } = parsed.data
+    const { issueDescription, mentorId } = parsed.data
 
     // Validate that a team can only have 1 active request/session
     const activeSession = await db.mentorSession.findFirst({
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
     const newSession = await db.mentorSession.create({
       data: {
         registrationId: team.id,
+        mentorId: mentorId || null,
         issueDescription,
         status: 'REQUESTED',
       },

@@ -51,11 +51,30 @@ export default function MentorStaffPanel({ token }: MentorStaffPanelProps) {
     }
   }, [token])
 
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/mentors/me/status', {
+        headers: authHeaders,
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data) {
+          setIsActive(Boolean(data.isActive))
+          setSkills(data.skills || '')
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load mentor status:', err)
+    }
+  }, [token])
+
   useEffect(() => {
     fetchSessions()
+    fetchStatus()
     const interval = window.setInterval(fetchSessions, 15000)
     return () => window.clearInterval(interval)
-  }, [fetchSessions])
+  }, [fetchSessions, fetchStatus])
 
   const updateStatus = async (nextActive = isActive) => {
     setSaving(true)
@@ -80,6 +99,7 @@ export default function MentorStaffPanel({ token }: MentorStaffPanelProps) {
       await fetchSessions()
     } catch (err: any) {
       setError(err.message || 'Failed to update mentor status.')
+      setIsActive(!nextActive) // Revert state on failure
     } finally {
       setSaving(false)
     }
@@ -175,9 +195,8 @@ export default function MentorStaffPanel({ token }: MentorStaffPanelProps) {
               updateStatus(next)
             }}
             disabled={saving}
-            className={`relative h-7 w-12 rounded-full border transition-colors disabled:opacity-50 ${
-              isActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
-            }`}
+            className={`relative h-7 w-12 rounded-full border transition-colors disabled:opacity-50 ${isActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
+              }`}
             aria-label="Toggle mentor availability"
             title="Toggle mentor availability"
           >
@@ -223,12 +242,16 @@ export default function MentorStaffPanel({ token }: MentorStaffPanelProps) {
                 <div className="min-w-0">
                   <p className="text-sm text-white/80 truncate">{session.registration?.teamName || 'Team'}</p>
                   <p className="text-[9px] font-mono text-white/25">{new Date(session.requestedAt).toLocaleTimeString()}</p>
+                  {session.mentor?.username && (
+                    <p className="text-[10px] text-cyan-300 font-mono mt-1 font-semibold">
+                      Target Mentor: {session.mentor.username}
+                    </p>
+                  )}
                 </div>
-                <span className={`text-[8px] font-mono px-2 py-1 rounded-lg border ${
-                  session.status === 'ACCEPTED'
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                    : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                }`}>
+                <span className={`text-[8px] font-mono px-2 py-1 rounded-lg border ${session.status === 'ACCEPTED'
+                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                  }`}>
                   {session.status}
                 </span>
               </div>

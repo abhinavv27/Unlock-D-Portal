@@ -78,27 +78,10 @@ export async function authenticateTeam(request: Request) {
       include: { event: true },
     })
 
-    if (!registration || !registration.event.isActive) return null
+    if (!registration || !registration.event.isActive || registration.isBlocked) return null
 
     return registration
   }
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!uuidRegex.test(token)) return null
-
-  const session = await db.session.findUnique({
-    where: { id: token },
-    include: {
-      registration: {
-        include: { event: true },
-      },
-    },
-  })
-
-  if (!session || session.expiresAt < new Date()) return null
-
-  const registration = session.registration
-  if (!registration.event.isActive) return null
-
-  return registration
+  return null
 }

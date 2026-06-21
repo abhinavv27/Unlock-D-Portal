@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -9,6 +9,37 @@ import { api } from '@/trpc/react'
 export default function AdminSchedulePage() {
   const pathname = usePathname()
   const { data: events, isLoading, refetch } = api.schedule.getAllEvents.useQuery()
+
+  const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
+
+  const fetchStaffUser = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/auth/staff/me', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffUser(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+    if (token) {
+      fetchStaffUser(token)
+    }
+  }, [fetchStaffUser])
 
   const handleLogout = () => {
     localStorage.removeItem('staff_token')
@@ -87,8 +118,9 @@ export default function AdminSchedulePage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
-            { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
+            ...(staffUser?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
             const isActive = pathname === href
