@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Slider } from '@base-ui/react/slider'
 import sliderStyles from './JudgeSlider.module.css'
+
+function getFeatureLabel(taskId: string): string {
+  if (!taskId) return ''
+  if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
+  if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
+  return taskId
+}
 
 function timeAgo(dateStr: string): string {
   const now = Date.now()
@@ -42,6 +49,7 @@ const INITIAL_SCORES = {
 export default function JudgingPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [staffToken, setStaffToken] = useState<string | null>(null)
 
   // Queue
   const [queue, setQueue] = useState<any[]>([])
@@ -50,26 +58,80 @@ export default function JudgingPage() {
 
   // Active submission
   const [activeSubmission, setActiveSubmission] = useState<any | null>(null)
-  const [scores, setScores] = useState(INITIAL_SCORES)
+  const [scores, setScores] = useState<Record<string, number>>(INITIAL_SCORES)
+
+  const currentCriteria = useMemo(() => {
+    if (!activeSubmission) return []
+    const taskId = activeSubmission.taskId
+    if (taskId === 'FEATURE-1' || taskId === 'FEATURE-2') {
+      return []
+    }
+    if (taskId === 'FEATURE-3') {
+      return [
+        { key: 'feature_1_functionality', label: 'Feature 1 Functionality', desc: 'Functionality of Feature 1 sprint', max: 10 },
+        { key: 'feature_1_code_quality', label: 'Feature 1 Code Quality', desc: 'Code Quality of Feature 1 sprint', max: 10 },
+        { key: 'feature_2_functionality', label: 'Feature 2 Functionality', desc: 'Functionality of Feature 2 sprint', max: 10 },
+        { key: 'feature_2_code_quality', label: 'Feature 2 Code Quality', desc: 'Code Quality of Feature 2 sprint', max: 10 },
+        { key: 'feature_3_functionality', label: 'Feature 3 Functionality', desc: 'Functionality of Feature 3 sprint', max: 10 },
+        { key: 'feature_3_code_quality', label: 'Feature 3 Code Quality', desc: 'Code Quality of Feature 3 sprint', max: 10 },
+      ]
+    }
+    return [
+      { key: 'functionality', label: 'Functionality', desc: 'Does the application work as intended?', max: 20 },
+      { key: 'codeQuality', label: 'Code Quality', desc: 'Is the code well-structured and maintainable?', max: 15 },
+      { key: 'integration', label: 'Integration', desc: 'Do components and APIs work together?', max: 15 },
+      { key: 'userExperience', label: 'User Experience', desc: 'Is the interface intuitive and polished?', max: 15 },
+      { key: 'deployment', label: 'Deployment', desc: 'Is the app deployed and accessible?', max: 10 },
+      { key: 'teamwork', label: 'Teamwork', desc: 'Clear roles, collaboration, and presentation?', max: 15 },
+      { key: 'errorHandling', label: 'Error Handling', desc: 'Are edge cases and errors managed?', max: 10 },
+    ]
+  }, [activeSubmission])
+
+  const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
+    const taskId = sub.taskId
+    if (taskId === 'FEATURE-1' || taskId === 'FEATURE-2') {
+      return {}
+    }
+    if (taskId === 'FEATURE-3') {
+      return {
+        feature_1_functionality: 8,
+        feature_1_code_quality: 8,
+        feature_2_functionality: 8,
+        feature_2_code_quality: 8,
+        feature_3_functionality: 8,
+        feature_3_code_quality: 8,
+      }
+    }
+    return { ...INITIAL_SCORES }
+  }, [])
   const [notes, setNotes] = useState('')
   const [gradeStatus, setGradeStatus] = useState<'APPROVED' | 'REJECTED'>('APPROVED')
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Leaderboard
-  const [leaderboard, setLeaderboard] = useState<any[]>([])
-  const [lbLoading, setLbLoading] = useState(false)
+  // View toggle
+  const [mainView, setMainView] = useState<'queue' | 'logs'>('queue')
 
-  const fetchQueue = useCallback(async () => {
+  // Team Logs
+  const [teamLogs, setTeamLogs] = useState<any[]>([])
+  const [teamLogsLoading, setTeamLogsLoading] = useState(false)
+  const [currentGlobalRound, setCurrentGlobalRound] = useState(1)
+  const [teamSearch, setTeamSearch] = useState('')
+  const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
+
+  // Current logged in user info
+  const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
+
+
+
+  const fetchQueue = useCallback(async (token: string) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/queue')
-      if (res.status === 401) {
-        router.push('/admin')
-        return
-      }
+      const res = await fetch('/api/admin/queue', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to retrieve queue.')
       setQueue(data.submissions || [])
@@ -78,30 +140,68 @@ export default function JudgingPage() {
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [])
 
-  const fetchLeaderboard = useCallback(async () => {
-    setLbLoading(true)
+
+
+  const fetchTeamLogs = useCallback(async (token: string) => {
+    setTeamLogsLoading(true)
     try {
-      const res = await fetch('/api/admin/leaderboard')
+      const res = await fetch('/api/admin/team-logs', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const data = await res.json()
-      if (res.ok) setLeaderboard(data.teams || [])
+      if (res.ok) {
+        setTeamLogs(data.teams || [])
+        setCurrentGlobalRound(data.currentGlobalRound || 1)
+      }
     } catch {
       // silently fail
     } finally {
-      setLbLoading(false)
+      setTeamLogsLoading(false)
     }
   }, [])
 
+  const fetchStaffUser = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/auth/staff/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffUser(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err)
+    }
+  }, [])
+
+
+
   useEffect(() => {
     setMounted(true)
-    fetchQueue()
-    fetchLeaderboard()
-  }, [fetchQueue, fetchLeaderboard])
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+
+    if (!token) {
+      router.push('/login')
+      return
+    }
+    setStaffToken(token)
+    fetchQueue(token)
+    fetchTeamLogs(token)
+    fetchStaffUser(token)
+  }, [router, fetchQueue, fetchTeamLogs, fetchStaffUser])
 
   const handleGradeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeSubmission) return
+    if (!activeSubmission || !staffToken) return
 
     setSubmitLoading(true)
     setError(null)
@@ -110,7 +210,10 @@ export default function JudgingPage() {
     try {
       const res = await fetch('/api/admin/grade', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${staffToken}`,
+        },
         body: JSON.stringify({
           submissionId: activeSubmission.id,
           scoreBreakdown: scores,
@@ -128,7 +231,9 @@ export default function JudgingPage() {
       setScores(INITIAL_SCORES)
       setNotes('')
       setGradeStatus('APPROVED')
-      fetchLeaderboard()
+      if (staffToken) {
+        fetchTeamLogs(staffToken)
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to save scores.')
     } finally {
@@ -136,9 +241,73 @@ export default function JudgingPage() {
     }
   }
 
-  const overall = (
-    CRITERIA.reduce((sum, c) => sum + scores[c.key], 0)
-  ).toFixed(0)
+  const overall = useMemo(() => {
+    return (
+      currentCriteria.reduce((sum, c) => sum + (scores[c.key] || 0), 0)
+    ).toFixed(0)
+  }, [currentCriteria, scores])
+
+  const filteredTeams = useMemo(() => {
+    if (!teamSearch.trim()) return teamLogs
+    const q = teamSearch.toLowerCase()
+    return teamLogs.filter((t: any) => t.teamName.toLowerCase().includes(q))
+  }, [teamLogs, teamSearch])
+
+  // Helper: get current judge's userId
+  const getStaffUserId = useCallback(() => {
+    return staffUser?.userId ?? null
+  }, [staffUser])
+
+  const handleSelectTeamLogSubmission = (sub: any, team: any) => {
+    const judgeId = getStaffUserId()
+    const myEval = sub.evaluations?.find((e: any) => e.judgeId === judgeId)
+
+    // Build a submission object compatible with the grading form
+    const formattedSub = {
+      ...sub,
+      registration: {
+        teamName: team.teamName,
+        progressState: { current_stage: team.currentStage },
+      },
+    }
+
+    setActiveSubmission(formattedSub)
+    setSubmitSuccess(false)
+
+    if (myEval) {
+      // Pre-populate with existing evaluation
+      const breakdown = myEval.scoreBreakdown || {}
+      if (sub.taskId === 'FEATURE-3') {
+        setScores({
+          feature_1_functionality: Number(breakdown.feature_1_functionality) || 0,
+          feature_1_code_quality: Number(breakdown.feature_1_code_quality) || 0,
+          feature_2_functionality: Number(breakdown.feature_2_functionality) || 0,
+          feature_2_code_quality: Number(breakdown.feature_2_code_quality) || 0,
+          feature_3_functionality: Number(breakdown.feature_3_functionality) || 0,
+          feature_3_code_quality: Number(breakdown.feature_3_code_quality) || 0,
+        })
+      } else if (sub.taskId === 'FEATURE-1' || sub.taskId === 'FEATURE-2') {
+        setScores({})
+      } else {
+        setScores({
+          functionality: Number(breakdown.functionality) || 0,
+          codeQuality: Number(breakdown.codeQuality) || 0,
+          integration: Number(breakdown.integration) || 0,
+          userExperience: Number(breakdown.userExperience) || 0,
+          deployment: Number(breakdown.deployment) || 0,
+          teamwork: Number(breakdown.teamwork) || 0,
+          errorHandling: Number(breakdown.errorHandling) || 0,
+        })
+      }
+      setNotes(myEval.feedback || '')
+    } else {
+      setScores(initializeScoresForSubmission(sub))
+      setNotes('')
+    }
+    setGradeStatus('APPROVED')
+    setMainView('queue')
+    setSidebarOpen(false)
+  }
 
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
@@ -164,7 +333,7 @@ export default function JudgingPage() {
         <div className="lg:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar — Queue + Leaderboard */}
+      {/* Sidebar — Queue + Team Logs */}
       <aside className={`fixed lg:sticky top-0 left-0 h-screen w-80 border-r border-white/5 bg-black/80 lg:bg-black/40 backdrop-blur-3xl flex flex-col z-50 lg:z-10 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         {/* Header */}
         <div className="p-6 md:p-8 border-b border-white/5 space-y-4">
@@ -181,6 +350,33 @@ export default function JudgingPage() {
           <div className="flex justify-between items-end">
             <p className="text-label-caps !text-[9px] text-white/30">Submission Queue</p>
             <p className="text-value-mono !text-[10px] text-primary">{queue.length} pending</p>
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex rounded-xl border border-white/10 overflow-hidden mt-4">
+            <button
+              onClick={() => setMainView('queue')}
+              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
+                mainView === 'queue'
+                  ? 'bg-primary/10 text-primary border-r border-primary/20'
+                  : 'bg-white/[0.02] text-white/40 hover:text-white/60 border-r border-white/10'
+              }`}
+            >
+              Queue
+            </button>
+            <button
+              onClick={() => {
+                setMainView('logs')
+                if (staffToken) fetchTeamLogs(staffToken)
+              }}
+              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
+                mainView === 'logs'
+                  ? 'bg-violet-500/10 text-violet-300'
+                  : 'bg-white/[0.02] text-white/40 hover:text-white/60'
+              }`}
+            >
+              Logs
+            </button>
           </div>
         </div>
 
@@ -202,7 +398,7 @@ export default function JudgingPage() {
                 onClick={() => {
                   setActiveSubmission(sub)
                   setSubmitSuccess(false)
-                  setScores(INITIAL_SCORES)
+                  setScores(initializeScoresForSubmission(sub))
                   setNotes('')
                   setGradeStatus('APPROVED')
                   setSidebarOpen(false)
@@ -215,9 +411,7 @@ export default function JudgingPage() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-label-caps !text-[8px] text-white/30">
-                    {(sub.registration.progressState as any)?.current_stage !== undefined
-                      ? `Stage ${(sub.registration.progressState as any).current_stage}`
-                      : 'New'}
+                    {getFeatureLabel(sub.taskId)}
                   </span>
                   <span className="text-[8px] font-mono text-white/20">
                     {timeAgo(sub.submittedAt)}
@@ -234,71 +428,27 @@ export default function JudgingPage() {
           )}
         </div>
 
-        {/* Leaderboard section — lower half */}
-        <div className="flex-[0.6] overflow-auto border-t border-white/5 custom-scrollbar">
-          <div className="p-4 md:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-label-caps !text-xs text-white/40">Leaderboard</span>
-              <button
-                onClick={() => fetchLeaderboard()}
-                className="text-[9px] font-mono text-white/20 hover:text-white/60 transition-colors"
-              >
-                refresh
-              </button>
-            </div>
-            {lbLoading ? (
-              <div className="text-center py-6 text-white/20 text-xs font-mono">LOADING...</div>
-            ) : leaderboard.length === 0 ? (
-              <div className="text-center py-6 text-white/20 text-xs font-mono">No teams yet</div>
-            ) : (
-              <div className="space-y-1.5">
-                {leaderboard.map((team, i) => (
-                  <div
-                    key={team.teamName}
-                    className="flex items-center gap-4 py-2 px-3 rounded-xl hover:bg-white/[0.03] transition-colors"
-                  >
-                    <span className="w-6 text-xs font-mono text-white/30 text-right shrink-0">
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/80 font-medium truncate">{team.teamName}</p>
-                      <p className="text-[10px] font-mono text-white/30 truncate">
-                        {team.stageName} · {team.totalScore} pts
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {team.roundBreakdown && Object.keys(team.roundBreakdown).sort((a, b) => Number(a) - Number(b)).map((r) => {
-                        const val = Number(team.roundBreakdown[r])
-                        return (
-                          <span
-                            key={r}
-                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md ${
-                              val ? 'bg-primary/15 text-primary border border-primary/20' : 'bg-white/10 text-white/30'
-                            }`}
-                          >
-                            {val || '-'}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+
 
         {/* Bottom actions */}
         <div className="p-4 md:p-5 border-t border-white/5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => fetchQueue()}
+              onClick={() => staffToken && fetchQueue(staffToken)}
               className="text-[8px] font-black text-white/30 hover:text-white uppercase tracking-[0.2em]"
             >
               Refresh Queue
             </button>
             <span className="text-[7px] font-mono text-white/10 uppercase">Panel Active</span>
           </div>
+          {(staffUser?.role === 'ADMIN' || staffUser?.role === 'JUDGE') && (
+            <Link
+              href="/admin"
+              className="w-full btn-ghost py-2 rounded-xl text-[8px] font-mono tracking-wider hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-center uppercase block"
+            >
+              Admin Dashboard
+            </Link>
+          )}
           <button
             onClick={() => {
               localStorage.removeItem('staff_token')
@@ -312,7 +462,7 @@ export default function JudgingPage() {
         </div>
       </aside>
 
-      {/* Main grading area */}
+      {/* Main content area */}
       <div className="flex-1 relative z-10 overflow-auto">
         {error && (
           <div className="max-w-4xl mx-auto mt-6 px-6">
@@ -329,6 +479,168 @@ export default function JudgingPage() {
           </div>
         )}
 
+        {/* ===== TEAM LOGS VIEW ===== */}
+        {mainView === 'logs' && (
+          <div className="max-w-5xl mx-auto p-6 md:p-8 lg:p-10 space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1.5 rounded-full bg-violet-500/10 text-violet-300 text-[9px] font-bold uppercase tracking-wider border border-violet-500/20">
+                  Round {currentGlobalRound}
+                </span>
+                <h2 className="text-3xl md:text-5xl font-display font-bold text-white tracking-tight">
+                  Team Logs
+                </h2>
+              </div>
+              <p className="text-sm text-white/30 max-w-lg">
+                View all teams, their submission history, and grade or re-grade submissions for the current round.
+              </p>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                value={teamSearch}
+                onChange={(e) => setTeamSearch(e.target.value)}
+                placeholder="Search teams by name..."
+                className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm text-white/75 focus:outline-none focus:border-violet-400/40 placeholder:text-white/15"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-mono text-white/20">
+                {filteredTeams.length} teams
+              </span>
+            </div>
+
+            {/* Teams Grid */}
+            {teamLogsLoading ? (
+              <div className="text-center py-16 text-white/20 text-xs font-mono animate-pulse tracking-widest">LOADING TEAM LOGS...</div>
+            ) : filteredTeams.length === 0 ? (
+              <div className="text-center py-16 text-white/20 text-xs font-mono">No teams found.</div>
+            ) : (
+              <div className="space-y-3">
+                {filteredTeams.map((team: any) => {
+                  const isExpanded = expandedTeam === team.id
+                  return (
+                    <div key={team.id} className="rounded-2xl border border-white/5 bg-white/[0.01] overflow-hidden transition-all">
+                      {/* Team header row */}
+                      <button
+                        onClick={() => setExpandedTeam(isExpanded ? null : team.id)}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-300 text-xs font-bold shrink-0">
+                            {team.currentStage}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-semibold text-white truncate">{team.teamName}</h4>
+                            <p className="text-[10px] font-mono text-white/25">
+                              {team.submissions.length} submissions · {team.totalScore} pts
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-mono text-white/20">Stage {team.currentStage}</span>
+                          <svg
+                            className={`w-4 h-4 text-white/30 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </button>
+
+                      {/* Expanded submissions */}
+                      {isExpanded && (
+                        <div className="border-t border-white/5 bg-white/[0.01]">
+                          {team.submissions.length === 0 ? (
+                            <div className="px-5 py-6 text-xs text-white/20 font-mono text-center">No submissions yet.</div>
+                          ) : (
+                            <div className="divide-y divide-white/5">
+                              {team.submissions.map((sub: any) => {
+                                const isCurrentRound = sub.roundNumber === currentGlobalRound
+                                const judgeId = getStaffUserId()
+                                const myEval = sub.evaluations?.find((e: any) => e.judgeId === judgeId)
+
+                                return (
+                                  <div key={sub.id} className="px-5 py-4 flex flex-col md:flex-row md:items-center gap-4">
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-md border border-white/10 bg-white/[0.03] text-white/40">
+                                          R{sub.roundNumber}
+                                        </span>
+                                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md border ${
+                                          sub.status === 'APPROVED'
+                                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                                            : sub.status === 'REJECTED'
+                                              ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                                              : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                                        }`}>
+                                          {sub.status}
+                                        </span>
+                                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-md border border-white/5 text-white/25 uppercase">
+                                          {sub.submission_type}
+                                        </span>
+                                        {sub.averageScore !== null && sub.averageScore !== undefined && (
+                                          <span className="text-[9px] font-mono text-primary">
+                                            avg: {sub.averageScore}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] text-white/25 font-mono truncate">
+                                        Task: {getFeatureLabel(sub.taskId)} · {new Date(sub.submittedAt).toLocaleString()}
+                                      </p>
+                                      {sub.evaluations.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                          {sub.evaluations.map((ev: any) => (
+                                            <span
+                                              key={ev.id}
+                                              className={`text-[8px] font-mono px-2 py-0.5 rounded border ${
+                                                ev.judgeId === judgeId
+                                                  ? 'bg-primary/10 text-primary border-primary/20'
+                                                  : 'bg-white/5 text-white/30 border-white/5'
+                                              }`}
+                                            >
+                                              {ev.judgeName}: {ev.totalScore}pts
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="shrink-0">
+                                      {isCurrentRound ? (
+                                        <button
+                                          onClick={() => handleSelectTeamLogSubmission(sub, team)}
+                                          className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
+                                            myEval
+                                              ? 'border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20'
+                                              : 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20'
+                                          }`}
+                                        >
+                                          {myEval ? 'Edit Grade' : 'Grade'}
+                                        </button>
+                                      ) : (
+                                        <span className="px-4 py-2 rounded-xl text-[9px] font-mono text-white/15 border border-white/5 bg-white/[0.01] cursor-not-allowed">
+                                          Round Closed
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== GRADING QUEUE VIEW ===== */}
+        {mainView === 'queue' && (
         <AnimatePresence mode="wait">
           {activeSubmission ? (
             <motion.div
@@ -342,7 +654,7 @@ export default function JudgingPage() {
               <header className="space-y-4">
                 <div className="flex items-center gap-4">
                   <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-label-caps !text-[9px] border border-primary/20">
-                    Stage {(activeSubmission.registration.progressState as any)?.current_stage ?? 0} Review
+                    {getFeatureLabel(activeSubmission.taskId)} Review
                   </span>
                   <span className="text-label-caps !text-[9px] text-white/20">
                     {timeAgo(activeSubmission.submittedAt)}
@@ -383,7 +695,7 @@ export default function JudgingPage() {
               <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-8 md:space-y-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
                 <form onSubmit={handleGradeSubmit} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                    {CRITERIA.map(({ key, label, desc, max }) => (
+                    {currentCriteria.map(({ key, label, desc, max }) => (
                       <div key={key} className="space-y-1 group">
                         <div className="flex items-end justify-between">
                           <div>
@@ -432,19 +744,23 @@ export default function JudgingPage() {
                   </div>
  
                   {/* Overall Score */}
-                  <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
-                    <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
-                    <div className="relative z-10">
-                      <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
-                      <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
+                  {currentCriteria.length > 0 && (
+                    <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
+                      <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
+                      <div className="relative z-10">
+                        <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
+                        <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
+                      </div>
+                      <div className="relative z-10 text-right">
+                        <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
+                          {overall}
+                        </span>
+                        <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ {
+                          activeSubmission?.taskId === 'FEATURE-3' ? 60 : 100
+                        }</span>
+                      </div>
                     </div>
-                    <div className="relative z-10 text-right">
-                      <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
-                        {overall}
-                      </span>
-                      <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ 100</span>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Feedback */}
                   <div className="space-y-3">
@@ -458,48 +774,14 @@ export default function JudgingPage() {
                     />
                   </div>
 
-                  {/* Decision + Submit */}
-                  <div className="space-y-4">
-                    <label className="text-label-caps !text-[9px] text-white/30 px-2 italic">Decision</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setGradeStatus('APPROVED')}
-                        className={`py-3.5 rounded-2xl border font-mono text-[9px] font-bold transition-all uppercase tracking-wider text-center flex items-center justify-center gap-2 cursor-pointer ${
-                          gradeStatus === 'APPROVED'
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
-                            : 'bg-white/[0.01] border-white/5 text-white/40 hover:text-white/80 hover:bg-white/[0.03]'
-                        }`}
-                      >
-                        <span>✓</span> Approve &amp; Unlock Next
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGradeStatus('REJECTED')}
-                        className={`py-3.5 rounded-2xl border font-mono text-[9px] font-bold transition-all uppercase tracking-wider text-center flex items-center justify-center gap-2 cursor-pointer ${
-                          gradeStatus === 'REJECTED'
-                            ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.15)]'
-                            : 'bg-white/[0.01] border-white/5 text-white/40 hover:text-white/80 hover:bg-white/[0.03]'
-                        }`}
-                      >
-                        <span>✕</span> Reject / Request Changes
-                      </button>
-                    </div>
-
+                  {/* Submit */}
+                  <div className="space-y-4 pt-2">
                     <button
                       type="submit"
                       disabled={submitLoading}
-                      className={`w-full py-4 rounded-[1.5rem] bg-white text-black text-label-caps !text-[11px] transition-all hover:scale-[1.01] active:scale-[0.99] shadow-2xl font-black disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                        gradeStatus === 'APPROVED'
-                          ? 'hover:bg-emerald-500 hover:text-white'
-                          : 'hover:bg-rose-600 hover:text-white'
-                      }`}
+                      className="w-full py-4 rounded-[1.5rem] bg-white text-black text-label-caps !text-[11px] transition-all hover:scale-[1.01] active:scale-[0.99] shadow-2xl font-black disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:bg-primary hover:text-white"
                     >
-                      {submitLoading
-                        ? 'SUBMITTING...'
-                        : gradeStatus === 'APPROVED'
-                          ? 'SUBMIT & UNLOCK NEXT STAGE'
-                          : 'SUBMIT REJECTION'}
+                      {submitLoading ? 'SUBMITTING...' : 'SUBMIT GRADE & EVALUATION'}
                     </button>
                   </div>
                 </form>
@@ -526,6 +808,8 @@ export default function JudgingPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
+
       </div>
     </main>
   )

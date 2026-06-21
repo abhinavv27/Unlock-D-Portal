@@ -29,6 +29,7 @@ async function main() {
     data: {
       username: 'admin',
       passwordHash: adminPassword,
+      plainPassword: 'admin123',
       systemRole: 'ADMIN',
     },
   })
@@ -37,6 +38,7 @@ async function main() {
     data: {
       username: 'judge',
       passwordHash: judgePassword,
+      plainPassword: 'judge123',
       systemRole: 'JUDGE',
     },
   })
@@ -93,9 +95,20 @@ async function main() {
     },
   })
 
+  const team = await prisma.registration.create({
+    data: {
+      eventId: hackathonEvent.id,
+      unstopTeamId: 'unstop_101',
+      teamName: 'CyberTitans',
+      teamPasscodeHash: 'pass123',
+      progressState: { current_stage: 1, score: 0, penalties: 0 },
+    }
+  })
+
   console.log('Created events:')
   console.log(`- Hackathon: "${hackathonEvent.name}" (slug: "${hackathonEvent.slug}")`)
   console.log(`- CTF: "${ctfEvent.name}" (slug: "${ctfEvent.slug}")`)
+  console.log(`- Mock Team: "${team.teamName}" with passcode "pass123"`)
 
   console.log('Seed completed successfully!')
 }

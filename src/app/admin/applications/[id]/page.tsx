@@ -5,6 +5,13 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '@/trpc/react'
 
+function getFeatureLabel(taskId: string): string {
+  if (!taskId) return ''
+  if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
+  if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
+  return taskId
+}
+
 const CRITERIA_LABELS: Record<string, string> = {
   functionality: 'Functionality',
   codeQuality: 'Code Quality',
@@ -13,6 +20,16 @@ const CRITERIA_LABELS: Record<string, string> = {
   deployment: 'Deployment',
   teamwork: 'Teamwork',
   errorHandling: 'Error Handling',
+}
+
+const CRITERIA_MAX: Record<string, number> = {
+  functionality: 20,
+  codeQuality: 15,
+  integration: 15,
+  userExperience: 15,
+  deployment: 10,
+  teamwork: 15,
+  errorHandling: 10,
 }
 
 const ROUND_NAMES = ['Round 0', 'Round 1', 'Round 2', 'Round 3']
@@ -41,11 +58,81 @@ export default function TeamDetailPage() {
 
   const { data, isLoading, error, refetch } = api.application.getById.useQuery({ id })
   const [openRounds, setOpenRounds] = useState<Record<number, boolean>>({ 0: true })
-  const currentApproval = (data?.progressState as any)?.manualStatus || null
-  const approveMutation = api.application.updateStatus.useMutation({
-    onSuccess: () => refetch(),
-    onError: (err) => alert(`Error: ${err.message}`),
+
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTeamName, setEditTeamName] = useState('')
+  const [editPasscode, setEditPasscode] = useState('')
+  const [editStage, setEditStage] = useState(0)
+  const [editScore, setEditScore] = useState(0)
+
+  const updateTeamMutation = api.application.updateTeam.useMutation({
+    onSuccess: () => {
+      void refetch()
+      setIsEditing(false)
+    },
+    onError: (err) => {
+      alert(`Error updating team: ${err.message}`)
+    },
   })
+
+  const startEditing = () => {
+    if (!data) return
+    setEditTeamName(data.teamName)
+    setEditPasscode('')
+    setEditStage(data.progressState?.current_stage ?? 0)
+    setEditScore(data.progressState?.score ?? 0)
+    setIsEditing(true)
+  }
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    updateTeamMutation.mutate({
+      id,
+      teamName: editTeamName,
+      passcode: editPasscode || undefined,
+      currentStage: editStage,
+      score: editScore,
+    })
+  }
+
+  // Edit Evaluation states
+  const [isEditingEval, setIsEditingEval] = useState(false)
+  const [editingEvalId, setEditingEvalId] = useState<number | null>(null)
+  const [editEvalScores, setEditEvalScores] = useState<Record<string, number>>({})
+  const [editEvalFeedback, setEditEvalFeedback] = useState('')
+
+  const updateEvalMutation = api.application.updateEvaluation.useMutation({
+    onSuccess: () => {
+      void refetch()
+      setIsEditingEval(false)
+    },
+    onError: (err) => {
+      alert(`Error updating score: ${err.message}`)
+    }
+  })
+
+  const startEditingEvaluation = (ev: any) => {
+    setEditingEvalId(ev.id)
+    setEditEvalFeedback(ev.feedback || '')
+    const breakdown = ev.scoreBreakdown as Record<string, number> || {}
+    const initialScores: Record<string, number> = {}
+    Object.keys(CRITERIA_MAX).forEach(key => {
+      initialScores[key] = Number(breakdown[key]) || 0
+    })
+    setEditEvalScores(initialScores)
+    setIsEditingEval(true)
+  }
+
+  const handleSaveEval = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editingEvalId === null) return
+    updateEvalMutation.mutate({
+      evaluationId: editingEvalId,
+      scoreBreakdown: editEvalScores,
+      feedback: editEvalFeedback,
+    })
+  }
 
   const toggleRound = (r: number) =>
     setOpenRounds(prev => ({ ...prev, [r]: !prev[r] }))
@@ -67,13 +154,13 @@ export default function TeamDetailPage() {
     for (const sub of data.submissions) {
       events.push({
         date: sub.submittedAt,
-        label: `Round ${sub.roundNumber} submitted (${sub.taskId})`,
+        label: `${getFeatureLabel(sub.taskId)} submitted`,
         type: 'submission',
       })
       if (sub.status === 'APPROVED' || sub.status === 'REJECTED') {
         events.push({
           date: sub.evaluations[0]?.gradedAt || sub.submittedAt,
-          label: `Round ${sub.roundNumber} ${sub.status === 'APPROVED' ? 'approved' : 'rejected'} (score: ${sub.evaluations.reduce((s, e) => s + e.totalScore, 0)})`,
+          label: `${getFeatureLabel(sub.taskId)} ${sub.status === 'APPROVED' ? 'approved' : 'rejected'} (score: ${sub.evaluations.reduce((s, e) => s + e.totalScore, 0)})`,
           type: sub.status === 'APPROVED' ? 'approved' : 'rejected',
         })
       }
@@ -151,6 +238,12 @@ export default function TeamDetailPage() {
                   Stage {currentStage}
                 </span>
                 <span className="text-[9px] font-mono text-white/30">{data.unstopTeamId}</span>
+                <button
+                  onClick={startEditing}
+                  className="px-3.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-primary transition-all text-[8px] font-mono tracking-wider uppercase font-black cursor-pointer"
+                >
+                  Edit Details
+                </button>
               </div>
               <h1 className="text-4xl md:text-6xl text-hero leading-[0.9]">{data.teamName}</h1>
             </div>
@@ -163,22 +256,6 @@ export default function TeamDetailPage() {
             <span>Passcode: {data.teamPasscode}</span>
             <span>Event: {data.eventName}</span>
             {data.memberDetails && <span>Members: {String(Object.keys(data.memberDetails as object).length)}</span>}
-          </div>
-          <div className="flex gap-3 pt-2 border-t border-white/5">
-            <button
-              onClick={() => {
-                const newStatus = currentApproval === 'APPROVED_FOR_NEXT' ? 'NONE' : 'APPROVED_FOR_NEXT'
-                approveMutation.mutate({ id, status: newStatus })
-              }}
-              disabled={approveMutation.isPending}
-              className={`text-[10px] font-black uppercase tracking-widest transition-colors px-4 py-2 rounded-xl border ${
-                currentApproval === 'APPROVED_FOR_NEXT'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20'
-                  : 'bg-white/5 text-white/40 border-white/10 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/20'
-              }`}
-            >
-              {currentApproval === 'APPROVED_FOR_NEXT' ? 'Revoke Approval' : 'Approve for Next Round'}
-            </button>
           </div>
         </header>
 
@@ -274,7 +351,7 @@ export default function TeamDetailPage() {
                               {/* Submission header */}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-label-caps !text-[10px] text-white/60">{sub.taskId}</span>
+                                  <span className="text-label-caps !text-[10px] text-white/60">{getFeatureLabel(sub.taskId)}</span>
                                   <span className={`text-[8px] font-mono px-2 py-0.5 rounded-md border ${STATUS_COLORS[sub.status] || 'bg-white/10 text-white/30'}`}>
                                     {sub.status}
                                   </span>
@@ -313,7 +390,15 @@ export default function TeamDetailPage() {
                                     <div key={ev.id} className="bg-white/[0.02] rounded-xl border border-white/5 p-4 space-y-3">
                                       <div className="flex items-center justify-between">
                                         <span className="text-[9px] font-mono text-primary">Judge: {ev.judgeName}</span>
-                                        <span className="text-[8px] font-mono text-white/20">{timeAgo(ev.gradedAt)}</span>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => startEditingEvaluation(ev)}
+                                            className="text-[8px] font-mono text-white/40 hover:text-primary hover:border-primary/20 transition-colors cursor-pointer uppercase font-black bg-white/5 border border-white/10 px-2 py-0.5 rounded"
+                                          >
+                                            Edit Score
+                                          </button>
+                                          <span className="text-[8px] font-mono text-white/20">{timeAgo(ev.gradedAt)}</span>
+                                        </div>
                                       </div>
 
                                       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -375,6 +460,193 @@ export default function TeamDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Team Details Modal */}
+      <AnimatePresence>
+        {isEditing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditing(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md glass-premium border-white/10 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl bg-[#090909] z-10"
+            >
+              <div className="space-y-1">
+                <h3 className="text-xl font-display font-bold text-white uppercase tracking-tight">Edit Team Details</h3>
+                <p className="text-[10px] text-white/30 font-medium">Modify team name, reset passcode, allowed stage, or overwrite score.</p>
+              </div>
+
+              <form onSubmit={handleSave} className="space-y-5">
+                <div className="space-y-1">
+                  <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Team Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTeamName}
+                    onChange={e => setEditTeamName(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Reset Passcode</label>
+                  <input
+                    type="text"
+                    placeholder="Leave blank to keep existing passcode"
+                    value={editPasscode}
+                    onChange={e => setEditPasscode(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder:text-white/15 focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Allowed Stage</label>
+                    <div className="relative">
+                      <select
+                        value={editStage}
+                        onChange={e => setEditStage(Number(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-primary/50 appearance-none cursor-pointer"
+                      >
+                        {[0, 1, 2, 3].map(round => (
+                          <option key={round} value={round} className="bg-[#090909] text-white">Stage {round}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/30 text-[9px]">▼</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Total Score</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      value={editScore}
+                      onChange={e => setEditScore(Number(e.target.value) || 0)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-bold uppercase hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateTeamMutation.isPending}
+                    className="flex-1 py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:scale-[1.02] transition-transform disabled:opacity-50 cursor-pointer"
+                  >
+                    {updateTeamMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Evaluation Modal */}
+      <AnimatePresence>
+        {isEditingEval && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditingEval(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg glass-premium border-white/10 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl bg-[#090909] z-10 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            >
+              <div className="space-y-1">
+                <h3 className="text-xl font-display font-bold text-white uppercase tracking-tight">Edit Judge Evaluation</h3>
+                <p className="text-[10px] text-white/30 font-medium">Update criteria scoring breakdown and technical feedback.</p>
+              </div>
+
+              <form onSubmit={handleSaveEval} className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  {Object.entries(CRITERIA_MAX).map(([key, max]) => (
+                    <div key={key} className="space-y-1 group">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 group-hover:text-white transition-colors">
+                          {CRITERIA_LABELS[key] || key}
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={0}
+                            max={max}
+                            required
+                            value={editEvalScores[key] ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, Math.min(max, Math.round(Number(e.target.value) || 0)))
+                              setEditEvalScores(prev => ({ ...prev, [key]: val }))
+                            }}
+                            className="w-12 bg-white/5 border border-white/10 rounded-lg px-1.5 py-0.5 text-right text-xs text-primary font-mono focus:outline-none focus:border-primary/50"
+                          />
+                          <span className="text-[9px] text-white/20 font-mono">/ {max}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Technical Feedback</label>
+                  <textarea
+                    required
+                    value={editEvalFeedback}
+                    onChange={e => setEditEvalFeedback(e.target.value)}
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-primary/50 placeholder:text-white/15 resize-none"
+                    placeholder="Enter judge notes or feedback changes..."
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingEval(false)}
+                    className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-bold uppercase hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateEvalMutation.isPending}
+                    className="flex-1 py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:scale-[1.02] transition-transform disabled:opacity-50 cursor-pointer"
+                  >
+                    {updateEvalMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

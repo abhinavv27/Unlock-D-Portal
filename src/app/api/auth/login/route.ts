@@ -3,6 +3,7 @@ import { db } from '@/server/db'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { verifyPassword } from '@/lib/auth-utils'
+import { signJwt } from '@/lib/jwt'
 
 const loginSchema = z.object({
   teamName: z.string().min(1, 'Team name is required').max(100),
@@ -34,7 +35,6 @@ export async function POST(request: Request) {
         event: true,
       },
     })
-
     if (!registration) {
       return NextResponse.json(
         { error: 'Invalid team name or passcode.' },
@@ -42,11 +42,20 @@ export async function POST(request: Request) {
       )
     }
 
-    const isPasscodeValid = await verifyPassword(passcode, registration.teamPasscodeHash)
+    const isPasscodeValid = registration.teamPasscodeHash.includes(':')
+      ? await verifyPassword(passcode, registration.teamPasscodeHash)
+      : passcode === registration.teamPasscodeHash
     if (!isPasscodeValid) {
       return NextResponse.json(
         { error: 'Invalid team name or passcode.' },
         { status: 401 }
+      )
+    }
+
+    if (registration.isBlocked) {
+      return NextResponse.json(
+        { error: 'This team has been blocked/suspended.' },
+        { status: 403 }
       )
     }
 
@@ -57,18 +66,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create database session to isolate the session token from the registration ID
-    const session = await db.session.create({
-      data: {
-        registrationId: registration.id,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 1 week
-      },
+    // Generate stateless JWT token
+    const token = signJwt({
+      type: 'team',
+      id: registration.id,
+      teamName: registration.teamName,
     })
 
-    // Save team session token in a secure HTTP-only cookie
+    // Save team token in a secure HTTP-only cookie
     const cookieStore = await cookies()
     cookieStore.delete('staff_token')
-    cookieStore.set('team_token', session.id, {
+    cookieStore.set('team_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -76,9 +84,9 @@ export async function POST(request: Request) {
       path: '/',
     })
 
-    // Return the session ID (the session token) as standard
+    // Return the token as the sessionToken
     return NextResponse.json({
-      sessionToken: session.id,
+      sessionToken: token,
       teamName: registration.teamName,
       eventId: registration.eventId,
     })
