@@ -37,7 +37,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"])
-  
+
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
@@ -88,7 +88,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
   // Resolve config objects based on authentication status role
   let config = {
     label: status,
-    color: 'text-primary/80', 
+    color: 'text-primary/80',
     bg: 'bg-primary/10',
     border: 'border-primary/20',
     message: 'Welcome to your event workspace nexus.'
@@ -130,7 +130,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
 
   const handleWorkSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     const isRound1 = team?.allowedRound === 1
     if (isRound1 && !liveDemoUrl.trim()) {
       setSubmitError('Drive video link is mandatory for Stage 1.')
@@ -457,14 +457,13 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   </div>
                   <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
                     <span className="text-[9px] text-white/30 font-mono uppercase block">Status</span>
-                    <span className={`text-xs font-bold mt-2 block uppercase tracking-wider ${
-                      demoCall?.status === 'COMPLETED' ? 'text-emerald-400'
-                      : demoCall?.status === 'CALLED' ? 'text-emerald-400'
-                      : 'text-amber-400'
-                    }`}>
+                    <span className={`text-xs font-bold mt-2 block uppercase tracking-wider ${demoCall?.status === 'COMPLETED' ? 'text-emerald-400'
+                        : demoCall?.status === 'CALLED' ? 'text-emerald-400'
+                          : 'text-amber-400'
+                      }`}>
                       {demoCall?.status === 'COMPLETED' ? 'Finished'
                         : demoCall?.status === 'CALLED' ? 'In Call'
-                        : 'Queued'}
+                          : 'Queued'}
                     </span>
                   </div>
                 </div>
@@ -495,7 +494,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
     return (
       <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
         {/* Background Layer */}
-        <motion.div 
+        <motion.div
           style={{ y: backgroundY }}
           className="fixed inset-0 pointer-events-none z-0"
         >
@@ -556,13 +555,13 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">
-              <button 
+              <button
                 onClick={() => window.location.reload()}
                 className="btn-vibrant !py-3 !px-8 text-xs font-semibold rounded-xl"
               >
                 🔄 Refresh Status
               </button>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="btn-ghost !py-3 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20"
               >
@@ -604,10 +603,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         {sub.payload?.github && (
                           <div>
                             <span className="text-[9px] text-white/20 uppercase font-mono block">GitHub Repository</span>
-                            <a 
-                              href={sub.payload.github} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
+                            <a
+                              href={sub.payload.github}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                             >
                               {sub.payload.github}
@@ -617,10 +616,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         {sub.payload?.liveDemo && (
                           <div>
                             <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Live Demo / Video</span>
-                            <a 
-                              href={sub.payload.liveDemo} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
+                            <a
+                              href={sub.payload.liveDemo}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                             >
                               {sub.payload.liveDemo}
@@ -764,9 +763,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
 
   return (
     <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
-      
+
       {/* Background Layer */}
-      <motion.div 
+      <motion.div
         style={{ y: backgroundY }}
         className="fixed inset-0 pointer-events-none z-0"
       >
@@ -779,7 +778,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
       </motion.div>
 
       {/* Progress Bar */}
-      <motion.div 
+      <motion.div
         className="fixed top-0 left-0 right-0 h-[3px] bg-primary z-[100] origin-left"
         style={{ scaleX }}
       />
@@ -788,7 +787,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
       <Navbar session={session as any} />
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-28 md:pt-48 lg:pt-56 pb-16 md:pb-32 relative z-10">
-        
+
         {/* Header Section */}
         <section className="mb-16 md:mb-32">
           <motion.div
@@ -804,7 +803,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   {session.user.name?.split(' ')[0] || 'GUEST'}.
                 </span>
               </h1>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="btn-ghost !py-2.5 !px-6 !rounded-full text-xs font-mono tracking-widest hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 transition-all duration-300"
               >
@@ -812,7 +811,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
               </button>
             </div>
             <p className="text-lg md:text-2xl text-editorial max-w-3xl text-white/70">
-              {team 
+              {team
                 ? `You are connected as a team member of "${team.teamName}" under event "${team.event.name}".`
                 : `You are connected to the administrator panel. Monitor the event, check entries, and execute grading protocols.`}
             </p>
@@ -840,29 +839,26 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   return (
                     <div key={stage.stage} className="flex-1 relative">
                       <div className="flex flex-col items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 ${
-                          isCompleted
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 ${isCompleted
                             ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(52,211,153,0.3)]'
                             : isCurrent
                               ? 'bg-primary text-black shadow-[0_0_20px_rgba(109,40,217,0.4)] ring-2 ring-primary/50'
                               : 'bg-white/5 text-white/20 border border-white/10'
-                        }`}>
+                          }`}>
                           {isCompleted ? '✓' : stage.stage}
                         </div>
-                        <span className={`mt-3 text-[9px] font-black text-center uppercase tracking-[0.15em] leading-relaxed max-w-[90px] ${
-                          isCompleted
+                        <span className={`mt-3 text-[9px] font-black text-center uppercase tracking-[0.15em] leading-relaxed max-w-[90px] ${isCompleted
                             ? 'text-emerald-400/80'
                             : isCurrent
                               ? 'text-white'
                               : 'text-white/20'
-                        }`}>
+                          }`}>
                           {stage.name}
                         </span>
                       </div>
                       {idx < stages.length - 1 && (
-                        <div className={`absolute top-5 left-[60%] w-[80%] h-[2px] -translate-y-1/2 ${
-                          isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'
-                        }`} />
+                        <div className={`absolute top-5 left-[60%] w-[80%] h-[2px] -translate-y-1/2 ${isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'
+                          }`} />
                       )}
                     </div>
                   )
@@ -874,9 +870,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-20 md:mb-32">
-          
+
           {/* Status & Action Card */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
@@ -891,7 +887,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
               <h2 className={`text-6xl md:text-8xl lg:text-[90px] text-stat mb-6 ${config.color} leading-none`}>
                 {config.label}
               </h2>
-              
+
               <p className="text-lg md:text-2xl text-editorial leading-snug max-w-2xl text-white/70">
                 {config.message}
               </p>
@@ -949,7 +945,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   {team && (
                     <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
                       <h3 className="text-xl md:text-2xl font-display font-medium text-white mb-6">Submit Round Progress</h3>
-                      
+
                       {/* Rejected submission feedback + resubmit prompt */}
                       {lastRejected && lastRejected.evaluation && !hasPending && (
                         <div className="mb-6 p-5 rounded-2xl bg-rose-500/5 border border-rose-500/15">
@@ -1007,8 +1003,8 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                               {loading ? 'Submitting...' : 'Submit Entry'}
                             </button>
                             <span className="text-[10px] text-white/20 font-mono">
-                              {team?.allowedRound === 1 
-                                ? "Provide your GitHub repository link and mandatory drive demo video URL" 
+                              {team?.allowedRound === 1
+                                ? "Provide your GitHub repository link and mandatory drive demo video URL"
                                 : "Provide your code repository and working demo video URL"}
                             </span>
                           </div>
@@ -1047,7 +1043,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             {team ? (
               <>
                 {/* Event Cumulative Score */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
@@ -1066,7 +1062,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                 </motion.div>
 
                 {/* Team Info Code */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
@@ -1091,7 +1087,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             ) : (
               <>
                 {/* Staff metrics card */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
@@ -1140,8 +1136,8 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                 if (isRejected) statusBadgeColor = 'text-rose-400 bg-rose-400/5 border-rose-400/10'
 
                 return (
-                  <div 
-                    key={sub.id} 
+                  <div
+                    key={sub.id}
                     className="p-6 rounded-2xl glass-premium border border-white/5 hover:border-white/10 transition-all duration-300 relative group overflow-hidden"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -1181,10 +1177,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       {sub.payload?.github && (
                         <>
                           <span className="text-[9px] text-white/20 uppercase font-mono block">GitHub Repository</span>
-                          <a 
-                            href={sub.payload.github} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={sub.payload.github}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                           >
                             {sub.payload.github}
@@ -1194,10 +1190,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       {sub.payload?.liveDemo && (
                         <>
                           <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Live Demo</span>
-                          <a 
-                            href={sub.payload.liveDemo} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={sub.payload.liveDemo}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                           >
                             {sub.payload.liveDemo}
@@ -1271,7 +1267,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             <div className="flex-1 h-px bg-white/10 hidden md:block" />
             <div className="text-micro text-[10px]">Quick Links</div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {[
               { title: 'Timeline', desc: 'View the full event schedule', href: '/schedule', icon: '⚡' },

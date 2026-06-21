@@ -489,11 +489,10 @@ export default function TeamDetailPage() {
               {timeline.map((event, i) => (
                 <div key={i} className="flex gap-4 pb-4 relative">
                   <div className="flex flex-col items-center">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${
-                      event.type === 'approved' ? 'bg-emerald-400' :
-                      event.type === 'rejected' ? 'bg-rose-400' :
-                      'bg-white/20'
-                    }`} />
+                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${event.type === 'approved' ? 'bg-emerald-400' :
+                        event.type === 'rejected' ? 'bg-rose-400' :
+                          'bg-white/20'
+                      }`} />
                     {i < timeline.length - 1 && <div className="w-px flex-1 bg-white/5 mt-1" />}
                   </div>
                   <div className="flex-1 min-w-0 pb-2">
