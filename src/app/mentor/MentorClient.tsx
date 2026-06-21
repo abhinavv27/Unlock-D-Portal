@@ -120,8 +120,18 @@ export default function MentorClient({ session }: MentorClientProps) {
     fetchSessions()
     fetchHistory()
 
-    const interval = window.setInterval(fetchSessions, 15000)
-    return () => window.clearInterval(interval)
+    const interval = window.setInterval(fetchSessions, 5000)
+
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchSessions() }
+    const onOnline = () => fetchSessions()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
   }, [fetchProfile, fetchSessions, fetchHistory])
 
   // Save profile changes (isActive & skills)
