@@ -226,6 +226,7 @@ export default function AdminApplicationsPage() {
                       </div>
                     </th>
                     <th className="p-6 text-label-caps">Team</th>
+                    <th className="p-6 text-label-caps">Passcode</th>
                     <th className="p-6 text-label-caps">University</th>
                     <th className="p-6 text-label-caps">Submitted</th>
                     <th className="p-6 text-label-caps text-right">Score</th>
@@ -235,7 +236,7 @@ export default function AdminApplicationsPage() {
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="p-20 text-center">
+                      <td colSpan={6} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                           <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Synching_Records...</span>
@@ -244,7 +245,7 @@ export default function AdminApplicationsPage() {
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-20 text-center">
+                      <td colSpan={6} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-2 opacity-20">
                           <span className="text-4xl">📁</span>
                           <span className="text-[10px] font-black uppercase tracking-[0.3em]">No_Matching_Entries</span>
@@ -273,7 +274,7 @@ export default function AdminApplicationsPage() {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-3">
                             <Link href={`/admin/applications/${app.id}`} className="text-sm font-black text-white hover:text-primary transition-colors font-display uppercase tracking-tight">
-                              {app.firstName} {app.lastName}
+                              {app.firstName}
                             </Link>
                             {app.status === 'ELIMINATED' && (
                               <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-widest">
@@ -298,6 +299,11 @@ export default function AdminApplicationsPage() {
                           </div>
                           <span className="text-value-mono !text-white/20 !text-[9px]">{app.user?.email}</span>
                         </div>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-value-mono !text-primary !text-[11px] font-mono font-bold select-all">
+                          {app.lastName.replace('(Passcode: ', '').replace(')', '')}
+                        </span>
                       </td>
                       <td className="p-6">
                         <span className="text-xs font-bold text-white/60 tracking-tight">{app.university}</span>
