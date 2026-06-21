@@ -260,6 +260,40 @@ export const applicationRouter = createTRPCRouter({
         }
       })
 
+      if (input.round === 3) {
+        // Automatically create ROUND-3 submissions for top 10 leaderboard teams
+        const topTeams = await ctx.db.registration.findMany({
+          where: { eventId: activeEvent.id },
+          orderBy: { totalScore: 'desc' },
+          take: 10,
+        })
+        for (const team of topTeams) {
+          const existing = await ctx.db.submission.findFirst({
+            where: {
+              registrationId: team.id,
+              taskId: 'ROUND-3'
+            }
+          })
+          if (!existing) {
+            await ctx.db.submission.create({
+              data: {
+                registrationId: team.id,
+                roundNumber: 3,
+                taskId: 'ROUND-3',
+                status: 'APPROVED',
+                submission_type: 'DEMO',
+                payload: {
+                  github: '',
+                  liveDemo: '',
+                  description: 'Round 3 — Final Demonstration entry',
+                  submitted_at: new Date().toISOString()
+                }
+              }
+            })
+          }
+        }
+      }
+
       return { success: true, currentRound: input.round }
     }),
 
