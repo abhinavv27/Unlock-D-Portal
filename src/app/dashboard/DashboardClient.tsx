@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/Navbar'
 import SplineRobot from '@/components/SplineRobot'
 import { api } from '@/trpc/react'
@@ -22,6 +23,7 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ session, status, team, staff }: DashboardClientProps) {
   const submitMutation = api.teams.submit.useMutation()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"])
@@ -35,6 +37,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   // Submission form states
   const [githubUrl, setGithubUrl] = useState('')
   const [liveDemoUrl, setLiveDemoUrl] = useState('')
+  const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -48,6 +51,26 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Auto-refresh dashboard data every 30s + on tab focus / reconnect
+  const refreshDashboard = useCallback(() => {
+    router.refresh()
+  }, [router])
+
+  useEffect(() => {
+    const interval = setInterval(refreshDashboard, 30000)
+
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshDashboard() }
+    const onOnline = () => refreshDashboard()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
+  }, [refreshDashboard])
 
   // Resolve config objects based on authentication status role
   let config = {
@@ -88,6 +111,11 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
     e.preventDefault()
     if (!githubUrl.trim() && !liveDemoUrl.trim()) return
 
+    if (description.trim() && description.trim().length < 20) {
+      setSubmitError('Description must be at least 20 characters.')
+      return
+    }
+
     setLoading(true)
     setSubmitError(null)
     setSubmitSuccess(false)
@@ -96,12 +124,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       await submitMutation.mutateAsync({
         githubUrl: githubUrl.trim(),
         liveDemoUrl: liveDemoUrl.trim(),
-        description: 'Submission for allowed round',
+        description: description.trim(),
       })
 
       setSubmitSuccess(true)
       setGithubUrl('')
       setLiveDemoUrl('')
+      setDescription('')
 
       setTimeout(() => {
         window.location.reload()
@@ -422,6 +451,20 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               placeholder="Loom / Google Drive Video URL"
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
+                            <textarea
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                              placeholder="Describe what you built and any notable features or changes"
+                              maxLength={1000}
+                              rows={3}
+                              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs resize-none text-white/75 placeholder:text-white/15"
+                            />
+                            <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
+                              <span>{description.length} / 1000 chars</span>
+                              {description.length > 0 && description.length < 20 && (
+                                <span className="text-amber-400">min 20 chars</span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
@@ -629,6 +672,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                             {sub.payload.liveDemo}
                           </a>
                         </>
+                      )}
+                      {sub.payload?.description && (
+                        <div className="mt-3">
+                          <span className="text-[9px] text-white/20 uppercase font-mono block">Description</span>
+                          <p className="text-xs text-white/70 mt-1 leading-relaxed">{sub.payload.description}</p>
+                        </div>
                       )}
                     </div>
 
