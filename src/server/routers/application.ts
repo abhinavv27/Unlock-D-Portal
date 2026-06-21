@@ -26,7 +26,7 @@ export const applicationRouter = createTRPCRouter({
       const [registrations, total] = await Promise.all([
         ctx.db.registration.findMany({
           where,
-          include: { 
+          include: {
             event: {
               select: {
                 name: true,
@@ -254,7 +254,7 @@ export const applicationRouter = createTRPCRouter({
 
       await ctx.db.event.update({
         where: { id: activeEvent.id },
-        data: { 
+        data: {
           config: updatedConfig,
           currentGlobalRound: input.round
         }

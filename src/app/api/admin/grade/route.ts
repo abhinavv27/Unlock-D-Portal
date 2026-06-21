@@ -152,7 +152,7 @@ export async function POST(request: Request) {
       const eventConfig = submission.registration.event.config as any
       const roadmap = eventConfig?.roadmap || []
       const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
-      
+
       let rubric = stepObj?.rubric || ['functionality', 'code_quality']
       if (submission.taskId === 'FEATURE-3') {
         rubric = [
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
           'feature_3_functionality', 'feature_3_code_quality'
         ]
       }
-      
+
       const maxScore = rubric.length * 10
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
