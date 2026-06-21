@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { decryptToken } from '@/lib/auth-utils'
+import { verifyJwt } from '@/lib/jwt'
 import { db } from '@/server/db'
 
 export const auth = async () => {
@@ -9,7 +10,17 @@ export const auth = async () => {
     const teamToken = cookieStore.get('team_token')?.value
 
     if (staffToken) {
-      const decoded = decryptToken(staffToken)
+      const encryptedPayload = decryptToken(staffToken)
+      const jwtPayload = encryptedPayload ? null : verifyJwt(staffToken)
+      const decoded = encryptedPayload || (
+        jwtPayload?.type === 'staff'
+          ? {
+              userId: jwtPayload.userId,
+              username: jwtPayload.username,
+              role: jwtPayload.role,
+            }
+          : null
+      )
       if (decoded && decoded.userId && decoded.role) {
         const userExists = await db.user.findUnique({
           where: { id: decoded.userId }
@@ -18,9 +29,9 @@ export const auth = async () => {
           return {
             user: {
               id: String(decoded.userId),
-              name: decoded.username,
-              email: `${decoded.username}@ras.test`,
-              role: decoded.role as string, // 'ADMIN' or 'JUDGE'
+              name: userExists.username,
+              email: `${userExists.username}@ras.test`,
+              role: userExists.systemRole as string,
             },
             expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
           }
@@ -28,20 +39,21 @@ export const auth = async () => {
       }
     }
     if (teamToken) {
-      const dbSession = await db.session.findUnique({
-        where: { id: teamToken },
-        include: { registration: true },
-      })
-      if (dbSession && dbSession.expiresAt > new Date()) {
-        const team = dbSession.registration
-        return {
-          user: {
-            id: team.id,
-            name: team.teamName,
-            email: "",
-            role: "TEAM",
-          },
-          expires: dbSession.expiresAt.toISOString(),
+      const decoded = verifyJwt(teamToken)
+      if (decoded?.type === 'team' && decoded.id) {
+        const team = await db.registration.findUnique({
+          where: { id: decoded.id }
+        })
+        if (team && !team.isBlocked) {
+          return {
+            user: {
+              id: team.id,
+              name: team.teamName,
+              email: "",
+              role: "TEAM",
+            },
+            expires: new Date(decoded.exp * 1000).toISOString(),
+          }
         }
       }
     }

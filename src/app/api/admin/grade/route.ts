@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     // 1. Validate staff credentials (ADMIN or JUDGE)
     const staff = await getStaffFromRequest(request)
-    if (!staff || staff.role !== 'JUDGE') {
+    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
       return NextResponse.json(
         { error: 'Unauthorized. Judge or Admin credentials required.' },
         { status: 401 }
@@ -73,31 +73,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if the current judge has already evaluated this submission
-    const existingEvaluation = await db.evaluation.findFirst({
-      where: {
-        submissionId: numSubId,
-        judgeId: staff.userId,
-      },
+    // Fetch the active progressive hackathon event config to verify the current active round
+    const activeEvent = await db.event.findFirst({
+      where: { isActive: true, eventType: 'PROGRESSIVE_HACKATHON' },
     })
 
-    if (existingEvaluation) {
+    if (activeEvent && submission.roundNumber !== activeEvent.currentGlobalRound) {
       return NextResponse.json(
-        { error: 'You have already evaluated this submission.' },
-        { status: 400 }
-      )
-    }
-
-    if (submission.submissionType === 'DEMO') {
-      return NextResponse.json(
-        { error: 'Demo submissions are approved by admins, not graded by judges.' },
-        { status: 400 }
-      )
-    }
-
-    if (submission.status !== 'PENDING' && submission.status !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'This submission is not open for grading (already rejected or finalized).' },
+        { error: 'Cannot grade or modify grades for a closed round.' },
         { status: 400 }
       )
     }
@@ -113,9 +96,42 @@ export async function POST(request: Request) {
 
     // 5. Update submission and team state in a transaction
     await db.$transaction(async (tx) => {
-      // Create evaluation report
-      await tx.evaluation.create({
-        data: {
+      // Check if evaluation already exists to log audit trail
+      const existingEval = await tx.evaluation.findUnique({
+        where: {
+          submissionId_judgeId: {
+            submissionId: numSubId,
+            judgeId: staff.userId,
+          },
+        },
+      })
+
+      if (existingEval) {
+        await tx.evaluationAudit.create({
+          data: {
+            evaluationId: existingEval.id,
+            oldScoreBreakdown: existingEval.scoreBreakdown as any,
+            oldTotalScore: existingEval.totalScore,
+            oldFeedback: existingEval.feedback,
+          },
+        })
+      }
+
+      // Create or update evaluation report
+      await tx.evaluation.upsert({
+        where: {
+          submissionId_judgeId: {
+            submissionId: numSubId,
+            judgeId: staff.userId,
+          },
+        },
+        update: {
+          scoreBreakdown: scoreBreakdown as any,
+          totalScore,
+          feedback,
+          gradedAt: new Date(),
+        },
+        create: {
           submissionId: numSubId,
           judgeId: staff.userId,
           scoreBreakdown: scoreBreakdown as any,
@@ -136,22 +152,35 @@ export async function POST(request: Request) {
       const eventConfig = submission.registration.event.config as any
       const roadmap = eventConfig?.roadmap || []
       const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
-      const rubric = stepObj?.rubric || ['functionality', 'code_quality']
+      
+      let rubric = stepObj?.rubric || ['functionality', 'code_quality']
+      if (submission.taskId === 'FEATURE-3') {
+        rubric = [
+          'feature_1_functionality', 'feature_1_code_quality',
+          'feature_2_functionality', 'feature_2_code_quality',
+          'feature_3_functionality', 'feature_3_code_quality'
+        ]
+      }
+      
       const maxScore = rubric.length * 10
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
-      let finalStatus: 'APPROVED' | 'REJECTED'
+      let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
 
-      if (averageScore >= passingThresholdScore) {
+      if (submission.taskId === 'FEATURE-1' || submission.taskId === 'FEATURE-2') {
         finalStatus = 'APPROVED'
       } else {
-        finalStatus = 'REJECTED'
-        rejectionReason = evaluations
-          .map((e) => e.feedback?.trim())
-          .filter(Boolean)
-          .join(' | ')
+        if (averageScore >= passingThresholdScore) {
+          finalStatus = 'APPROVED'
+        } else {
+          finalStatus = 'REJECTED'
+          rejectionReason = evaluations
+            .map((e) => e.feedback?.trim())
+            .filter(Boolean)
+            .join(' | ')
+        }
       }
 
       await tx.submission.update({

@@ -6,6 +6,14 @@ import { useState, useEffect } from 'react'
 import { Navbar } from '@/components/Navbar'
 import SplineRobot from '@/components/SplineRobot'
 import { api } from '@/trpc/react'
+import MentorTeamPanel from '@/components/MentorTeamPanel'
+
+function getFeatureLabel(taskId: string): string {
+  if (!taskId) return ''
+  if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
+  if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
+  return taskId
+}
 
 interface DashboardClientProps {
   session: {
@@ -39,15 +47,39 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  // Demo submission form states
-  const [demoUrl, setDemoUrl] = useState('')
-  const [demoLoading, setDemoLoading] = useState(false)
-  const [demoError, setDemoError] = useState<string | null>(null)
-  const [demoSuccess, setDemoSuccess] = useState(false)
+  // Edit Submission states
+  const [editingSubmission, setEditingSubmission] = useState<any | null>(null)
+  const [editGithubUrl, setEditGithubUrl] = useState('')
+  const [editLiveDemoUrl, setEditLiveDemoUrl] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editSuccess, setEditSuccess] = useState(false)
+
+  // Round 3 states
+  const [r3Entering, setR3Entering] = useState(false)
+  const [r3EntryError, setR3EntryError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Poll for Round 3 demo call updates every 5 minutes
+  useEffect(() => {
+    if (!team) return
+    const isR3 = team.allowedTaskId === 'ROUND-3' || team.submissions?.some((s: any) => s.taskId === 'ROUND-3')
+    if (!isR3) return
+    const hasR3Submission = team.submissions?.some((s: any) => s.taskId === 'ROUND-3')
+    if (!hasR3Submission) return
+    // Only poll when waiting for a call or during an active call
+    if (team.demoCall?.status === 'COMPLETED') return
+
+    const interval = setInterval(() => {
+      window.location.reload()
+    }, 300000)
+
+    return () => clearInterval(interval)
+  }, [team])
 
   // Resolve config objects based on authentication status role
   let config = {
@@ -59,14 +91,22 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   }
 
   if (status.startsWith('STAGE ')) {
+    let label = status
+    if (status === 'STAGE 1') {
+      const taskSuffix = team?.allowedTaskId ? ` - ${team.allowedTaskId.replace('-', ' ')}` : ''
+      label = `ROUND 1${taskSuffix}`
+    } else if (team?.allowedTaskId && team.allowedTaskId.startsWith('ROUND-')) {
+      label = team.allowedTaskId.replace('-', ' ')
+    }
+
     config = {
-      label: status,
+      label,
       color: 'text-emerald-400',
       bg: 'bg-emerald-400/10',
       border: 'border-emerald-400/20',
       message: 'Deliver your payload below to advance to the next round of the challenge.'
     }
-  } else if (status === 'ADMIN' || status === 'SUPER_ADMIN') {
+  } else if (status === 'ADMIN') {
     config = {
       label: 'Admin Control',
       color: 'text-indigo-400',
@@ -86,6 +126,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
   const handleWorkSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    const isRound1 = team?.allowedRound === 1
+    if (isRound1 && !liveDemoUrl.trim()) {
+      setSubmitError('Drive video link is mandatory for Stage 1.')
+      return
+    }
+
     if (!githubUrl.trim() && !liveDemoUrl.trim()) return
 
     setLoading(true)
@@ -113,31 +160,41 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
     }
   }
 
-  const handleDemoSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!demoUrl.trim()) return
+    if (!editingSubmission) return
 
-    setDemoLoading(true)
-    setDemoError(null)
-    setDemoSuccess(false)
+    const isRound1 = editingSubmission.roundNumber === 1
+    if (isRound1 && !editLiveDemoUrl.trim()) {
+      setEditError('Drive video link is mandatory for Stage 1.')
+      return
+    }
+
+    if (!editGithubUrl.trim() && !editLiveDemoUrl.trim()) {
+      setEditError('At least one URL (GitHub or Live Demo) must be provided.')
+      return
+    }
+
+    setEditLoading(true)
+    setEditError(null)
+    setEditSuccess(false)
 
     try {
       await submitMutation.mutateAsync({
-        liveDemoUrl: demoUrl.trim(),
-        submissionType: 'DEMO',
-        description: 'Demo / Documentation submission for Round 2',
+        githubUrl: editGithubUrl.trim(),
+        liveDemoUrl: editLiveDemoUrl.trim(),
+        description: editDescription.trim(),
+        taskId: editingSubmission.taskId,
       })
 
-      setDemoSuccess(true)
-      setDemoUrl('')
-
+      setEditSuccess(true)
       setTimeout(() => {
         window.location.reload()
       }, 1500)
     } catch (err: any) {
-      setDemoError(err.message || 'An unexpected error occurred.')
+      setEditError(err.message || 'An unexpected error occurred.')
     } finally {
-      setDemoLoading(false)
+      setEditLoading(false)
     }
   }
 
@@ -227,6 +284,209 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
     )
   }
 
+  // Round 3: Final Demo & Evaluation landing page
+  if (team?.allowedTaskId === 'ROUND-3' || team?.submissions?.some((s: any) => s.taskId === 'ROUND-3')) {
+    const hasR3Submission = team.submissions?.some((s: any) => s.taskId === 'ROUND-3')
+    const demoCall = team.demoCall
+
+    const handleEnterRound3 = async () => {
+      setR3Entering(true)
+      setR3EntryError(null)
+      try {
+        await submitMutation.mutateAsync({
+          githubUrl: '',
+          liveDemoUrl: '',
+          description: 'Round 3 — Final Demonstration entry',
+        })
+        setTimeout(() => window.location.reload(), 1000)
+      } catch (err: any) {
+        setR3EntryError(err.message || 'Failed to enter Round 3.')
+        setR3Entering(false)
+      }
+    }
+
+    return (
+      <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
+        <motion.div
+          style={{ y: backgroundY }}
+          className="fixed inset-0 pointer-events-none z-0"
+        >
+          <div className="mesh-gradient !opacity-25">
+            <div className="mesh-blob w-[1200px] h-[1200px] bg-violet-600 top-[-10%] left-[-10%]" />
+            <div className="mesh-blob w-[1000px] h-[1000px] bg-primary/40 bottom-[-10%] right-[-10%]" />
+          </div>
+          <div className="absolute inset-0 neural-grid opacity-[0.03]" />
+          <SplineRobot />
+        </motion.div>
+
+        <Navbar session={session as any} />
+
+        <div className="max-w-4xl mx-auto px-4 md:px-8 pt-32 md:pt-48 pb-16 relative z-10 flex flex-col items-center justify-center min-h-[80vh]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as any }}
+            className="w-full glass-premium rounded-3xl md:rounded-[2.5rem] p-8 md:p-14 border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] text-center relative overflow-hidden space-y-8"
+          >
+            {/* Ambient glows */}
+            <div className="absolute -top-24 -left-24 w-56 h-56 bg-violet-500/30 blur-[100px] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-56 h-56 bg-primary/20 blur-[100px] pointer-events-none" />
+
+            <div className="flex flex-col items-center gap-4 relative z-10">
+              <span className="px-4 py-1.5 rounded-full bg-violet-500/10 text-violet-300 text-[10px] font-mono tracking-widest border border-violet-500/20 uppercase animate-pulse">
+                🎤 Round 3 — Final Demonstration
+              </span>
+              <h1 className="text-5xl md:text-7xl font-display font-black leading-tight text-white uppercase tracking-tight">
+                Welcome to<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-primary to-fuchsia-400">
+                  Round 3.
+                </span>
+              </h1>
+              <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
+                {hasR3Submission
+                  ? `You're queued for your final demo, ${team.teamName}. A judge will call your team with a meeting link when it's your turn.`
+                  : `Congratulations on reaching the finals, ${team.teamName}! Enter Round 3 to join the presentation queue and wait for a judge to call you.`
+                }
+              </p>
+            </div>
+
+            {/* NOT YET ENTERED — Show Enter Button */}
+            {!hasR3Submission && (
+              <div className="space-y-4 relative z-10">
+                {r3EntryError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs max-w-md mx-auto">
+                    {r3EntryError}
+                  </div>
+                )}
+                <button
+                  onClick={handleEnterRound3}
+                  disabled={r3Entering}
+                  className="px-10 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-primary text-white text-sm font-black uppercase tracking-wider shadow-2xl shadow-violet-500/20 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {r3Entering ? '⏳ Entering...' : '🚀 Enter Round 3'}
+                </button>
+                <p className="text-[10px] text-white/30 font-mono">
+                  This will add your team to the presentation queue
+                </p>
+              </div>
+            )}
+
+            {/* ENTERED — Show Call Status */}
+            {hasR3Submission && (
+              <div className="space-y-6 relative z-10">
+                {/* Demo Call Status Card */}
+                {!demoCall || demoCall.status === 'QUEUED' ? (
+                  /* Waiting for judge to call */
+                  <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 max-w-lg mx-auto space-y-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-amber-400 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.4)]" />
+                      <span className="text-sm font-bold text-amber-400 uppercase tracking-wider">In Queue</span>
+                    </div>
+                    <p className="text-xs text-white/40 leading-relaxed">
+                      Your team is in the presentation queue. A judge will send you a meeting link when it&apos;s your turn. This page updates automatically.
+                    </p>
+                    <div className="flex items-center justify-center gap-2 text-[10px] text-white/20 font-mono">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                        className="w-3 h-3 border border-white/20 border-t-primary rounded-full"
+                      />
+                      <span>Auto-refreshing...</span>
+                    </div>
+                  </div>
+                ) : demoCall.status === 'CALLED' ? (
+                  /* Judge has called — Show meeting link */
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-8 rounded-2xl bg-emerald-500/5 border-2 border-emerald-500/30 max-w-lg mx-auto space-y-5 shadow-[0_0_60px_-10px_rgba(52,211,153,0.15)]"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_15px_rgba(52,211,153,0.5)]" />
+                      <span className="text-sm font-bold text-emerald-400 uppercase tracking-wider">You&apos;re Being Called!</span>
+                    </div>
+                    <p className="text-xs text-white/50">
+                      Judge <strong className="text-white/80">{demoCall.judgeName}</strong> has called your team. Join the meeting now:
+                    </p>
+                    <a
+                      href={demoCall.meetingLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full py-4 rounded-xl bg-emerald-500 text-black text-sm font-black uppercase tracking-wider text-center shadow-2xl shadow-emerald-500/30 hover:bg-emerald-400 hover:shadow-emerald-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      🔗 Join Meeting Now
+                    </a>
+                    <p className="text-[10px] text-white/25 font-mono break-all">
+                      {demoCall.meetingLink}
+                    </p>
+                    {demoCall.calledAt && (
+                      <p className="text-[9px] text-white/20 font-mono">
+                        Called at {new Date(demoCall.calledAt).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </motion.div>
+                ) : (
+                  /* Demo Completed */
+                  <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 max-w-lg mx-auto space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-3xl">
+                      🏆
+                    </div>
+                    <h3 className="text-2xl font-display font-medium text-white">Demo Complete</h3>
+                    <p className="text-sm text-white/50 leading-relaxed">
+                      Your final demonstration has been completed. Thank you for participating!
+                    </p>
+                    {demoCall.completedAt && (
+                      <p className="text-[9px] text-white/20 font-mono">
+                        Completed at {new Date(demoCall.completedAt).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                    <span className="text-[9px] text-white/30 font-mono uppercase block">Score</span>
+                    <span className="text-2xl font-mono font-bold text-primary mt-1 block">
+                      {team.progressState?.score || 0}
+                    </span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                    <span className="text-[9px] text-white/30 font-mono uppercase block">Status</span>
+                    <span className={`text-xs font-bold mt-2 block uppercase tracking-wider ${
+                      demoCall?.status === 'COMPLETED' ? 'text-emerald-400'
+                      : demoCall?.status === 'CALLED' ? 'text-emerald-400'
+                      : 'text-amber-400'
+                    }`}>
+                      {demoCall?.status === 'COMPLETED' ? 'Finished'
+                        : demoCall?.status === 'CALLED' ? 'In Call'
+                        : 'Queued'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-center gap-4 pt-4 relative z-10">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-vibrant !py-3 !px-8 text-xs font-semibold rounded-xl"
+              >
+                🔄 Refresh Status
+              </button>
+              <button
+                onClick={handleLogout}
+                className="btn-ghost !py-3 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20"
+              >
+                DISCONNECT
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </main>
+    )
+  }
+
   if (team?.allowedTaskId === 'WAITING_ROOM') {
     return (
       <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
@@ -261,13 +521,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 ⏳ Synchronized Waiting Room
               </span>
               <h1 className="text-5xl md:text-7xl font-display font-black leading-tight text-white uppercase tracking-tight">
-                Round 1 <br />
+                Round {team?.allowedRound} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
                   Completed.
                 </span>
               </h1>
               <p className="text-base md:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
-                Excellent work, <strong>{team.teamName}</strong>! Your team has successfully submitted and passed all milestones for Round 1. You are currently in the workspace waiting room.
+                Excellent work, <strong>{team.teamName}</strong>! Your team has successfully submitted and passed all milestones for Round {team?.allowedRound}. You are currently in the workspace waiting room.
               </p>
             </div>
 
@@ -282,13 +542,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Global Status</span>
                 <span className="text-sm font-bold text-emerald-400 mt-3 uppercase tracking-wider">
-                  Waiting for Round 2
+                  Waiting for Round {(team?.allowedRound || 0) + 1}
                 </span>
               </div>
             </div>
 
             <div className="p-6 rounded-2xl bg-white/[0.01] border border-white/5 text-xs text-white/45 max-w-lg mx-auto leading-relaxed">
-              💡 <strong>System Notice:</strong> Progression in this event is synchronized. The administrator must advance the global event ceiling before you can access Round 2 objectives.
+              💡 <strong>System Notice:</strong> Progression in this event is synchronized. The administrator must advance the global event ceiling before you can access Round {(team?.allowedRound || 0) + 1} objectives.
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">
@@ -316,19 +576,88 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {team.submissions.filter((s: any) => s.status === 'APPROVED').map((sub: any) => (
-                  <div key={sub.id} className="p-6 rounded-2xl glass-premium border border-white/5 flex flex-col justify-between gap-4">
+                  <div key={sub.id} className="p-6 rounded-2xl glass-premium border border-white/5 flex flex-col justify-between gap-4 text-left">
                     <div>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
-                        {sub.taskId}
-                      </span>
+                      <div className="flex justify-between items-center gap-3">
+                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
+                          {getFeatureLabel(sub.taskId)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setEditingSubmission(sub)
+                            setEditGithubUrl(sub.payload?.github || '')
+                            setEditLiveDemoUrl(sub.payload?.liveDemo || '')
+                            setEditDescription(sub.payload?.description || '')
+                          }}
+                          className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
+                        >
+                          ✏️ Edit Submission
+                        </button>
+                      </div>
+
+                      {/* Display active links */}
+                      <div className="mt-4 space-y-2">
+                        {sub.payload?.github && (
+                          <div>
+                            <span className="text-[9px] text-white/20 uppercase font-mono block">GitHub Repository</span>
+                            <a 
+                              href={sub.payload.github} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
+                            >
+                              {sub.payload.github}
+                            </a>
+                          </div>
+                        )}
+                        {sub.payload?.liveDemo && (
+                          <div>
+                            <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Live Demo / Video</span>
+                            <a 
+                              href={sub.payload.liveDemo} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
+                            >
+                              {sub.payload.liveDemo}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
                       <p className="text-xs text-white/50 mt-4 font-mono">
                         Approved on {new Date(sub.submittedAt).toLocaleDateString()}
                       </p>
+                      {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
+                        <div className="text-[9px] text-white/30 font-mono mt-2 flex items-center gap-1.5">
+                          <span>✏️ Last modified:</span>
+                          <span className="text-white/40">{new Date(sub.payload.editHistory[sub.payload.editHistory.length - 1].editedAt).toLocaleDateString()}</span>
+                        </div>
+                      )}
                     </div>
                     {sub.evaluation && (
-                      <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[10px] text-white/40 font-mono">Judge Score</span>
-                        <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
+                      <div className="pt-2 border-t border-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-white/40 font-mono">Judge Score</span>
+                          <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
+                        </div>
+                        {sub.evaluation.feedback && (
+                          <div className="pt-2 border-t border-white/5">
+                            <span className="text-[9px] text-white/20 uppercase font-mono block">Evaluations Feedback</span>
+                            <p className="text-xs text-white/70 italic leading-relaxed mt-1">
+                              "{sub.evaluation.feedback}"
+                            </p>
+                          </div>
+                        )}
+                        {sub.evaluation.scoreBreakdown && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {Object.entries(sub.evaluation.scoreBreakdown).map(([key, val]: any) => (
+                              <div key={key} className="bg-white/5 px-2.5 py-0.5 rounded-lg border border-white/5 text-[9px] font-mono">
+                                <span className="text-white/40 capitalize">{key}:</span> <span className="text-white font-bold">{val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -337,6 +666,94 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
             </div>
           )}
         </div>
+
+        {/* Edit Submission Modal */}
+        <AnimatePresence>
+          {editingSubmission && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setEditingSubmission(null)}
+                className="absolute inset-0 bg-black/85 backdrop-blur-md"
+              />
+
+              {/* Modal Content */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="w-full max-w-lg bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 overflow-hidden text-white text-left"
+              >
+                <div className="absolute top-0 right-0 p-4">
+                  <button
+                    onClick={() => setEditingSubmission(null)}
+                    className="text-white/40 hover:text-white text-xl cursor-pointer"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <div>
+                  <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-mono tracking-widest uppercase">
+                    Resubmit {getFeatureLabel(editingSubmission.taskId)}
+                  </span>
+                  <h3 className="text-2xl font-display font-medium text-white mt-3 uppercase tracking-tight">
+                    Update Submission &amp; Entry Details
+                  </h3>
+                  <p className="text-[11px] text-white/50 leading-relaxed mt-1 font-mono">
+                    Modifying your submission will replace the existing one and reset any current evaluations/grades for this milestone.
+                  </p>
+                </div>
+
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                  {editError && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                      {editError}
+                    </div>
+                  )}
+                  {editSuccess && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                      Submission updated successfully! Refreshing...
+                    </div>
+                  )}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">GitHub Link</label>
+                      <input
+                        type="url"
+                        value={editGithubUrl}
+                        onChange={(e) => setEditGithubUrl(e.target.value)}
+                        placeholder="GitHub Commit / Repository URL"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Live Demo / Loom Link</label>
+                      <input
+                        type="url"
+                        value={editLiveDemoUrl}
+                        onChange={(e) => setEditLiveDemoUrl(e.target.value)}
+                        placeholder="Loom / Google Drive Video URL"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="w-full btn-vibrant !py-3.5 text-xs font-semibold rounded-xl mt-4"
+                  >
+                    {editLoading ? 'Updating Submission...' : 'Save & Update Submission'}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     )
   }
@@ -524,47 +941,6 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
                   )}
 
-                  {/* Presentation Status (Round 2) */}
-                  {team && team.eventRound === 2 && team.progressState?.presentationStatus && team.progressState.presentationStatus !== 'NONE' && (
-                    <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-primary/5 border border-primary/20">
-                      <span className="text-[9px] text-primary uppercase font-mono tracking-widest">Presentation</span>
-                      {team.progressState.presentationStatus === 'QUEUED' && (
-                        <div className="mt-3 space-y-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
-                            <span className="text-sm text-blue-400">Demo approved. Waiting for your turn...</span>
-                          </div>
-                          {team.progressState.meetLink && (
-                            <a href={team.progressState.meetLink} target="_blank" rel="noopener noreferrer"
-                               className="inline-block px-6 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all text-sm font-bold">
-                              Join Meet Room
-                            </a>
-                          )}
-                        </div>
-                      )}
-                      {team.progressState.presentationStatus === 'ACTIVE' && (
-                        <div className="mt-3 space-y-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shadow-[0_0_10px_rgba(52,211,153,0.3)]" />
-                            <span className="text-sm text-emerald-400 font-bold">Your turn! Join the meeting now.</span>
-                          </div>
-                          {team.progressState.meetLink && (
-                            <a href={team.progressState.meetLink} target="_blank" rel="noopener noreferrer"
-                               className="inline-block px-6 py-3 bg-emerald-500/20 text-emerald-400 rounded-xl hover:bg-emerald-500/30 transition-all text-sm font-bold">
-                              Join Meet Room
-                            </a>
-                          )}
-                        </div>
-                      )}
-                      {team.progressState.presentationStatus === 'COMPLETED' && (
-                        <div className="mt-3 flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                          <span className="text-sm text-white/40">Presentation completed. Thank you!</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* PARTICIPANT WORK SUBMISSION INPUT */}
                   {team && (
                     <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
@@ -607,62 +983,33 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               type="url"
                               value={githubUrl}
                               onChange={(e) => setGithubUrl(e.target.value)}
-                              placeholder="GitHub Commit / Repository URL"
+                              placeholder={team?.allowedRound === 1 ? "GitHub Submission Link" : "GitHub Commit / Repository URL"}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
                             <input
                               type="url"
                               value={liveDemoUrl}
                               onChange={(e) => setLiveDemoUrl(e.target.value)}
-                              placeholder="Loom / Google Drive Video URL"
+                              placeholder={team?.allowedRound === 1 ? "Drive Video Link (Mandatory)" : "Loom / Google Drive Video URL"}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
                           </div>
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
                               type="submit"
-                              disabled={loading || (!githubUrl.trim() && !liveDemoUrl.trim())}
+                              disabled={loading || (team?.allowedRound === 1 ? !liveDemoUrl.trim() : (!githubUrl.trim() && !liveDemoUrl.trim()))}
                               className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
                             >
                               {loading ? 'Submitting...' : 'Submit Entry'}
                             </button>
-                            <span className="text-[10px] text-white/20 font-mono">Provide your code repository and working demo video URL</span>
+                            <span className="text-[10px] text-white/20 font-mono">
+                              {team?.allowedRound === 1 
+                                ? "Provide your GitHub repository link and mandatory drive demo video URL" 
+                                : "Provide your code repository and working demo video URL"}
+                            </span>
                           </div>
                         </form>
                       )}
-                    </div>
-                  )}
-
-                  {/* DEMO SUBMISSION FORM (Round 2 only) */}
-                  {team && team.eventRound === 2 && !team.submissions?.some((s: any) => s.submissionType === 'DEMO' && (s.status === 'PENDING' || s.status === 'APPROVED')) && (
-                    <div className="mt-6 pt-6 border-t border-white/5">
-                      <h4 className="text-lg font-display font-medium text-white mb-3">Submit Project Demo / Documentation</h4>
-                      <p className="text-xs text-white/40 mb-4">Submit a video demo or documentation URL for final evaluation.</p>
-                      <form onSubmit={handleDemoSubmit} className="max-w-xl space-y-4">
-                        {demoError && (
-                          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">{demoError}</div>
-                        )}
-                        {demoSuccess && (
-                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Demo submitted! Refreshing dashboard...</div>
-                        )}
-                        <input
-                          type="url"
-                          value={demoUrl}
-                          onChange={(e) => setDemoUrl(e.target.value)}
-                          placeholder="Loom / YouTube / Google Drive / Documentation URL"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
-                        />
-                        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-                          <button
-                            type="submit"
-                            disabled={demoLoading || !demoUrl.trim()}
-                            className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
-                          >
-                            {demoLoading ? 'Submitting...' : 'Submit Demo'}
-                          </button>
-                          <span className="text-[10px] text-white/20 font-mono">Upload a video walkthrough or project documentation</span>
-                        </div>
-                      </form>
                     </div>
                   )}
                 </>
@@ -672,9 +1019,14 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               {staff && (
                 <div className="mt-12 md:mt-20 pt-10 border-t border-white/5 flex flex-wrap gap-4">
                   {(staff.role === 'ADMIN' || staff.role === 'JUDGE') && (
-                    <a href="/judging" className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl flex items-center gap-2">
-                      Grading Queue <span className="text-sm">→</span>
-                    </a>
+                    <>
+                      <a href="/judging" className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl flex items-center gap-2">
+                        Grading Queue <span className="text-sm">→</span>
+                      </a>
+                      <a href="/mentor" className="btn-ghost !py-3.5 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20 flex items-center gap-2">
+                        Mentor Console <span className="text-sm">→</span>
+                      </a>
+                    </>
                   )}
                   {staff.role === 'ADMIN' && (
                     <a href="/admin/import" className="btn-ghost !py-3.5 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20">
@@ -757,6 +1109,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
           </div>
         </div>
 
+        {/* MENTOR HELP DESK (PARTICIPANTS ONLY) */}
+        {team && (
+          <section className="mb-20 md:mb-32">
+            <MentorTeamPanel />
+          </section>
+        )}
+
         {/* SUBMISSION LOGS PANEL (PARTICIPANTS ONLY) */}
         {team && team.submissions && team.submissions.length > 0 && (
           <section className="mb-20 md:mb-32">
@@ -782,13 +1141,29 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     className="p-6 rounded-2xl glass-premium border border-white/5 hover:border-white/10 transition-all duration-300 relative group overflow-hidden"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] px-3 py-1 rounded-full border ${statusBadgeColor} font-mono tracking-wider`}>
-                          {sub.status}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-mono uppercase tracking-wider">
+                          {getFeatureLabel(sub.taskId)}
                         </span>
+                        {sub.status !== 'APPROVED' && (
+                          <span className={`text-[10px] px-3 py-1 rounded-full border ${statusBadgeColor} font-mono tracking-wider`}>
+                            {sub.status}
+                          </span>
+                        )}
                         <span className="text-[10px] text-white/30 font-mono">
                           Submitted on {new Date(sub.submittedAt).toLocaleString()}
                         </span>
+                        <button
+                          onClick={() => {
+                            setEditingSubmission(sub)
+                            setEditGithubUrl(sub.payload?.github || '')
+                            setEditLiveDemoUrl(sub.payload?.liveDemo || '')
+                            setEditDescription(sub.payload?.description || '')
+                          }}
+                          className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
+                        >
+                          ✏️ Edit Submission
+                        </button>
                       </div>
                       {sub.evaluation && (
                         <div className="text-right">
@@ -824,6 +1199,40 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                             {sub.payload.liveDemo}
                           </a>
                         </>
+                      )}
+                      {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          <span className="text-[9px] text-white/20 uppercase font-mono block">Edit History</span>
+                          <div className="space-y-2">
+                            {sub.payload.editHistory.map((historyItem: any, hIdx: number) => (
+                              <div key={hIdx} className="text-[10px] font-mono text-white/40 flex items-start gap-2">
+                                <span className="text-primary/70">✏️</span>
+                                <div>
+                                  <span className="font-semibold text-white/50">Modified on {new Date(historyItem.editedAt).toLocaleString()}</span>
+                                  <div className="text-[9px] text-white/20 mt-0.5 space-y-1.5 pl-2 border-l border-white/5">
+                                    {historyItem.previousGithub && (
+                                      <div className="truncate max-w-lg">Prev GitHub: <span className="text-white/30">{historyItem.previousGithub}</span></div>
+                                    )}
+                                    {historyItem.previousLiveDemo && (
+                                      <div className="truncate max-w-lg">Prev Demo: <span className="text-white/30">{historyItem.previousLiveDemo}</span></div>
+                                    )}
+                                    {historyItem.previousEvaluations && historyItem.previousEvaluations.length > 0 && (
+                                      <div className="mt-1 space-y-1">
+                                        <span className="text-[8px] text-white/25 uppercase font-mono block">Previous Scores</span>
+                                        {historyItem.previousEvaluations.map((pe: any, peIdx: number) => (
+                                          <div key={peIdx} className="bg-white/5 px-2 py-1 rounded border border-white/5 text-[9px] text-white/40">
+                                            <span>Score: <strong className="text-primary">{pe.totalScore} pts</strong></span>
+                                            {pe.feedback && <p className="italic text-[8px] text-white/30 mt-0.5">"{pe.feedback}"</p>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -906,6 +1315,94 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
           Logged in as {session.user.name?.split(' ')[0] || 'Guest'}
         </div>
       </footer>
+
+      {/* Edit Submission Modal */}
+      <AnimatePresence>
+        {editingSubmission && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingSubmission(null)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-lg bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 overflow-hidden text-white"
+            >
+              <div className="absolute top-0 right-0 p-4">
+                <button
+                  onClick={() => setEditingSubmission(null)}
+                  className="text-white/40 hover:text-white text-xl cursor-pointer"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div>
+                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-mono tracking-widest uppercase">
+                  Resubmit {getFeatureLabel(editingSubmission.taskId)}
+                </span>
+                <h3 className="text-2xl font-display font-medium text-white mt-3 uppercase tracking-tight">
+                  Update Submission &amp; Entry Details
+                </h3>
+                <p className="text-[11px] text-white/50 leading-relaxed mt-1 font-mono">
+                  Modifying your submission will replace the existing one and reset any current evaluations/grades for this milestone.
+                </p>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                {editError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                    {editError}
+                  </div>
+                )}
+                {editSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                    Submission updated successfully! Refreshing...
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">GitHub Link</label>
+                    <input
+                      type="url"
+                      value={editGithubUrl}
+                      onChange={(e) => setEditGithubUrl(e.target.value)}
+                      placeholder="GitHub Commit / Repository URL"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Live Demo / Loom Link</label>
+                    <input
+                      type="url"
+                      value={editLiveDemoUrl}
+                      onChange={(e) => setEditLiveDemoUrl(e.target.value)}
+                      placeholder="Loom / Google Drive Video URL"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="w-full btn-vibrant !py-3.5 text-xs font-semibold rounded-xl mt-4"
+                >
+                  {editLoading ? 'Updating Submission...' : 'Save & Update Submission'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

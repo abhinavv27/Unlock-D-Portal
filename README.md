@@ -1,6 +1,6 @@
-# ⚡ UNLOCK'D — IEEE RAS MUJ Hackathon Portal
+# ⚡ UNLOCK'D — IEEE RAS MUJ Hackathon & CTF Portal
 
-Unlock'D is a state-of-the-art, role-based operations platform designed to coordinate and manage **Unlock'D**, the 24-hour progressive software development challenge organized by the **IEEE Robotics & Automation Society (RAS), MUJ**.
+Unlock'D is a state-of-the-art, role-based operations platform designed to coordinate and manage **Unlock'D**, the 24-hour progressive software development challenge and Capture the Flag (CTF) events organized by the **IEEE Robotics & Automation Society (RAS), MUJ**.
 
 The platform drives progressive team progression, enables real-time scoring and multi-judge feedback, automates roster ingestion, and features an immersive, glassmorphic dark-theme user experience.
 
