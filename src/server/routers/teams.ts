@@ -157,10 +157,10 @@ export const teamsRouter = createTRPCRouter({
       // Round 3 is a demo-only round — no URLs required
       if (!isRound3) {
         if (isRound1) {
-          if (!cleanDemo) {
+          if (!cleanGithub || !cleanDemo) {
             throw new TRPCError({
               code: 'BAD_REQUEST',
-              message: 'Drive video link is mandatory for Stage 1.',
+              message: 'Both GitHub repository and Drive video link are mandatory for Round 1.',
             })
           }
         } else {

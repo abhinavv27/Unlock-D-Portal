@@ -134,8 +134,8 @@ export default function DashboardClient({ session, status, team: initialTeam, st
     e.preventDefault()
 
     const isRound1 = team?.allowedRound === 1
-    if (isRound1 && !liveDemoUrl.trim()) {
-      setSubmitError('Drive video link is mandatory for Stage 1.')
+    if (isRound1 && (!githubUrl.trim() || !liveDemoUrl.trim())) {
+      setSubmitError('Both GitHub repository and Drive video link are mandatory for Round 1.')
       return
     }
 
@@ -172,8 +172,8 @@ export default function DashboardClient({ session, status, team: initialTeam, st
     if (!editingSubmission) return
 
     const isRound1 = editingSubmission.roundNumber === 1
-    if (isRound1 && !editLiveDemoUrl.trim()) {
-      setEditError('Drive video link is mandatory for Stage 1.')
+    if (isRound1 && (!editGithubUrl.trim() || !editLiveDemoUrl.trim())) {
+      setEditError('Both GitHub repository and Drive video link are mandatory for Round 1.')
       return
     }
 
@@ -735,7 +735,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   )}
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">GitHub Link</label>
+                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">
+                        GitHub Link {editingSubmission.roundNumber === 1 && <span className="text-rose-400 font-bold">*</span>}
+                      </label>
                       <input
                         type="url"
                         value={editGithubUrl}
@@ -745,7 +747,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Live Demo / Loom Link</label>
+                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">
+                        Live Demo / Loom Link {editingSubmission.roundNumber === 1 && <span className="text-rose-400 font-bold">*</span>}
+                      </label>
                       <input
                         type="url"
                         value={editLiveDemoUrl}
@@ -1005,7 +1009,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                               type="url"
                               value={githubUrl}
                               onChange={(e) => setGithubUrl(e.target.value)}
-                              placeholder={team?.allowedRound === 1 ? "GitHub Submission Link" : "GitHub Commit / Repository URL"}
+                              placeholder={team?.allowedRound === 1 ? "GitHub Submission Link (Mandatory)" : "GitHub Commit / Repository URL"}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
                             <input
@@ -1027,14 +1031,14 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
                               type="submit"
-                              disabled={loading || (team?.allowedRound === 1 ? !liveDemoUrl.trim() : (!githubUrl.trim() && !liveDemoUrl.trim()))}
+                              disabled={loading || (team?.allowedRound === 1 ? (!githubUrl.trim() || !liveDemoUrl.trim()) : (!githubUrl.trim() && !liveDemoUrl.trim()))}
                               className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
                             >
                               {loading ? 'Submitting...' : 'Submit Entry'}
                             </button>
                             <span className="text-[10px] text-white/20 font-mono">
                               {team?.allowedRound === 1
-                                ? "Provide your GitHub repository link and mandatory drive demo video URL"
+                                ? "Provide your mandatory GitHub repository link and drive demo video URL"
                                 : "Provide your code repository and working demo video URL"}
                             </span>
                           </div>
