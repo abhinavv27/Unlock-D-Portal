@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/Navbar'
 import SplineRobot from '@/components/SplineRobot'
 import { api } from '@/trpc/react'
+import MentorTeamPanel from '@/components/MentorTeamPanel'
 
 interface DashboardClientProps {
   session: {
@@ -702,6 +703,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 )
               })}
             </div>
+          </section>
+        )}
+
+        {/* Mentor Desk */}
+        {team && (
+          <section className="mb-20 md:mb-32">
+            <MentorTeamPanel />
           </section>
         )}
 
