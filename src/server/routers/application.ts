@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createTRPCRouter, adminProcedure } from '@/server/trpc'
+import { createTRPCRouter, adminProcedure, strictAdminProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
 
@@ -70,8 +70,8 @@ export const applicationRouter = createTRPCRouter({
             totalScore: score,
             currentStage,
             status: teamRoundStatus,
-            manualStatus: state?.manualStatus || null,
             submittedAt: reg.registeredAt,
+            isBlocked: reg.isBlocked,
             user: {
               email: `Unstop Team: ${reg.unstopTeamId}`,
               image: null,
@@ -112,11 +112,12 @@ export const applicationRouter = createTRPCRouter({
         id: reg.id,
         teamName: reg.teamName,
         unstopTeamId: reg.unstopTeamId,
-        teamPasscode: '[HIDDEN]',
+        teamPasscode: reg.teamPasscodeHash.includes(':') ? '[Hashed]' : reg.teamPasscodeHash,
         memberDetails: reg.memberDetails,
         progressState: state,
         eventName: reg.event.name,
         eventConfig: reg.event.config,
+        isBlocked: reg.isBlocked,
         submissions: reg.submissions.map(sub => ({
           id: sub.id,
           roundNumber: sub.roundNumber,
@@ -155,20 +156,14 @@ export const applicationRouter = createTRPCRouter({
     }
   }),
 
+  // Add dummy mutations for client API backwards compatibility
   updateStatus: adminProcedure
     .input(z.object({
       id: z.string(),
       status: z.string(),
       notes: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const reg = await ctx.db.registration.findUnique({ where: { id: input.id } })
-      if (!reg) throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' })
-      const progress = (reg.progressState as any) || {}
-      await ctx.db.registration.update({
-        where: { id: input.id },
-        data: { progressState: { ...progress, manualStatus: input.status } },
-      })
+    .mutation(() => {
       return { success: true }
     }),
 
@@ -181,17 +176,41 @@ export const applicationRouter = createTRPCRouter({
       return { success: true }
     }),
 
-  removeTeam: adminProcedure
+  removeTeam: strictAdminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.registration.delete({ where: { id: input.id } })
       return { success: true }
     }),
 
-  bulkRemoveTeams: adminProcedure
+  bulkRemoveTeams: strictAdminProcedure
     .input(z.object({ ids: z.array(z.string()) }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.registration.deleteMany({ where: { id: { in: input.ids } } })
+      return { success: true }
+    }),
+
+  toggleBlockTeam: strictAdminProcedure
+    .input(z.object({
+      id: z.string(),
+      isBlocked: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const registration = await ctx.db.registration.findUnique({
+        where: { id: input.id }
+      })
+      if (!registration) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Team registration not found.'
+        })
+      }
+
+      await ctx.db.registration.update({
+        where: { id: input.id },
+        data: { isBlocked: input.isBlocked }
+      })
+
       return { success: true }
     }),
 
@@ -214,7 +233,7 @@ export const applicationRouter = createTRPCRouter({
     }
   }),
 
-  startRound: adminProcedure
+  startRound: strictAdminProcedure
     .input(z.object({ round: z.number().int().min(0).max(3) }))
     .mutation(async ({ ctx, input }) => {
       const activeEvent = await ctx.db.event.findFirst({
@@ -241,144 +260,218 @@ export const applicationRouter = createTRPCRouter({
         }
       })
 
+      if (input.round === 3) {
+        // Automatically create ROUND-3 submissions for top 10 leaderboard teams
+        const topTeams = await ctx.db.registration.findMany({
+          where: { eventId: activeEvent.id },
+          orderBy: { totalScore: 'desc' },
+          take: 10,
+        })
+        for (const team of topTeams) {
+          const existing = await ctx.db.submission.findFirst({
+            where: {
+              registrationId: team.id,
+              taskId: 'ROUND-3'
+            }
+          })
+          if (!existing) {
+            await ctx.db.submission.create({
+              data: {
+                registrationId: team.id,
+                roundNumber: 3,
+                taskId: 'ROUND-3',
+                status: 'APPROVED',
+                submission_type: 'DEMO',
+                payload: {
+                  github: '',
+                  liveDemo: '',
+                  description: 'Round 3 — Final Demonstration entry',
+                  submitted_at: new Date().toISOString()
+                }
+              }
+            })
+          }
+        }
+      }
+
       return { success: true, currentRound: input.round }
     }),
 
-  getDemoQueue: adminProcedure.query(async ({ ctx }) => {
-    const activeEvent = await ctx.db.event.findFirst({ where: { isActive: true } })
-    if (!activeEvent) return { teams: [] }
-
-    const registrations = await ctx.db.registration.findMany({
-      where: { eventId: activeEvent.id },
-      include: {
-        submissions: {
-          where: { submissionType: 'DEMO' },
-          orderBy: { submittedAt: 'desc' },
-        },
-      },
-      orderBy: { registeredAt: 'asc' },
-    })
-
-    const teams = registrations.map((reg) => {
-      const progress = (reg.progressState as any) || {}
-      const latestDemo = reg.submissions[0] || null
-      return {
-        id: reg.id,
-        teamName: reg.teamName,
-        unstopTeamId: reg.unstopTeamId,
-        score: progress.score || 0,
-        currentStage: progress.current_stage || 0,
-        demoSubmission: latestDemo ? {
-          id: latestDemo.id,
-          status: latestDemo.status,
-          payload: latestDemo.payload,
-          submittedAt: latestDemo.submittedAt,
-        } : null,
-        meetLink: progress.meetLink || null,
-        presentationStatus: progress.presentationStatus || 'NONE',
-      }
-    })
-
-    return { teams }
-  }),
-
-  approveDemo: adminProcedure
+  updateTeam: adminProcedure
     .input(z.object({
-      registrationId: z.string(),
-      meetLink: z.string().url('Must be a valid URL'),
+      id: z.string(),
+      teamName: z.string().min(1),
+      passcode: z.string().optional(),
+      currentStage: z.number().int().min(0),
+      score: z.number(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const reg = await ctx.db.registration.findUniqueOrThrow({ where: { id: input.registrationId } })
-      const progress = (reg.progressState as any) || {}
-
-      const demoSub = await ctx.db.submission.findFirst({
-        where: { registrationId: input.registrationId, submissionType: 'DEMO', status: 'PENDING' },
+      const reg = await ctx.db.registration.findUnique({
+        where: { id: input.id },
       })
-      if (demoSub) {
-        await ctx.db.submission.update({
-          where: { id: demoSub.id },
-          data: { status: 'APPROVED' },
+      if (!reg) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Team registration not found.',
         })
       }
 
+      const updateData: any = {
+        teamName: input.teamName,
+        totalScore: input.score,
+      }
+
+      if (input.passcode && input.passcode.trim() !== '') {
+        updateData.teamPasscodeHash = input.passcode.trim()
+      }
+
+      const oldState = (reg.progressState as any) || {}
+      updateData.progressState = {
+        ...oldState,
+        current_stage: input.currentStage,
+        score: input.score,
+        updated_at: new Date().toISOString(),
+      }
+
       await ctx.db.registration.update({
-        where: { id: input.registrationId },
-        data: {
-          progressState: {
-            ...progress,
-            meetLink: input.meetLink,
-            presentationStatus: 'QUEUED',
-          },
-        },
+        where: { id: input.id },
+        data: updateData,
       })
 
       return { success: true }
     }),
 
-  updatePresentationStatus: adminProcedure
+  updateEvaluation: adminProcedure
     .input(z.object({
-      registrationId: z.string(),
-      status: z.enum(['QUEUED', 'ACTIVE', 'COMPLETED']),
+      evaluationId: z.number().int(),
+      scoreBreakdown: z.record(z.string(), z.number()),
+      feedback: z.string().max(2000),
     }))
     .mutation(async ({ ctx, input }) => {
-      const reg = await ctx.db.registration.findUniqueOrThrow({ where: { id: input.registrationId } })
-      const progress = (reg.progressState as any) || {}
-
-      await ctx.db.registration.update({
-        where: { id: input.registrationId },
-        data: {
-          progressState: {
-            ...progress,
-            presentationStatus: input.status,
+      const evaluation = await ctx.db.evaluation.findUnique({
+        where: { id: input.evaluationId },
+        include: {
+          submission: {
+            include: {
+              registration: {
+                include: {
+                  event: true,
+                },
+              },
+            },
           },
         },
       })
 
+      if (!evaluation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Evaluation not found.',
+        })
+      }
+
+      const numSubId = evaluation.submissionId
+      const submission = evaluation.submission
+      const registrationId = submission.registrationId
+
+      // 1. Calculate total score
+      const totalScore = Object.values(input.scoreBreakdown).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0
+      )
+
+      // 2. Perform updates in transaction
+      await ctx.db.$transaction(async (tx) => {
+        // Log previous evaluation state to evaluation_audits
+        await tx.evaluationAudit.create({
+          data: {
+            evaluationId: evaluation.id,
+            oldScoreBreakdown: evaluation.scoreBreakdown as any,
+            oldTotalScore: evaluation.totalScore,
+            oldFeedback: evaluation.feedback,
+          },
+        })
+
+        // Update the evaluation record
+        await tx.evaluation.update({
+          where: { id: input.evaluationId },
+          data: {
+            scoreBreakdown: input.scoreBreakdown,
+            totalScore,
+            feedback: input.feedback,
+            gradedAt: new Date(),
+          },
+        })
+
+        // Fetch all evaluations for this submission to calculate average
+        const evaluations = await tx.evaluation.findMany({
+          where: { submissionId: numSubId },
+        })
+
+        const totalScoreSum = evaluations.reduce((sum, e) => sum + e.totalScore, 0)
+        const averageScore = Math.round((totalScoreSum / evaluations.length) * 10) / 10
+
+        // Read passing_threshold from config
+        const eventConfig = submission.registration.event.config as any
+        const roadmap = eventConfig?.roadmap || []
+        const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
+        const rubric = stepObj?.rubric || ['functionality', 'code_quality']
+        const maxScore = rubric.length * 10
+        const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
+        const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
+
+        let finalStatus: 'APPROVED' | 'REJECTED'
+        let rejectionReason: string | null = null
+
+        if (averageScore >= passingThresholdScore) {
+          finalStatus = 'APPROVED'
+        } else {
+          finalStatus = 'REJECTED'
+          rejectionReason = evaluations
+            .map((e) => e.feedback?.trim())
+            .filter(Boolean)
+            .join(' | ')
+        }
+
+        await tx.submission.update({
+          where: { id: numSubId },
+          data: {
+            status: finalStatus,
+            averageScore,
+            rejectionReason,
+          },
+        })
+
+        // Fetch new state engine status using transaction client
+        const teamStatus = await getTeamStatus(registrationId, tx as any)
+
+        // Fetch cumulative totalScore from all APPROVED submissions
+        const approvedSubs = await tx.submission.findMany({
+          where: {
+            registrationId,
+            status: 'APPROVED',
+          },
+        })
+        const cumulativeScore = approvedSubs.reduce((sum, s) => sum + (s.averageScore || 0), 0)
+        const roundedCumulative = Math.round(cumulativeScore * 10) / 10
+
+        const stateObj = submission.registration.progressState as any || {}
+        const updatedProgress = {
+          ...stateObj,
+          current_stage: teamStatus.allowedRound,
+          score: roundedCumulative,
+          updated_at: new Date().toISOString(),
+        }
+
+        await tx.registration.update({
+          where: { id: registrationId },
+          data: {
+            totalScore: roundedCumulative,
+            progressState: updatedProgress,
+          },
+        })
+      })
+
       return { success: true }
     }),
-
-  callNextTeam: adminProcedure.mutation(async ({ ctx }) => {
-    const currentActive = await ctx.db.registration.findFirst({
-      where: {
-        event: { isActive: true },
-        progressState: {
-          path: ['presentationStatus'],
-          equals: 'ACTIVE',
-        },
-      },
-    })
-    if (currentActive) {
-      const currentProgress = (currentActive.progressState as any) || {}
-      await ctx.db.registration.update({
-        where: { id: currentActive.id },
-        data: {
-          progressState: { ...currentProgress, presentationStatus: 'COMPLETED' },
-        },
-      })
-    }
-
-    const nextQueued = await ctx.db.registration.findFirst({
-      where: {
-        event: { isActive: true },
-        progressState: {
-          path: ['presentationStatus'],
-          equals: 'QUEUED',
-        },
-      },
-      orderBy: { registeredAt: 'asc' },
-    })
-    if (!nextQueued) {
-      return { success: true, message: 'No teams in queue.' }
-    }
-
-    const nextProgress = (nextQueued.progressState as any) || {}
-    await ctx.db.registration.update({
-      where: { id: nextQueued.id },
-      data: {
-        progressState: { ...nextProgress, presentationStatus: 'ACTIVE' },
-      },
-    })
-
-    return { success: true, teamName: nextQueued.teamName }
-  }),
 })

@@ -44,7 +44,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed.')
       }
 
-
+      localStorage.setItem('team_token', data.sessionToken)
 
       // Redirect to participant dashboard
       router.push('/dashboard')
@@ -78,7 +78,7 @@ export default function LoginPage() {
       // Route depending on staff role
       const role = data.user.systemRole
       localStorage.setItem('staff_token', data.token)
-      if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      if (role === 'ADMIN' || role === 'JUDGE') {
         router.push('/admin')
       } else {
         router.push('/judging')

@@ -25,12 +25,9 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
     api.createClient({
       links: [
         loggerLink({
-          enabled: (op) => {
-            if (op.direction === 'down' && op.result instanceof Error) {
-              if ((op.result as any).data?.code === 'UNAUTHORIZED') return false
-            }
-            return process.env.NODE_ENV === 'development'
-          },
+          enabled: (op) =>
+            process.env.NODE_ENV === 'development' ||
+            (op.direction === 'down' && op.result instanceof Error),
         }),
         unstable_httpBatchStreamLink({
           transformer: SuperJSON,

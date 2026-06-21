@@ -1,6 +1,3 @@
-// Universal Event Engine — Database Schema
-// Database: PostgreSQL / Neon
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,19 +8,16 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum SubmissionType {
-  COMMIT
-  DEMO
-}
-
-// ─── MODELS ───────────────────────────────────────────────────────────────
-
 model User {
-  id           Int          @id @default(autoincrement())
-  username     String       @unique
-  passwordHash String       @map("password_hash")
-  systemRole   String       @map("system_role") // 'ADMIN' or 'JUDGE'
-  evaluations  Evaluation[]
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  passwordHash   String          @map("password_hash")
+  plainPassword  String?         @map("plain_password")
+  systemRole     String          @map("system_role")
+  evaluations    Evaluation[]
+  mentorProfile  MentorProfile?
+  mentorSessions MentorSession[]
+  demoCalls      DemoCall[]
 
   @@map("users")
 }
@@ -32,8 +26,8 @@ model Event {
   id                 Int            @id @default(autoincrement())
   slug               String         @unique
   name               String
-  eventType          String         @map("event_type") // e.g., 'PROGRESSIVE_HACKATHON', 'CTF'
-  config             Json // JSONB: stores rules, stages, grading rubrics, etc.
+  eventType          String         @map("event_type")
+  config             Json
   currentGlobalRound Int            @default(1) @map("current_global_round")
   isActive           Boolean        @default(true) @map("is_active")
   registrations      Registration[]
@@ -42,61 +36,121 @@ model Event {
 }
 
 model Registration {
-  id               String       @id @default(uuid()) @db.Uuid
-  eventId          Int          @map("event_id")
-  event            Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  unstopTeamId     String       @map("unstop_team_id")
-  teamName         String       @map("team_name")
-  teamPasscodeHash String       @map("team_passcode_hash")
-  memberDetails    Json?        @map("member_details")
-  progressState    Json         @default("{}") @map("progress_state") // JSONB: tracks stage, points, log, dynamic status
-  totalScore       Float        @default(0.0) @map("total_score")
-  registeredAt     DateTime     @default(now()) @map("registered_at")
-  submissions      Submission[]
+  id               String          @id @default(uuid()) @db.Uuid
+  eventId          Int             @map("event_id")
+  unstopTeamId     String          @map("unstop_team_id")
+  teamName         String          @map("team_name")
+  teamPasscodeHash String          @map("team_passcode_hash")
+  memberDetails    Json?           @map("member_details")
+  progressState    Json            @default("{}") @map("progress_state")
+  totalScore       Float           @default(0.0) @map("total_score")
+  registeredAt     DateTime        @default(now()) @map("registered_at")
+  isBlocked        Boolean         @default(false) @map("is_blocked")
+  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sessions         Session[]
+  submissions      Submission[]
+  mentorSessions   MentorSession[]
 
   @@unique([eventId, unstopTeamId])
   @@map("registrations")
 }
 
 model Submission {
-  id              Int          @id @default(autoincrement())
-  registrationId  String       @map("registration_id") @db.Uuid
-  registration    Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  roundNumber     Int          @map("round_number")
-  taskId          String       @map("task_id")
-  rejectionReason String?      @map("rejection_reason")
-  payload         Json // JSONB: dynamic submission payload (e.g. GitHub URL, CTF flag submission)
-  status          String       @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED'
-  averageScore    Float?       @map("average_score")
-  submissionType  SubmissionType @default(COMMIT) @map("submission_type")
-  submittedAt     DateTime     @default(now()) @map("submitted_at")
+  id              Int            @id @default(autoincrement())
+  registrationId  String         @map("registration_id") @db.Uuid
+  roundNumber     Int            @map("round_number")
+  taskId          String         @map("task_id")
+  rejectionReason String?        @map("rejection_reason")
+  payload         Json
+  status          String         @default("PENDING")
+  averageScore    Float?         @map("average_score")
+  submittedAt     DateTime       @default(now()) @map("submitted_at")
+  submission_type SubmissionType @default(COMMIT)
   evaluations     Evaluation[]
+  registration    Registration   @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  demoCall        DemoCall?
 
   @@map("submissions")
 }
 
 model Evaluation {
-  id             Int        @id @default(autoincrement())
-  submissionId   Int        @map("submission_id")
-  submission     Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  judgeId        Int        @map("judge_id")
-  judge          User       @relation(fields: [judgeId], references: [id], onDelete: Cascade)
-  scoreBreakdown Json       @map("score_breakdown") // JSONB: rubric scores (e.g. {"innovation": 8, "code": 9})
-  totalScore     Int        @map("total_score")
+  id             Int               @id @default(autoincrement())
+  submissionId   Int               @map("submission_id")
+  judgeId        Int               @map("judge_id")
+  scoreBreakdown Json              @map("score_breakdown")
+  totalScore     Int               @map("total_score")
   feedback       String
-  gradedAt       DateTime   @default(now()) @map("graded_at")
+  gradedAt       DateTime          @default(now()) @map("graded_at")
+  judge          User              @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  submission     Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  audits         EvaluationAudit[]
 
   @@unique([submissionId, judgeId])
   @@map("evaluations")
 }
 
+model EvaluationAudit {
+  id                Int        @id @default(autoincrement())
+  evaluationId      Int        @map("evaluation_id")
+  oldScoreBreakdown Json       @map("old_score_breakdown")
+  oldTotalScore     Int        @map("old_total_score")
+  oldFeedback       String?    @map("old_feedback")
+  changedAt         DateTime   @default(now()) @map("changed_at")
+  evaluation        Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+
+  @@map("evaluation_audits")
+}
+
 model Session {
   id             String       @id @default(uuid()) @db.Uuid
   registrationId String       @map("registration_id") @db.Uuid
-  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   expiresAt      DateTime     @map("expires_at")
   createdAt      DateTime     @default(now()) @map("created_at")
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+enum SubmissionType {
+  COMMIT
+  DEMO
+}
+
+model MentorProfile {
+  userId        Int             @id @map("user_id")
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills        String?
+  isActive      Boolean         @default(true) @map("is_active")
+  currentStatus String          @default("AVAILABLE") @map("current_status")
+
+  @@map("mentor_profiles")
+}
+
+model MentorSession {
+  id               Int          @id @default(autoincrement())
+  registrationId   String       @map("registration_id") @db.Uuid
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  mentorId         Int?         @map("mentor_id")
+  mentor           User?        @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  issueDescription String       @map("issue_description")
+  meetingLink      String?      @map("meeting_link")
+  status           String       @default("REQUESTED")
+  requestedAt      DateTime     @default(now()) @map("requested_at")
+  resolvedAt       DateTime?    @map("resolved_at")
+
+  @@map("mentor_sessions")
+}
+
+model DemoCall {
+  id           Int       @id @default(autoincrement())
+  submissionId Int       @unique @map("submission_id")
+  judgeId      Int       @map("judge_id")
+  meetingLink  String?   @map("meeting_link")
+  status       String    @default("QUEUED") // QUEUED → CALLED → COMPLETED
+  calledAt     DateTime? @map("called_at")
+  completedAt  DateTime? @map("completed_at")
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  judge        User       @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+
+  @@map("demo_calls")
 }
