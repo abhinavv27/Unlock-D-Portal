@@ -80,11 +80,12 @@ export const teamsRouter = createTRPCRouter({
           }
           const updatedHistory = [...editHistory, newHistoryItem]
 
-          // Update submission payload, status back to APPROVED, and reset score
+          // Update submission payload, status back to APPROVED/PENDING, and reset score
+          const isFeature = targetTaskId.startsWith('FEATURE-')
           const updatedSub = await tx.submission.update({
             where: { id: existingSubmission.id },
             data: {
-              status: 'APPROVED',
+              status: isFeature ? 'APPROVED' : 'PENDING',
               averageScore: null,
               rejectionReason: null,
               payload: {
@@ -173,12 +174,13 @@ export const teamsRouter = createTRPCRouter({
       }
 
       const newSub = await ctx.db.$transaction(async (tx) => {
+        const isFeature = status.allowedTaskId.startsWith('FEATURE-')
         const sub = await tx.submission.create({
           data: {
             registrationId: ctx.team.id,
             roundNumber: status.allowedRound,
             taskId: status.allowedTaskId,
-            status: 'APPROVED',
+            status: isFeature ? 'APPROVED' : 'PENDING',
             submission_type: isRound3 ? 'DEMO' : 'COMMIT',
             payload: {
               github: cleanGithub || undefined,
