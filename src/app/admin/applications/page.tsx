@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -10,6 +10,37 @@ export default function AdminApplicationsPage() {
   const pathname = usePathname()
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
+
+  const fetchStaffUser = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/auth/staff/me', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffUser(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+    if (token) {
+      fetchStaffUser(token)
+    }
+  }, [fetchStaffUser])
 
   const handleLogout = () => {
     localStorage.removeItem('staff_token')
@@ -34,6 +65,10 @@ export default function AdminApplicationsPage() {
       refetch()
     },
     onError: (err) => alert(`Error removing teams: ${err.message}`),
+  })
+  const toggleBlockMutation = api.application.toggleBlockTeam.useMutation({
+    onSuccess: () => refetch(),
+    onError: (err) => alert(`Error toggling block status: ${err.message}`),
   })
 
   const filtered = data?.applications ?? []
@@ -85,8 +120,9 @@ export default function AdminApplicationsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
-            { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
+            ...(staffUser?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
             { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
             const isActive = pathname === href
@@ -134,7 +170,7 @@ export default function AdminApplicationsPage() {
             </div>
 
             <AnimatePresence>
-              {selected.size > 0 && (
+              {selected.size > 0 && staffUser?.role === 'ADMIN' && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -254,6 +290,11 @@ export default function AdminApplicationsPage() {
                                 Active
                               </span>
                             )}
+                            {app.isBlocked && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-500/20 uppercase tracking-widest">
+                                Suspended
+                              </span>
+                            )}
                           </div>
                           <span className="text-value-mono !text-white/20 !text-[9px]">{app.user?.email}</span>
                         </div>
@@ -270,18 +311,41 @@ export default function AdminApplicationsPage() {
                         <span className="text-sm font-black text-primary">{app.totalScore}</span>
                       </td>
                       <td className="p-6 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
-                                removeTeamMutation.mutate({ id: app.id })
-                              }
-                            }}
-                            disabled={removeTeamMutation.isPending}
-                            className="text-[10px] font-black text-rose-400/60 hover:text-rose-400 uppercase tracking-widest transition-colors"
+                        <div className="flex items-center justify-end gap-4">
+                          <Link
+                            href={`/admin/applications/${app.id}`}
+                            className="text-[10px] font-black text-white/40 hover:text-primary uppercase tracking-widest transition-colors cursor-pointer"
                           >
-                            Remove
-                          </button>
+                            Edit
+                          </Link>
+                          {staffUser?.role === 'ADMIN' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  toggleBlockMutation.mutate({ id: app.id, isBlocked: !app.isBlocked })
+                                }}
+                                disabled={toggleBlockMutation.isPending}
+                                className={`text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer ${
+                                  app.isBlocked
+                                    ? 'text-emerald-500/60 hover:text-emerald-400'
+                                    : 'text-amber-500/60 hover:text-amber-400'
+                                }`}
+                              >
+                                {app.isBlocked ? 'Unblock' : 'Block'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
+                                    removeTeamMutation.mutate({ id: app.id })
+                                  }
+                                }}
+                                disabled={removeTeamMutation.isPending}
+                                className="text-[10px] font-black text-rose-500/60 hover:text-rose-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </motion.tr>

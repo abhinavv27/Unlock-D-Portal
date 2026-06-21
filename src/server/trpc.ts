@@ -67,29 +67,30 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
         session = {
           user: {
             id: String(decoded.userId),
-            name: decoded.username,
-            email: `${decoded.username}@ras.test`,
-            role: decoded.role as string, // 'ADMIN' or 'JUDGE'
+            name: userExists.username,
+            email: `${userExists.username}@ras.test`,
+            role: userExists.systemRole as string,
           },
           expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
         }
       }
     }
   } else if (teamToken) {
-    const dbSession = await db.session.findUnique({
-      where: { id: teamToken },
-      include: { registration: true },
-    })
-    if (dbSession && dbSession.expiresAt > new Date()) {
-      const team = dbSession.registration
-      session = {
-        user: {
-          id: team.id,
-          name: team.teamName,
-          email: '',
-          role: 'TEAM',
-        },
-        expires: dbSession.expiresAt.toISOString(),
+    const decoded = verifyJwt(teamToken)
+    if (decoded?.type === 'team' && decoded.id) {
+      const team = await db.registration.findUnique({
+        where: { id: decoded.id }
+      })
+      if (team && !team.isBlocked) {
+        session = {
+          user: {
+            id: team.id,
+            name: team.teamName,
+            email: '',
+            role: 'TEAM',
+          },
+          expires: new Date(decoded.exp * 1000).toISOString(),
+        }
       }
     }
   }
@@ -133,7 +134,15 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 
 const isAdmin = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+  if (role !== 'ADMIN' && role !== 'JUDGE') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required.' })
+  }
+  return next({ ctx })
+})
+
+const isStrictAdmin = t.middleware(({ ctx, next }) => {
+  const role = ctx.session?.user?.role
+  if (role !== 'ADMIN') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required.' })
   }
   return next({ ctx })
@@ -141,7 +150,7 @@ const isAdmin = t.middleware(({ ctx, next }) => {
 
 const isJudge = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (role !== 'JUDGE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+  if (role !== 'JUDGE' && role !== 'ADMIN') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Judge access required.' })
   }
   return next({ ctx })
@@ -149,7 +158,7 @@ const isJudge = t.middleware(({ ctx, next }) => {
 
 const isStaff = t.middleware(({ ctx, next }) => {
   const role = ctx.session?.user?.role
-  if (!['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(role ?? '')) {
+  if (!['STAFF', 'ADMIN', 'JUDGE'].includes(role ?? '')) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Staff access required.' })
   }
   return next({ ctx })
@@ -176,6 +185,7 @@ export const createCallerFactory = t.createCallerFactory
 export const publicProcedure = t.procedure
 export const protectedProcedure = t.procedure.use(isAuthed)
 export const adminProcedure = t.procedure.use(isAuthed).use(isAdmin)
+export const strictAdminProcedure = t.procedure.use(isAuthed).use(isStrictAdmin)
 export const judgeProcedure = t.procedure.use(isAuthed).use(isJudge)
 export const staffProcedure = t.procedure.use(isAuthed).use(isStaff)
 export const teamProcedure = t.procedure.use(isAuthed).use(isTeam)

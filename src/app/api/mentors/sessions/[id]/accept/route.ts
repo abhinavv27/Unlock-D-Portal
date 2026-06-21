@@ -58,6 +58,14 @@ export async function PUT(
       )
     }
 
+    // Verify authorization: only the requested mentor or staff override can accept a targeted request
+    if (session.mentorId && session.mentorId !== staff.userId && !['ADMIN', 'JUDGE'].includes(staff.role)) {
+      return NextResponse.json(
+        { error: 'Only the requested mentor or staff can accept this request.' },
+        { status: 403 }
+      )
+    }
+
     // Process accept operation in a transaction
     const updatedSession = await db.$transaction(async (tx) => {
       // Update mentor session

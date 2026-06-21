@@ -59,10 +59,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ sessions })
     }
 
+    const isUserAdmin = staff!.role === 'ADMIN'
+
     const sessions = await db.mentorSession.findMany({
       where: {
         OR: [
-          { status: 'REQUESTED' },
+          { 
+            status: 'REQUESTED',
+            ...(isUserAdmin ? {} : {
+              OR: [
+                { mentorId: null },
+                { mentorId: staff!.userId },
+              ]
+            })
+          },
           { status: 'ACCEPTED', mentorId: staff!.userId },
         ],
       },
@@ -77,12 +87,19 @@ export async function GET(request: Request) {
         mentor: {
           select: {
             username: true,
+            id: true,
           },
         },
       },
     })
 
-    return NextResponse.json({ sessions })
+    // Format output to match client requirements
+    const mappedSessions = sessions.map(s => ({
+      ...s,
+      mentor: s.mentor ? { username: s.mentor.username } : null
+    }))
+
+    return NextResponse.json({ sessions: mappedSessions })
   } catch (error) {
     console.error('Fetch mentor sessions error:', error)
     return NextResponse.json(
