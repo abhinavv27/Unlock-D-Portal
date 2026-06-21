@@ -28,7 +28,11 @@ interface DashboardClientProps {
   staff?: any
 }
 
-export default function DashboardClient({ session, status, team, staff }: DashboardClientProps) {
+export default function DashboardClient({ session, status, team: initialTeam, staff }: DashboardClientProps) {
+  const { data: team } = api.teams.status.useQuery(undefined, {
+    initialData: initialTeam,
+    refetchInterval: 10000,
+  })
   const submitMutation = api.teams.submit.useMutation()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
@@ -210,7 +214,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const hasPending = team?.submissions?.some((sub: any) => sub.status === 'PENDING')
 
   // Extract stage data from event config for roadmap
-  const stages: { stage: number; name: string; pointsRequired: number }[] = team?.event?.config?.stages || []
+  const stages: { stage: number; name: string; pointsRequired: number }[] = (team?.event?.config as any)?.stages || []
   const currentStageNum: number = team?.progressState?.current_stage !== undefined ? team.progressState.current_stage : 0
   const currentStage = stages.find(s => s.stage === currentStageNum) || null
 
@@ -409,7 +413,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                       Judge <strong className="text-white/80">{demoCall.judgeName}</strong> has called your team. Join the meeting now:
                     </p>
                     <a
-                      href={demoCall.meetingLink}
+                      href={demoCall.meetingLink || undefined}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block w-full py-4 rounded-xl bg-emerald-500 text-black text-sm font-black uppercase tracking-wider text-center shadow-2xl shadow-emerald-500/30 hover:bg-emerald-400 hover:shadow-emerald-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"

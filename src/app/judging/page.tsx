@@ -120,6 +120,18 @@ export default function JudgingPage() {
   const [teamSearch, setTeamSearch] = useState('')
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
 
+  // Filters
+  const [filterTask, setFilterTask] = useState<string>('ALL')
+  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+
+  const filteredQueue = useMemo(() => {
+    return queue.filter((sub) => {
+      const matchTask = filterTask === 'ALL' || sub.taskId === filterTask
+      const matchStatus = filterStatus === 'ALL' || sub.status === filterStatus
+      return matchTask && matchStatus
+    })
+  }, [queue, filterTask, filterStatus])
+
   // Current logged in user info
   const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
 
@@ -248,10 +260,28 @@ export default function JudgingPage() {
   }, [currentCriteria, scores])
 
   const filteredTeams = useMemo(() => {
-    if (!teamSearch.trim()) return teamLogs
-    const q = teamSearch.toLowerCase()
-    return teamLogs.filter((t: any) => t.teamName.toLowerCase().includes(q))
-  }, [teamLogs, teamSearch])
+    let result = teamLogs
+
+    if (teamSearch.trim()) {
+      const q = teamSearch.toLowerCase()
+      result = result.filter((t: any) => t.teamName.toLowerCase().includes(q))
+    }
+
+    if (filterTask === 'ALL' && filterStatus === 'ALL') {
+      return result
+    }
+
+    return result
+      .map((team: any) => {
+        const matchedSubs = team.submissions.filter((sub: any) => {
+          const matchTask = filterTask === 'ALL' || sub.taskId === filterTask
+          const matchStatus = filterStatus === 'ALL' || sub.status === filterStatus
+          return matchTask && matchStatus
+        })
+        return { ...team, submissions: matchedSubs }
+      })
+      .filter((team: any) => team.submissions.length > 0)
+  }, [teamLogs, teamSearch, filterTask, filterStatus])
 
   // Helper: get current judge's userId
   const getStaffUserId = useCallback(() => {
@@ -349,7 +379,7 @@ export default function JudgingPage() {
 
           <div className="flex justify-between items-end">
             <p className="text-label-caps !text-[9px] text-white/30">Submission Queue</p>
-            <p className="text-value-mono !text-[10px] text-primary">{queue.length} pending</p>
+            <p className="text-value-mono !text-[10px] text-primary">{filteredQueue.length} / {queue.length}</p>
           </div>
 
           {/* View Toggle */}
@@ -378,18 +408,52 @@ export default function JudgingPage() {
               Logs
             </button>
           </div>
+
+          {/* Filters Selectors */}
+          <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-white/5">
+            <div className="space-y-1">
+              <label className="text-[7px] uppercase tracking-wider font-mono text-white/40 block ml-1">Task</label>
+              <select
+                value={filterTask}
+                onChange={(e) => setFilterTask(e.target.value)}
+                className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-2 py-1.5 text-[9px] text-white font-mono focus:outline-none focus:border-primary/50 cursor-pointer"
+              >
+                <option value="ALL">All Tasks</option>
+                <option value="FEATURE-1">Feature 1</option>
+                <option value="FEATURE-2">Feature 2</option>
+                <option value="FEATURE-3">Feature 3</option>
+                <option value="FEATURE-4">Feature 4</option>
+                <option value="FEATURE-5">Feature 5</option>
+                <option value="ROUND-2">Round 2</option>
+                <option value="ROUND-3">Round 3</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[7px] uppercase tracking-wider font-mono text-white/40 block ml-1">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-2 py-1.5 text-[9px] text-white font-mono focus:outline-none focus:border-primary/50 cursor-pointer"
+              >
+                <option value="ALL">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Accepted</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Queue list — takes upper half */}
         <div className="flex-1 overflow-auto p-4 md:p-5 space-y-2 custom-scrollbar min-h-0">
           {loading ? (
             <div className="text-center py-16 text-white/20 text-xs font-mono tracking-widest">LOADING...</div>
-          ) : queue.length === 0 ? (
+          ) : filteredQueue.length === 0 ? (
             <div className="text-center py-16 text-white/20 text-xs leading-relaxed font-mono">
-              ALL CLEAR<br />No pending submissions.
+              ALL CLEAR<br />No matching entries.
             </div>
           ) : (
-            queue.map((sub, idx) => (
+            filteredQueue.map((sub, idx) => (
               <motion.button
                 key={sub.id}
                 initial={{ opacity: 0, x: -20 }}

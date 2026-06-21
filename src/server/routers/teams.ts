@@ -346,6 +346,7 @@ export const teamsRouter = createTRPCRouter({
       id: rawTeam.id,
       teamId: rawTeam.id,
       teamName: rawTeam.teamName,
+      unstopTeamId: rawTeam.unstopTeamId,
       eventId: rawTeam.eventId,
       eventName: rawTeam.event.name,
       eventSlug: rawTeam.event.slug,
