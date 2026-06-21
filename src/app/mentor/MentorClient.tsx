@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -278,7 +278,7 @@ export default function MentorClient({ session }: MentorClientProps) {
               exit={{ opacity: 0, y: -10 }}
               className="p-4 mb-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm"
             >
-              ⚠️ {error}
+              ΓÜá∩╕Å {error}
             </motion.div>
           )}
           {message && (
@@ -288,7 +288,7 @@ export default function MentorClient({ session }: MentorClientProps) {
               exit={{ opacity: 0, y: -10 }}
               className="p-4 mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm"
             >
-              ✓ {message}
+              Γ£ô {message}
             </motion.div>
           )}
         </AnimatePresence>
@@ -400,7 +400,7 @@ export default function MentorClient({ session }: MentorClientProps) {
               >
                 <div className="flex items-center justify-between">
                   <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[9px] font-bold tracking-widest uppercase animate-pulse">
-                    ⚡ ACTIVE TICKET ASSIGNED
+                    ΓÜí ACTIVE TICKET ASSIGNED
                   </span>
                   <span className="text-[10px] text-white/30 font-mono">
                     Accepted at {new Date(currentActiveSession.requestedAt).toLocaleTimeString()}
@@ -469,7 +469,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                 <div className="text-center py-16 font-mono text-xs text-white/20 tracking-widest">LOADING QUEUE...</div>
               ) : pendingQueue.length === 0 ? (
                 <div className="text-center py-16 rounded-2xl border border-dashed border-white/5 bg-white/[0.01] space-y-3">
-                  <div className="text-4xl">🎉</div>
+                  <div className="text-4xl">≡ƒÄë</div>
                   <h4 className="text-sm font-bold text-white/70">All clear! No pending help requests.</h4>
                   <p className="text-xs text-white/30 max-w-xs mx-auto leading-relaxed">
                     Teams are executing clean sprints. When a developer submits a help ticket, it will appear here in real-time.
