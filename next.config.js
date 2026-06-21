@@ -3,6 +3,13 @@ const nextConfig = {
   compiler: {
     styledComponents: true,
   },
+  experimental: {
+    cpus: 1,
+    workerThreads: false,
+  },
+  turbopack: {
+    root: __dirname,
+  },
   serverExternalPackages: ['@prisma/client', 'prisma'],
   images: {
     remotePatterns: [

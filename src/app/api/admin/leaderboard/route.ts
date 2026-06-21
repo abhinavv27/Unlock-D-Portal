@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
-import { getStaffFromRequest } from '@/lib/auth-utils'
+import { authenticateStaff } from '@/lib/jwt-auth'
 
 export async function GET(request: Request) {
   try {
-    const staff = await getStaffFromRequest(request)
-    if (!staff || staff.role !== 'JUDGE') {
+    const staff = await authenticateStaff(request)
+    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
       return NextResponse.json(
         { error: 'Unauthorized.' },
         { status: 401 }
@@ -22,9 +22,11 @@ export async function GET(request: Request) {
 
     const registrations = await db.registration.findMany({
       where: { eventId: activeEvent.id },
+      orderBy: { totalScore: 'desc' },
       select: {
         teamName: true,
         progressState: true,
+        totalScore: true,
         submissions: {
           where: { status: 'APPROVED' },
           select: {
@@ -45,12 +47,10 @@ export async function GET(request: Request) {
     const teams = registrations.map((reg) => {
       const ps = reg.progressState as any
       const currentStage = ps?.current_stage ?? 0
-      const cumulativeScore = ps?.score ?? 0
       const approvedSubs = reg.submissions
       const approvedCount = approvedSubs.length
       const stageName = stages.find((s: any) => s.stage === currentStage)?.name || `Stage ${currentStage}`
 
-      // Compute per-round score: for each round, sum the per-submission average evaluation score
       const roundMap: Record<number, number> = {}
       for (const sub of approvedSubs) {
         const round = sub.roundNumber
@@ -66,12 +66,12 @@ export async function GET(request: Request) {
         teamName: reg.teamName,
         currentStage,
         stageName,
-        totalScore: cumulativeScore,
+        totalScore: reg.totalScore,
         approvedCount,
         maxStage,
         roundBreakdown: roundMap,
       }
-    }).sort((a, b) => b.totalScore - a.totalScore || b.currentStage - a.currentStage)
+    })
 
     return NextResponse.json({ teams })
   } catch (error) {

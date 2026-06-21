@@ -460,7 +460,60 @@ export default function LandingPage() {
             </a>
           </motion.div>
 
+          {/* Event Format Timeline */}
+          <motion.div variants={itemVariants} className="mb-32">
+            <div className="text-center mb-16">
+              <span className="text-value-mono mb-6 inline-block border border-primary/30 text-primary px-3 py-1 rounded-full !text-[9px]">Timeline</span>
+              <h2 className="text-4xl md:text-6xl text-hero leading-[0.9]">Event Format</h2>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Day 1 */}
+              <div className="glass-premium rounded-[var(--radius)] p-10 border-white/10">
+                <div className="text-3xl text-headline mb-8 flex items-center gap-4">
+                  <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_10px_rgba(109,40,217,0.5)]" />
+                  Day 1 — 3rd July
+                </div>
+                <div className="space-y-6">
+                  {[
+                    { time: "9:00 AM", event: "Participant Reporting & Registration" },
+                    { time: "9:45 AM", event: "Opening Ceremony, Rules Briefing & Problem Statement Reveal" },
+                    { time: "9:45 AM - 10:15 AM", event: "Round 0 Begins — System Setup & Comprehension" },
+                    { time: "10:30 AM - 8:30 PM", event: "Round 1 Begins — Progressive Feature Sprints" },
+                    { time: "8:30 PM - 11:30 PM", event: "Elimination Phase & Evaluation" },
+                    { time: "11:30 PM", event: "Announcement of Results (50 teams remain)" },
+                  ].map((s, i) => (
+                    <div key={i} className="flex gap-6">
+                      <div className="w-24 shrink-0 text-label-caps text-primary/70">{s.time}</div>
+                      <div className="text-editorial text-white/70">{s.event}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Day 2 */}
+              <div className="glass-premium rounded-[var(--radius)] p-10 border-white/10">
+                <div className="text-3xl text-headline mb-8 flex items-center gap-4">
+                  <div className="w-3 h-3 rounded-full bg-primary/50 border border-primary/50" />
+                  Day 2 — 4th July
+                </div>
+                <div className="space-y-6">
+                  {[
+                    { time: "12:00 AM - 6:00 AM", event: "Round 2 Begins — Optimisation and Open Innovation" },
+                    { time: "6:00 AM - 8:00 AM", event: "Elimination Phase & Evaluation (10 teams remain)" },
+                    { time: "8:00 AM", event: "Announcement of Finalists" },
+                    { time: "8:30 AM - 10:30 AM", event: "Round 3 Begins — Final Demonstration & Evaluation" },
+                    { time: "11:00 AM", event: "End of Event & Closing Ceremony" },
+                  ].map((s, i) => (
+                    <div key={i} className="flex gap-6">
+                      <div className="w-24 shrink-0 text-label-caps text-primary/70">{s.time}</div>
+                      <div className="text-editorial text-white/70">{s.event}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
 
         </motion.div>

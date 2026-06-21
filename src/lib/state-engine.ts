@@ -1,64 +1,99 @@
 import { type PrismaClient } from '@prisma/client'
+import { z } from 'zod'
+
+const RoadmapStepSchema = z.object({
+  step: z.number(),
+  task_id: z.string(),
+  round: z.number(),
+})
+
+const EventConfigSchema = z.object({
+  passing_threshold: z.number().default(60),
+  roadmap: z.array(RoadmapStepSchema).default([]),
+})
 
 export async function getTeamStatus(teamId: string, db: PrismaClient) {
+  // 1. Fetch the Registration and its parent Event with submissions
   const registration = await db.registration.findUniqueOrThrow({
     where: { id: teamId },
     include: {
       event: true,
       submissions: {
-        include: { evaluations: true },
+        orderBy: { submittedAt: 'asc' },
       },
     },
   })
 
-  const isPending = registration.submissions.some((s) => s.status === 'PENDING')
+  const event = registration.event
+  
+  // Safe parsing of the Event JSON config using Zod
+  const config = EventConfigSchema.parse(event.config || {})
+  const roadmap = config.roadmap
 
-  const approvedSubs = registration.submissions.filter((s) => s.status === 'APPROVED')
-  let highestRound = -1
-  let cumulativeScore = 0
-
-  for (const sub of approvedSubs) {
-    if (sub.roundNumber > highestRound) highestRound = sub.roundNumber
-    if (sub.evaluations.length > 0) {
-      const avg = sub.evaluations.reduce((sum, e) => sum + e.totalScore, 0) / sub.evaluations.length
-      cumulativeScore += avg
+  // 2. Iterate over all the team's submissions to find the highest completed step
+  // Since progression is unlocked immediately upon submission, any submission counts as completed except for REJECTED ones.
+  let highestCompletedStep = 0
+  for (const sub of registration.submissions) {
+    if (sub.status === 'REJECTED') continue
+    const stepObj = roadmap.find((r) => r.task_id === sub.taskId)
+    if (stepObj && stepObj.step > highestCompletedStep) {
+      highestCompletedStep = stepObj.step
     }
   }
 
-  const currentGlobalRound = registration.event.currentGlobalRound
-  const progressState = (registration.progressState as any) || {}
-  const manualStatus = progressState.manualStatus
+  // 3. Determine the allowed step attributes
+  // ROUND-0 has no submissions — auto-skip it so teams unlock FEATURE-1 immediately
+  const NO_SUBMISSION_TASKS = ['ROUND-0']
+  let nextStep = highestCompletedStep + 1
+  let nextStepObj = roadmap.find((r) => r.step === nextStep)
 
-  let allowedRound = highestRound
-
-  if (highestRound < 2) {
-    const shouldAdvance = manualStatus === 'APPROVED_FOR_NEXT' || (highestRound >= 1 && cumulativeScore > 50)
-    if (shouldAdvance) {
-      allowedRound = highestRound + 1
-    }
-  }
-
-  if (highestRound === -1) {
-    allowedRound = 0
+  while (nextStepObj && NO_SUBMISSION_TASKS.includes(nextStepObj.task_id)) {
+    nextStep += 1
+    nextStepObj = roadmap.find((r) => r.step === nextStep)
   }
 
   let allowedTaskId: string
+  let allowedRound: number
 
-  if (allowedRound > currentGlobalRound) {
-    allowedTaskId = 'WAITING_ROOM'
-    allowedRound = currentGlobalRound
-  } else if (allowedRound < currentGlobalRound) {
-    allowedTaskId = 'ELIMINATED'
-    allowedRound = currentGlobalRound
+  if (nextStepObj) {
+    allowedTaskId = nextStepObj.task_id
+    allowedRound = nextStepObj.round
   } else {
-    allowedTaskId = 'COMMIT'
+    // If all steps in the roadmap are completed
+    allowedTaskId = 'COMPLETED'
+    allowedRound = event.currentGlobalRound
   }
+
+  // Enforce top 10 qualification for Round 3
+  if (allowedRound === 3 && event.currentGlobalRound >= 3) {
+    const topTeams = await db.registration.findMany({
+      where: { eventId: event.id },
+      orderBy: { totalScore: 'desc' },
+      take: 10,
+      select: { id: true }
+    })
+    const topTeamIds = new Set(topTeams.map(t => t.id))
+    
+    if (!topTeamIds.has(teamId)) {
+      // Capped at Round 2, they cannot advance to Round 3 tasks
+      allowedTaskId = 'WAITING_ROOM'
+      allowedRound = 2
+    }
+  }
+
+  // 4. THE GLOBAL CEILING: Check if allowed round exceeds the current global ceiling
+  if (allowedRound > event.currentGlobalRound) {
+    allowedTaskId = 'WAITING_ROOM'
+    allowedRound = event.currentGlobalRound
+  }
+
+  // 5. Determine isPending: Set to false so teams can proceed immediately
+  const isPending = false
 
   return {
     allowedTaskId,
     allowedRound,
     isPending,
-    highestRound,
-    cumulativeScore: Math.round(cumulativeScore * 10) / 10,
+    highestState: highestCompletedStep,
   }
 }

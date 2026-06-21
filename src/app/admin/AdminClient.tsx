@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import RefreshButton from '@/components/RefreshButton'
 import { api } from '@/trpc/react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function AdminClient({ session, stats, funnel, activeEvent: initialActiveEvent }: { session: any, stats: any[], funnel: any[], activeEvent?: any }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -23,6 +24,88 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
   } : null
 
   const startRoundMutation = api.application.startRound.useMutation()
+
+  // Round 3 States & Functions
+  const [staffToken, setStaffToken] = useState<string | null>(null)
+  const [r3Queue, setR3Queue] = useState<any[]>([])
+  const [r3Loading, setR3Loading] = useState(false)
+  const [r3CallModal, setR3CallModal] = useState<any | null>(null)
+  const [r3MeetingLink, setR3MeetingLink] = useState('')
+  const [r3CallLoading, setR3CallLoading] = useState(false)
+
+  const fetchR3Queue = useCallback(async (token: string) => {
+    setR3Loading(true)
+    try {
+      const res = await fetch('/api/admin/demo-call', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setR3Queue(data.submissions || [])
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setR3Loading(false)
+    }
+  }, [])
+
+  const handleCallTeam = async (submissionId: number) => {
+    if (!staffToken || !r3MeetingLink.trim()) return
+    setR3CallLoading(true)
+    try {
+      const res = await fetch('/api/admin/demo-call', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify({ submissionId, meetingLink: r3MeetingLink.trim() }),
+      })
+      if (res.ok) {
+        setR3CallModal(null)
+        setR3MeetingLink('')
+        fetchR3Queue(staffToken)
+      }
+    } catch (err) {
+      console.error('Failed to call team:', err)
+    } finally {
+      setR3CallLoading(false)
+    }
+  }
+
+  const handleCompleteDemo = async (demoCallId: number) => {
+    if (!staffToken) return
+    try {
+      await fetch(`/api/admin/demo-call/${demoCallId}/complete`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${staffToken}` },
+      })
+      fetchR3Queue(staffToken)
+    } catch (err) {
+      console.error('Failed to complete demo:', err)
+    }
+  }
+
+  useEffect(() => {
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+    if (token) {
+      setStaffToken(token)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (staffToken && activeEvent?.currentRound === 3) {
+      fetchR3Queue(staffToken)
+    }
+  }, [staffToken, activeEvent?.currentRound, fetchR3Queue])
 
   const handleLogout = () => {
     localStorage.removeItem('staff_token')
@@ -72,9 +155,10 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Leaderboard', icon: '🏆' },
-            { href: '/admin/presentations', label: 'Presentations', icon: '🎤' },
-            { href: '/admin/import', label: 'Roster Ingestion', icon: '📥' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
+            ...(session?.user?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
+            { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => (
             <Link 
               key={href} 
@@ -98,7 +182,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-label-caps !text-[10px] text-white truncate">{session.user.name}</span>
-              <span className="text-value-mono !text-[8px] text-primary uppercase">Super_Admin</span>
+              <span className="text-value-mono !text-[8px] text-primary uppercase">{session?.user?.role || 'Admin'}</span>
             </div>
           </div>
           <button
@@ -149,7 +233,9 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                     Current Active: {activeEvent.stages.find((s: any) => s.stage === activeEvent.currentRound)?.name || `Round ${activeEvent.currentRound}`}
                   </h4>
                   <p className="text-xs text-white/40 mt-1 font-mono">
-                    Admins can unlock/start subsequent rounds for all participant teams.
+                    {session?.user?.role === 'JUDGE'
+                      ? 'Judges cannot change rounds (view-only mode).'
+                      : 'Admins can unlock/start subsequent rounds for all participant teams.'}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -161,7 +247,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                     return (
                       <button
                         key={round}
-                        disabled={startRoundMutation.isPending}
+                        disabled={startRoundMutation.isPending || session?.user?.role === 'JUDGE'}
                         onClick={() => {
                           setSelectedRound(round)
                         }}
@@ -169,7 +255,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                           isSelected
                             ? 'bg-primary text-black shadow-[0_0_20px_rgba(109,40,217,0.4)] border border-primary'
                             : 'bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10'
-                        }`}
+                        } ${session?.user?.role === 'JUDGE' ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {isUpdating ? 'Updating...' : `Round ${round}`}
                       </button>
@@ -179,7 +265,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
               </div>
 
               {/* Confirmation area */}
-              {selectedRound !== null && selectedRound !== activeEvent.currentRound && (
+              {selectedRound !== null && selectedRound !== activeEvent.currentRound && session?.user?.role !== 'JUDGE' && (
                 <div className="mt-6 p-6 border border-white/5 rounded-2xl bg-white/[0.02] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1">
                     <span className="text-label-caps !text-[9px] text-amber-400 block mb-1">Confirm Transition</span>
@@ -245,6 +331,115 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                   })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Round 3 Live Demos Queue */}
+          {activeEvent && activeEvent.currentRound === 3 && (
+            <div className="glass-premium p-8 rounded-3xl border-white/5 relative overflow-hidden bg-black/30 backdrop-blur-xl space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1.5 rounded-full bg-fuchsia-500/10 text-fuchsia-300 text-[9px] font-bold uppercase tracking-wider border border-fuchsia-500/20">
+                      🎤 Live Demos
+                    </span>
+                    <h3 className="text-2xl font-display font-medium text-white">Round 3 Queue</h3>
+                  </div>
+                  <p className="text-xs text-white/40 font-mono">
+                    Call teams for their final demonstration. Submit a meeting link and they'll see it on their dashboard.
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                  <button
+                    onClick={() => staffToken && fetchR3Queue(staffToken)}
+                    className="text-[9px] font-black text-white/30 hover:text-white uppercase tracking-[0.15em] transition-colors"
+                  >
+                    ↻ Refresh Queue
+                  </button>
+                  <span className="text-[10px] font-mono text-white/20">
+                    {r3Queue.length} teams
+                  </span>
+                </div>
+              </div>
+
+              {r3Loading ? (
+                <div className="text-center py-12 text-white/20 text-xs font-mono animate-pulse tracking-widest">LOADING R3 QUEUE...</div>
+              ) : r3Queue.length === 0 ? (
+                <div className="text-center py-12 text-white/20 text-xs font-mono">No teams have entered Round 3 yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {r3Queue.map((sub: any) => {
+                    const dc = sub.demoCall
+                    const statusColor = dc?.status === 'COMPLETED'
+                      ? 'border-emerald-500/20 bg-emerald-500/5'
+                      : dc?.status === 'CALLED'
+                        ? 'border-fuchsia-500/30 bg-fuchsia-500/5 shadow-[0_0_30px_-10px_rgba(217,70,239,0.15)]'
+                        : 'border-white/5 bg-white/[0.01]'
+
+                    return (
+                      <motion.div
+                        key={sub.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`rounded-2xl border p-5 transition-all ${statusColor}`}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-semibold text-white truncate uppercase tracking-tight">
+                                {sub.registration?.teamName || 'Unknown Team'}
+                              </h4>
+                              <span className={`text-[8px] font-mono px-2 py-0.5 rounded-md border ${
+                                dc?.status === 'COMPLETED'
+                                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                                  : dc?.status === 'CALLED'
+                                    ? 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20 animate-pulse'
+                                    : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                              }`}>
+                                {dc?.status || 'QUEUED'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-white/25 font-mono">
+                              Score: {sub.registration?.totalScore || 0} pts · Entered {new Date(sub.submittedAt).toLocaleTimeString()}
+                            </p>
+                            {dc?.judge && (
+                              <p className="text-[9px] text-white/20 font-mono">
+                                Judge: {dc.judge.username}
+                                {dc.meetingLink && <> · <a href={dc.meetingLink} target="_blank" rel="noopener noreferrer" className="text-fuchsia-300 underline">{dc.meetingLink}</a></>}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {!dc || dc.status === 'QUEUED' ? (
+                              <button
+                                onClick={() => {
+                                  setR3CallModal(sub)
+                                  setR3MeetingLink('')
+                                }}
+                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white text-[9px] font-bold uppercase tracking-wider shadow-lg hover:shadow-fuchsia-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                              >
+                                📞 Call Team
+                              </button>
+                            ) : dc.status === 'CALLED' ? (
+                              <button
+                                onClick={() => handleCompleteDemo(dc.id)}
+                                className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-500/20 transition-all cursor-pointer"
+                              >
+                                ✓ Mark Complete
+                              </button>
+                            ) : (
+                              <span className="px-4 py-2 rounded-xl text-[9px] font-mono text-white/15 border border-white/5 bg-white/[0.01]">
+                                Finished
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -339,6 +534,67 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
           </div>
         </div>
       </div>
+
+      {/* Round 3 Call Modal */}
+      <AnimatePresence>
+        {r3CallModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setR3CallModal(null)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-md bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-8 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 text-white"
+            >
+              <div>
+                <span className="px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300 text-[9px] font-mono tracking-widest uppercase">
+                  📞 Call Team
+                </span>
+                <h3 className="text-xl font-display font-medium text-white mt-3 uppercase tracking-tight">
+                  {r3CallModal.registration?.teamName}
+                </h3>
+                <p className="text-[11px] text-white/40 leading-relaxed mt-1 font-mono">
+                  Enter a meeting link below. The team will see it on their dashboard and can join immediately.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Meeting Link</label>
+                <input
+                  type="url"
+                  value={r3MeetingLink}
+                  onChange={(e) => setR3MeetingLink(e.target.value)}
+                  placeholder="https://meet.google.com/..."
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-fuchsia-400/50 text-value-mono !text-xs text-white"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleCallTeam(r3CallModal.id)}
+                  disabled={r3CallLoading || !r3MeetingLink.trim()}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white text-[10px] font-black uppercase tracking-wider shadow-lg hover:shadow-fuchsia-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {r3CallLoading ? 'Sending...' : 'Send Meeting Link'}
+                </button>
+                <button
+                  onClick={() => setR3CallModal(null)}
+                  className="px-5 py-3 rounded-xl border border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-wider hover:text-white/60 hover:border-white/20 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

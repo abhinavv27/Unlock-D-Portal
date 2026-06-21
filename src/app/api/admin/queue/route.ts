@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     // 1. Validate staff authentication (requires ADMIN or JUDGE)
     const staff = await getStaffFromRequest(request)
-    if (!staff || staff.role !== 'JUDGE') {
+    if (!staff || (staff.role !== 'ADMIN' && staff.role !== 'JUDGE')) {
       return NextResponse.json(
         { error: 'Unauthorized. Judge or Admin access required.' },
         { status: 401 }
