@@ -222,6 +222,32 @@ export const teamsRouter = createTRPCRouter({
   status: teamProcedure.query(async ({ ctx }) => {
     const statusResult = await getTeamStatus(ctx.team.id, ctx.db)
 
+    if (statusResult.allowedTaskId === 'ROUND-3') {
+      const existing = await ctx.db.submission.findFirst({
+        where: {
+          registrationId: ctx.team.id,
+          taskId: 'ROUND-3',
+        },
+      })
+      if (!existing) {
+        await ctx.db.submission.create({
+          data: {
+            registrationId: ctx.team.id,
+            roundNumber: 3,
+            taskId: 'ROUND-3',
+            status: 'APPROVED',
+            submission_type: 'DEMO',
+            payload: {
+              github: '',
+              liveDemo: '',
+              description: 'Round 3 — Final Demonstration entry',
+              submitted_at: new Date().toISOString(),
+            },
+          },
+        })
+      }
+    }
+
     const rawTeam = await ctx.db.registration.findUniqueOrThrow({
       where: { id: ctx.team.id },
       include: {

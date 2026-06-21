@@ -64,6 +64,23 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
     allowedRound = event.currentGlobalRound
   }
 
+  // Enforce top 10 qualification for Round 3
+  if (allowedRound === 3 && event.currentGlobalRound >= 3) {
+    const topTeams = await db.registration.findMany({
+      where: { eventId: event.id },
+      orderBy: { totalScore: 'desc' },
+      take: 10,
+      select: { id: true }
+    })
+    const topTeamIds = new Set(topTeams.map(t => t.id))
+    
+    if (!topTeamIds.has(teamId)) {
+      // Capped at Round 2, they cannot advance to Round 3 tasks
+      allowedTaskId = 'WAITING_ROOM'
+      allowedRound = 2
+    }
+  }
+
   // 4. THE GLOBAL CEILING: Check if allowed round exceeds the current global ceiling
   if (allowedRound > event.currentGlobalRound) {
     allowedTaskId = 'WAITING_ROOM'
