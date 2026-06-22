@@ -1,4 +1,4 @@
-import { auth } from '@/server/auth'
+﻿import { auth } from '@/server/auth'
 import { redirect } from 'next/navigation'
 import MentorClient from './MentorClient'
 

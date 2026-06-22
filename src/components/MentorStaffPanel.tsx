@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle2, ExternalLink, Headphones, RefreshCw, Save, Video } from 'lucide-react'
@@ -72,8 +72,18 @@ export default function MentorStaffPanel({ token }: MentorStaffPanelProps) {
   useEffect(() => {
     fetchSessions()
     fetchStatus()
-    const interval = window.setInterval(fetchSessions, 15000)
-    return () => window.clearInterval(interval)
+    const interval = window.setInterval(fetchSessions, 5000)
+
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchSessions() }
+    const onOnline = () => fetchSessions()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
   }, [fetchSessions, fetchStatus])
 
   const updateStatus = async (nextActive = isActive) => {
