@@ -362,7 +362,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                       }`}
                       title={currentActiveSession ? "Must resolve active session before going offline." : "Toggle Availability"}
                     >
-                      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-5' : 'translate-x-1'}`} />
+                      <span className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
 
