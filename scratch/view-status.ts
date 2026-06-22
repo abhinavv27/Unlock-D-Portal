@@ -20,7 +20,7 @@ async function main() {
   console.log(`\nTotal Teams: ${teams.length}`)
   for (const team of teams) {
     const status = await getTeamStatus(team.id, prisma)
-    console.log(`- Team: "${team.teamName}" | allowedRound: ${status.allowedRound} | highestRound: ${status.highestRound} | isEliminated: ${status.allowedRound < eventRound} | inWaitingRoom: ${status.allowedRound > eventRound}`)
+    console.log(`- Team: "${team.teamName}" | allowedRound: ${status.allowedRound} | highestState: ${status.highestState} | isEliminated: ${status.allowedRound < eventRound} | inWaitingRoom: ${status.allowedRound > eventRound}`)
   }
 }
 

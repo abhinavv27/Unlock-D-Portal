@@ -7,6 +7,7 @@ import { api } from '@/trpc/react'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
+  if (taskId === 'FINAL-SUBMISSION') return 'Final Submission'
   if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
   if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
   return taskId
@@ -375,6 +376,12 @@ export default function TeamDetailPage() {
                                 )}
                               </div>
 
+                              {(sub.payload as any)?.description && (
+                                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-mono text-white/60 whitespace-pre-wrap">
+                                  Description: {(sub.payload as any).description}
+                                </div>
+                              )}
+
                               {sub.rejectionReason && (
                                 <p className="text-[10px] font-mono text-rose-400/70 bg-rose-500/5 rounded-xl px-4 py-2 border border-rose-500/10">
                                   Rejection: {sub.rejectionReason}
@@ -423,6 +430,52 @@ export default function TeamDetailPage() {
                                   ))}
                                 </div>
                               )}
+
+                              {/* Edit History Logs */}
+                              {Array.isArray((sub.payload as any)?.editHistory) && ((sub.payload as any).editHistory as any[]).length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                                  <h4 className="text-[9px] font-black text-white/30 uppercase tracking-widest">Submission History Logs ({((sub.payload as any).editHistory as any[]).length})</h4>
+                                  <div className="space-y-2">
+                                    {((sub.payload as any).editHistory as any[]).map((historyItem: any, hIdx: number) => (
+                                      <div key={hIdx} className="bg-white/[0.01] rounded-xl border border-white/5 p-3.5 space-y-2 text-xs">
+                                        <div className="flex items-center justify-between text-[9px] font-mono text-white/25">
+                                          <span>Attempt #{hIdx + 1}</span>
+                                          <span>Edited {timeAgo(historyItem.editedAt)} ({new Date(historyItem.editedAt).toLocaleString()})</span>
+                                        </div>
+                                        <div className="text-[10px] text-white/55 leading-relaxed font-mono space-y-1">
+                                          {historyItem.previousGithub && (
+                                            <div>GitHub: <a href={historyItem.previousGithub} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">{historyItem.previousGithub}</a></div>
+                                          )}
+                                          {historyItem.previousLiveDemo && (
+                                            <div>Demo: <a href={historyItem.previousLiveDemo} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">{historyItem.previousLiveDemo}</a></div>
+                                          )}
+                                          {historyItem.previousDescription && (
+                                            <div className="mt-1 text-white/30 italic">&quot;{historyItem.previousDescription}&quot;</div>
+                                          )}
+                                        </div>
+                                        {Array.isArray(historyItem.previousEvaluations) && historyItem.previousEvaluations.length > 0 && (
+                                          <div className="pt-2 border-t border-white/5 space-y-1.5">
+                                            <span className="text-[8px] uppercase tracking-widest font-mono text-white/20">Previous Grades</span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                              {historyItem.previousEvaluations.map((prevEval: any, peIdx: number) => (
+                                                <div key={peIdx} className="bg-white/[0.02] rounded-lg border border-white/5 p-2 space-y-1">
+                                                  <div className="flex justify-between text-[8px] font-mono">
+                                                    <span className="text-primary">Judge ID: {prevEval.judgeId}</span>
+                                                    <span className="text-white/40">{prevEval.totalScore} pts</span>
+                                                  </div>
+                                                  {prevEval.feedback && (
+                                                    <p className="text-[9px] text-white/30 italic">&quot;{prevEval.feedback}&quot;</p>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))
                         )}
@@ -443,11 +496,10 @@ export default function TeamDetailPage() {
               {timeline.map((event, i) => (
                 <div key={i} className="flex gap-4 pb-4 relative">
                   <div className="flex flex-col items-center">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${
-                      event.type === 'approved' ? 'bg-emerald-400' :
-                      event.type === 'rejected' ? 'bg-rose-400' :
-                      'bg-white/20'
-                    }`} />
+                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${event.type === 'approved' ? 'bg-emerald-400' :
+                        event.type === 'rejected' ? 'bg-rose-400' :
+                          'bg-white/20'
+                      }`} />
                     {i < timeline.length - 1 && <div className="w-px flex-1 bg-white/5 mt-1" />}
                   </div>
                   <div className="flex-1 min-w-0 pb-2">
