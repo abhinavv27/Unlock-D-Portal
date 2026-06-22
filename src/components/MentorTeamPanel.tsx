@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, ExternalLink, Headphones, RefreshCw, Send, XCircle } from 'lucide-react'
@@ -64,8 +64,18 @@ export default function MentorTeamPanel() {
 
   useEffect(() => {
     fetchMentorState()
-    const interval = window.setInterval(fetchMentorState, 15000)
-    return () => window.clearInterval(interval)
+    const interval = window.setInterval(fetchMentorState, 5000)
+
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchMentorState() }
+    const onOnline = () => fetchMentorState()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
   }, [fetchMentorState])
 
   const handleRequest = async (event: React.FormEvent) => {
