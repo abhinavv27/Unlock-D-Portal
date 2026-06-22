@@ -80,11 +80,12 @@ export const teamsRouter = createTRPCRouter({
           }
           const updatedHistory = [...editHistory, newHistoryItem]
 
-          // Update submission payload, status back to APPROVED, and reset score
+          // Update submission payload, status back to APPROVED/PENDING, and reset score
+          const isFeature = targetTaskId.startsWith('FEATURE-')
           const updatedSub = await tx.submission.update({
             where: { id: existingSubmission.id },
             data: {
-              status: 'APPROVED',
+              status: isFeature ? 'APPROVED' : 'PENDING',
               averageScore: null,
               rejectionReason: null,
               payload: {
@@ -156,10 +157,10 @@ export const teamsRouter = createTRPCRouter({
       // Round 3 is a demo-only round — no URLs required
       if (!isRound3) {
         if (isRound1) {
-          if (!cleanDemo) {
+          if (!cleanGithub || !cleanDemo) {
             throw new TRPCError({
               code: 'BAD_REQUEST',
-              message: 'Drive video link is mandatory for Stage 1.',
+              message: 'Both GitHub repository and Drive video link are mandatory for Round 1.',
             })
           }
         } else {
@@ -173,12 +174,13 @@ export const teamsRouter = createTRPCRouter({
       }
 
       const newSub = await ctx.db.$transaction(async (tx) => {
+        const isFeature = status.allowedTaskId.startsWith('FEATURE-')
         const sub = await tx.submission.create({
           data: {
             registrationId: ctx.team.id,
             roundNumber: status.allowedRound,
             taskId: status.allowedTaskId,
-            status: 'APPROVED',
+            status: isFeature ? 'APPROVED' : 'PENDING',
             submission_type: isRound3 ? 'DEMO' : 'COMMIT',
             payload: {
               github: cleanGithub || undefined,
@@ -346,6 +348,7 @@ export const teamsRouter = createTRPCRouter({
       id: rawTeam.id,
       teamId: rawTeam.id,
       teamName: rawTeam.teamName,
+      unstopTeamId: rawTeam.unstopTeamId,
       eventId: rawTeam.eventId,
       eventName: rawTeam.event.name,
       eventSlug: rawTeam.event.slug,

@@ -59,11 +59,20 @@ async function main() {
     passing_threshold: 60,
     roadmap: [
       { step: 1, task_id: 'ROUND-0', round: 0, rubric: ['setup'] },
-      { step: 2, task_id: 'FEATURE-1', round: 1, rubric: ['functionality', 'code_quality'] },
-      { step: 3, task_id: 'FEATURE-2', round: 1, rubric: ['functionality', 'code_quality'] },
-      { step: 4, task_id: 'FEATURE-3', round: 1, rubric: ['functionality', 'code_quality'] },
-      { step: 5, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'] },
-      { step: 6, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'] },
+      { step: 2, task_id: 'FEATURE-1', round: 1, rubric: [] },
+      { step: 3, task_id: 'FEATURE-2', round: 1, rubric: [] },
+      { step: 4, task_id: 'FEATURE-3', round: 1, rubric: [] },
+      { step: 5, task_id: 'FEATURE-4', round: 1, rubric: [] },
+      { step: 6, task_id: 'FEATURE-5', round: 1, rubric: [] },
+      { step: 7, task_id: 'FINAL-SUBMISSION', round: 1, rubric: [
+        'feature_1_functionality', 'feature_1_code_quality',
+        'feature_2_functionality', 'feature_2_code_quality',
+        'feature_3_functionality', 'feature_3_code_quality',
+        'feature_4_functionality', 'feature_4_code_quality',
+        'feature_5_functionality', 'feature_5_code_quality'
+      ] },
+      { step: 8, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'] },
+      { step: 9, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'] },
     ],
   }
 
