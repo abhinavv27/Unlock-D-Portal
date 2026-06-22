@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -331,12 +331,12 @@ export default function MentorClient({ session }: MentorClientProps) {
                     <button
                       onClick={handleToggleActive}
                       disabled={savingProfile || !!currentActiveSession}
-                      className={`relative w-12 h-6 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`relative w-12 h-7 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                         isActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
                       }`}
                       title={currentActiveSession ? "Must resolve active session before going offline." : "Toggle Availability"}
                     >
-                      <span className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-6.5' : 'translate-x-1'}`} />
+                      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-5' : 'translate-x-1'}`} />
                     </button>
                   </div>
 

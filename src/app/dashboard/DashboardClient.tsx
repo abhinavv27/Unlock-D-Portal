@@ -653,17 +653,19 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
                           {getFeatureLabel(sub.taskId)}
                         </span>
-                        <button
-                          onClick={() => {
-                            setEditingSubmission(sub)
-                            setEditGithubUrl(sub.payload?.github || '')
-                            setEditLiveDemoUrl(sub.payload?.liveDemo || '')
-                            setEditDescription(sub.payload?.description || '')
-                          }}
-                          className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
-                        >
-                          ✏️ Edit Submission
-                        </button>
+                        {!sub.taskId.startsWith('FEATURE-') && (
+                          <button
+                            onClick={() => {
+                              setEditingSubmission(sub)
+                              setEditGithubUrl(sub.payload?.github || '')
+                              setEditLiveDemoUrl(sub.payload?.liveDemo || '')
+                              setEditDescription(sub.payload?.description || '')
+                            }}
+                            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
+                          >
+                            ✏️ Edit Submission
+                          </button>
+                        )}
                       </div>
 
                       {/* Display active links */}
@@ -1297,17 +1299,19 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         <span className="text-[10px] text-white/30 font-mono">
                           Submitted on {new Date(sub.submittedAt).toLocaleString()}
                         </span>
-                        <button
-                          onClick={() => {
-                            setEditingSubmission(sub)
-                            setEditGithubUrl(sub.payload?.github || '')
-                            setEditLiveDemoUrl(sub.payload?.liveDemo || '')
-                            setEditDescription(sub.payload?.description || '')
-                          }}
-                          className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
-                        >
-                          ✏️ Edit Submission
-                        </button>
+                        {!sub.taskId.startsWith('FEATURE-') && (
+                          <button
+                            onClick={() => {
+                              setEditingSubmission(sub)
+                              setEditGithubUrl(sub.payload?.github || '')
+                              setEditLiveDemoUrl(sub.payload?.liveDemo || '')
+                              setEditDescription(sub.payload?.description || '')
+                            }}
+                            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
+                          >
+                            ✏️ Edit Submission
+                          </button>
+                        )}
                       </div>
                       {sub.evaluation && (
                         <div className="text-right">
