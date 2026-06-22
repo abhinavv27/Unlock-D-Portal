@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/Navbar'
 import SplineRobot from '@/components/SplineRobot'
 import { api } from '@/trpc/react'
@@ -30,6 +31,7 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ session, status, team, staff }: DashboardClientProps) {
   const submitMutation = api.teams.submit.useMutation()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"])
@@ -43,6 +45,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   // Submission form states
   const [githubUrl, setGithubUrl] = useState('')
   const [liveDemoUrl, setLiveDemoUrl] = useState('')
+  const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -59,6 +62,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   // Round 3 states
   const [r3Entering, setR3Entering] = useState(false)
   const [r3EntryError, setR3EntryError] = useState<string | null>(null)
+
+  // Demo submission form states
+  const [demoUrl, setDemoUrl] = useState('')
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [demoError, setDemoError] = useState<string | null>(null)
+  const [demoSuccess, setDemoSuccess] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -80,6 +89,26 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
     return () => clearInterval(interval)
   }, [team])
+
+  // Auto-refresh dashboard data every 30s + on tab focus / reconnect
+  const refreshDashboard = useCallback(() => {
+    router.refresh()
+  }, [router])
+
+  useEffect(() => {
+    const interval = setInterval(refreshDashboard, 30000)
+
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshDashboard() }
+    const onOnline = () => refreshDashboard()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
+  }, [refreshDashboard])
 
   // Resolve config objects based on authentication status role
   let config = {
@@ -135,6 +164,11 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
     if (!githubUrl.trim() && !liveDemoUrl.trim()) return
 
+    if (description.trim() && description.trim().length < 20) {
+      setSubmitError('Description must be at least 20 characters.')
+      return
+    }
+
     setLoading(true)
     setSubmitError(null)
     setSubmitSuccess(false)
@@ -143,12 +177,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       await submitMutation.mutateAsync({
         githubUrl: githubUrl.trim(),
         liveDemoUrl: liveDemoUrl.trim(),
-        description: 'Submission for allowed round',
+        description: description.trim(),
       })
 
       setSubmitSuccess(true)
       setGithubUrl('')
       setLiveDemoUrl('')
+      setDescription('')
 
       setTimeout(() => {
         window.location.reload()
@@ -175,6 +210,11 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       return
     }
 
+    if (editDescription.trim() && editDescription.trim().length < 20) {
+      setEditError('Description must be at least 20 characters.')
+      return
+    }
+
     setEditLoading(true)
     setEditError(null)
     setEditSuccess(false)
@@ -195,6 +235,33 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
       setEditError(err.message || 'An unexpected error occurred.')
     } finally {
       setEditLoading(false)
+    }
+  }
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!demoUrl.trim()) return
+
+    setDemoLoading(true)
+    setDemoError(null)
+    setDemoSuccess(false)
+
+    try {
+      await submitMutation.mutateAsync({
+        liveDemoUrl: demoUrl.trim(),
+        description: 'Demo / Documentation submission for Round 2',
+      })
+
+      setDemoSuccess(true)
+      setDemoUrl('')
+
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (err: any) {
+      setDemoError(err.message || 'An unexpected error occurred.')
+    } finally {
+      setDemoLoading(false)
     }
   }
 
@@ -623,6 +690,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                             </a>
                           </div>
                         )}
+                        {sub.payload?.description && (
+                          <div className="mt-3">
+                            <span className="text-[9px] text-white/20 uppercase font-mono block">Description</span>
+                            <p className="text-xs text-white/70 mt-1 leading-relaxed">{sub.payload.description}</p>
+                          </div>
+                        )}
                       </div>
 
                       <p className="text-xs text-white/50 mt-4 font-mono">
@@ -739,6 +812,23 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                         placeholder="Loom / Google Drive Video URL"
                         className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="Describe what you built and any notable features or changes"
+                        maxLength={1000}
+                        rows={3}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white/75 placeholder:text-white/15 resize-none"
+                      />
+                      <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
+                        <span>{editDescription.length} / 1000 chars</span>
+                        {editDescription.length > 0 && editDescription.length < 20 && (
+                          <span className="text-amber-400">min 20 chars</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -993,6 +1083,20 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               placeholder={team?.allowedRound === 1 ? "Drive Video Link (Mandatory)" : "Loom / Google Drive Video URL"}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
+                            <textarea
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                              placeholder="Describe what you built and any notable features or changes"
+                              maxLength={1000}
+                              rows={3}
+                              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs resize-none text-white/75 placeholder:text-white/15"
+                            />
+                            <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
+                              <span>{description.length} / 1000 chars</span>
+                              {description.length > 0 && description.length < 20 && (
+                                <span className="text-amber-400">min 20 chars</span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
@@ -1013,6 +1117,39 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
                   )}
                 </>
+              )}
+
+              {/* DEMO SUBMISSION FORM (Round 2 only) */}
+              {team && team.eventRound === 2 && !team.submissions?.some((s: any) => s.submissionType === 'DEMO' && (s.status === 'PENDING' || s.status === 'APPROVED')) && (
+                <div className="mt-6 pt-6 border-t border-white/5">
+                  <h4 className="text-lg font-display font-medium text-white mb-3">Submit Project Demo / Documentation</h4>
+                  <p className="text-xs text-white/40 mb-4">Submit a video demo or documentation URL for final evaluation.</p>
+                  <form onSubmit={handleDemoSubmit} className="max-w-xl space-y-4">
+                    {demoError && (
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">{demoError}</div>
+                    )}
+                    {demoSuccess && (
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Demo submitted! Refreshing dashboard...</div>
+                    )}
+                    <input
+                      type="url"
+                      value={demoUrl}
+                      onChange={(e) => setDemoUrl(e.target.value)}
+                      placeholder="Loom / YouTube / Google Drive / Documentation URL"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
+                    />
+                    <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+                      <button
+                        type="submit"
+                        disabled={demoLoading || !demoUrl.trim()}
+                        className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
+                      >
+                        {demoLoading ? 'Submitting...' : 'Submit Demo'}
+                      </button>
+                      <span className="text-[10px] text-white/20 font-mono">Upload a video walkthrough or project documentation</span>
+                    </div>
+                  </form>
+                </div>
               )}
 
               {/* STAFF LINKS */}
@@ -1199,6 +1336,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                             {sub.payload.liveDemo}
                           </a>
                         </>
+                      )}
+                      {sub.payload?.description && (
+                        <div className="mt-3">
+                          <span className="text-[9px] text-white/20 uppercase font-mono block">Description</span>
+                          <p className="text-xs text-white/70 mt-1 leading-relaxed">{sub.payload.description}</p>
+                        </div>
                       )}
                       {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
@@ -1388,6 +1531,23 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                       placeholder="Loom / Google Drive Video URL"
                       className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
                     />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Describe what you built and any notable features or changes"
+                      maxLength={1000}
+                      rows={3}
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white/75 placeholder:text-white/15 resize-none"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
+                      <span>{editDescription.length} / 1000 chars</span>
+                      {editDescription.length > 0 && editDescription.length < 20 && (
+                        <span className="text-amber-400">min 20 chars</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
