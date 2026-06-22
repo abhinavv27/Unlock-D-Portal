@@ -642,17 +642,28 @@ export default function DashboardClient({ session, status, team: initialTeam, st
           {team.submissions && team.submissions.length > 0 && (
             <div className="w-full mt-12 space-y-6">
               <div className="flex items-center gap-4">
-                <h3 className="text-xl text-white/60 font-display uppercase tracking-wider">Approved Milestones</h3>
+                <h3 className="text-xl text-white/60 font-display uppercase tracking-wider">Milestone Submissions</h3>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {team.submissions.filter((s: any) => s.status === 'APPROVED').map((sub: any) => (
+                {team.submissions.filter((s: any) => s.status === 'APPROVED' || s.status === 'PENDING').map((sub: any) => (
                   <div key={sub.id} className="p-6 rounded-2xl glass-premium border border-white/5 flex flex-col justify-between gap-4 text-left">
                     <div>
                       <div className="flex justify-between items-center gap-3">
-                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
-                          {getFeatureLabel(sub.taskId)}
-                        </span>
+                        <div className="flex gap-2 items-center">
+                          <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider ${
+                            sub.status === 'APPROVED'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}>
+                            {getFeatureLabel(sub.taskId)}
+                          </span>
+                          {sub.status === 'PENDING' && (
+                            <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest animate-pulse">
+                              Pending Evaluation
+                            </span>
+                          )}
+                        </div>
                         {!sub.taskId.startsWith('FEATURE-') && (
                           <button
                             onClick={() => {
@@ -707,7 +718,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       </div>
 
                       <p className="text-xs text-white/50 mt-4 font-mono">
-                        Approved on {new Date(sub.submittedAt).toLocaleDateString()}
+                        {sub.status === 'APPROVED'
+                          ? `Approved on ${new Date(sub.submittedAt).toLocaleDateString()}`
+                          : `Submitted on ${new Date(sub.submittedAt).toLocaleDateString()} (Awaiting Evaluation)`}
                       </p>
                       {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
                         <div className="text-[9px] text-white/30 font-mono mt-2 flex items-center gap-1.5">
