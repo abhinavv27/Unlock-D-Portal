@@ -664,7 +664,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                             </span>
                           )}
                         </div>
-                        {!sub.taskId.startsWith('FEATURE-') && (
+                        {!sub.taskId.startsWith('FEATURE-') && sub.taskId !== 'FINAL-SUBMISSION' && (
                           <button
                             onClick={() => {
                               setEditingSubmission(sub)
@@ -1312,7 +1312,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         <span className="text-[10px] text-white/30 font-mono">
                           Submitted on {new Date(sub.submittedAt).toLocaleString()}
                         </span>
-                        {!sub.taskId.startsWith('FEATURE-') && (
+                        {!sub.taskId.startsWith('FEATURE-') && sub.taskId !== 'FINAL-SUBMISSION' && (
                           <button
                             onClick={() => {
                               setEditingSubmission(sub)

@@ -51,7 +51,7 @@ export const teamsRouter = createTRPCRouter({
       })
 
       if (existingSubmission) {
-        if (targetTaskId.startsWith('FEATURE-')) {
+        if (targetTaskId.startsWith('FEATURE-') || targetTaskId === 'FINAL-SUBMISSION') {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Editing feature submissions is not allowed.',
