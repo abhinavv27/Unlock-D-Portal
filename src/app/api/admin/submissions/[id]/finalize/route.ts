@@ -77,7 +77,7 @@ export async function POST(
     let finalStatus: 'APPROVED' | 'REJECTED'
     let rejectionReason: string | null = null
 
-    if (submission.taskId === 'FEATURE-1') {
+    if (submission.taskId.startsWith('FEATURE-') || submission.taskId === 'FINAL-FEATURE') {
       finalStatus = 'APPROVED'
     } else {
       if (averageScore >= passingThresholdScore) {
