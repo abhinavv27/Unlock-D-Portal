@@ -152,18 +152,16 @@ export async function POST(request: Request) {
       const eventConfig = submission.registration.event.config as any
       const roadmap = eventConfig?.roadmap || []
       const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
-
+      
       let rubric = stepObj?.rubric || ['functionality', 'code_quality']
-      if (submission.taskId === 'FINAL-SUBMISSION') {
+      if (submission.taskId.startsWith('FEATURE-') || submission.taskId === 'FINAL-FEATURE') {
+        const featureNum = submission.taskId === 'FINAL-FEATURE' ? 'final' : submission.taskId.split('-')[1]
         rubric = [
-          'feature_1_functionality', 'feature_1_code_quality',
-          'feature_2_functionality', 'feature_2_code_quality',
-          'feature_3_functionality', 'feature_3_code_quality',
-          'feature_4_functionality', 'feature_4_code_quality',
-          'feature_5_functionality', 'feature_5_code_quality'
+          `feature_${featureNum}_functionality`,
+          `feature_${featureNum}_code_quality`,
         ]
       }
-
+      
       const maxScore = rubric.length * 10
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
@@ -171,11 +169,8 @@ export async function POST(request: Request) {
       let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
 
-      if (submission.taskId.startsWith('FEATURE-')) {
-        finalStatus = gradeStatus
-        if (finalStatus === 'REJECTED') {
-          rejectionReason = feedback || 'Changes requested by judge.'
-        }
+      if (submission.taskId === 'FEATURE-1') {
+        finalStatus = 'APPROVED'
       } else {
         if (averageScore >= passingThresholdScore) {
           finalStatus = 'APPROVED'
