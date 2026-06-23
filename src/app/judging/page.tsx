@@ -64,8 +64,8 @@ export default function JudgingPage() {
   const currentCriteria = useMemo(() => {
     if (!activeSubmission) return []
     const taskId = activeSubmission.taskId
-    if (taskId.startsWith('FEATURE-') || taskId === 'FINAL-FEATURE') {
-      const featureNum = taskId === 'FINAL-FEATURE' ? 'final' : taskId.split('-')[1]
+    if (taskId.startsWith('FEATURE-')) {
+      const featureNum = taskId.split('-')[1]
       return [
         { key: `feature_${featureNum}_functionality`, label: `Feature ${featureNum} Functionality`, desc: `Functionality of Feature ${featureNum} sprint`, max: 10 },
         { key: `feature_${featureNum}_code_quality`, label: `Feature ${featureNum} Code Quality`, desc: `Code Quality of Feature ${featureNum} sprint`, max: 10 },
@@ -84,8 +84,8 @@ export default function JudgingPage() {
 
   const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
     const taskId = sub.taskId
-    if (taskId.startsWith('FEATURE-') || taskId === 'FINAL-FEATURE') {
-      const featureNum = taskId === 'FINAL-FEATURE' ? 'final' : taskId.split('-')[1]
+    if (taskId.startsWith('FEATURE-')) {
+      const featureNum = taskId.split('-')[1]
       return {
         [`feature_${featureNum}_functionality`]: 8,
         [`feature_${featureNum}_code_quality`]: 8,
@@ -266,8 +266,8 @@ export default function JudgingPage() {
     if (myEval) {
       // Pre-populate with existing evaluation
       const breakdown = myEval.scoreBreakdown || {}
-      if (sub.taskId.startsWith('FEATURE-') || sub.taskId === 'FINAL-FEATURE') {
-        const featureNum = sub.taskId === 'FINAL-FEATURE' ? 'final' : sub.taskId.split('-')[1]
+      if (sub.taskId.startsWith('FEATURE-')) {
+        const featureNum = sub.taskId.split('-')[1]
         setScores({
           [`feature_${featureNum}_functionality`]: Number(breakdown[`feature_${featureNum}_functionality`]) || 0,
           [`feature_${featureNum}_code_quality`]: Number(breakdown[`feature_${featureNum}_code_quality`]) || 0,
@@ -740,7 +740,7 @@ export default function JudgingPage() {
                           {overall}
                         </span>
                         <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ {
-                          (activeSubmission?.taskId.startsWith('FEATURE-') || activeSubmission?.taskId === 'FINAL-FEATURE') ? currentCriteria.length * 10 : 100
+                          activeSubmission?.taskId.startsWith('FEATURE-') ? currentCriteria.length * 10 : 100
                         }</span>
                       </div>
                     </div>

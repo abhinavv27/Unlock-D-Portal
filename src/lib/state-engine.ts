@@ -5,6 +5,8 @@ const RoadmapStepSchema = z.object({
   step: z.number(),
   task_id: z.string(),
   round: z.number(),
+  title: z.string().optional(),
+  description: z.string().optional(),
 })
 
 const EventConfigSchema = z.object({
@@ -82,12 +84,35 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   }
 
   // 4. THE GLOBAL CEILING: Check if allowed round exceeds the current global ceiling
+  const originalAllowedRound = allowedRound
   if (allowedRound > event.currentGlobalRound) {
     allowedTaskId = 'WAITING_ROOM'
     allowedRound = event.currentGlobalRound
   }
 
-  // 5. Determine isPending: Set to false so teams can proceed immediately
+  // 5. Calculate waiting room and elimination metrics
+  const inWaitingRoom = originalAllowedRound > event.currentGlobalRound
+  const isEliminated = originalAllowedRound < event.currentGlobalRound
+
+  // 6. Determine task name and description from the roadmap
+  let allowedTaskName = ''
+  let allowedTaskDescription = ''
+  if (allowedTaskId === 'WAITING_ROOM') {
+    allowedTaskName = 'Waiting for Next Round'
+    allowedTaskDescription = 'All milestones submitted. Awaiting admin unlock to proceed.'
+  } else if (allowedTaskId === 'COMPLETED') {
+    allowedTaskName = 'Hackathon Completed'
+    allowedTaskDescription = 'Your team has completed all challenges. Congratulations!'
+  } else if (nextStepObj) {
+    allowedTaskName = nextStepObj.title || (nextStepObj.task_id.startsWith('FEATURE-')
+      ? `Feature ${nextStepObj.task_id.split('-')[1]}`
+      : nextStepObj.task_id === 'FINAL-FEATURE'
+        ? 'Final Feature'
+        : nextStepObj.task_id)
+    allowedTaskDescription = nextStepObj.description || ''
+  }
+
+  // 7. Determine isPending: Set to false so teams can proceed immediately
   const isPending = false
 
   return {
@@ -95,5 +120,9 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
     allowedRound,
     isPending,
     highestState: highestCompletedStep,
+    inWaitingRoom,
+    isEliminated,
+    allowedTaskName,
+    allowedTaskDescription,
   }
 }
