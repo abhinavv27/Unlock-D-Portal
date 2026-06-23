@@ -58,21 +58,15 @@ async function main() {
     total_rounds: 3,
     passing_threshold: 60,
     roadmap: [
-      { step: 1, task_id: 'ROUND-0', round: 0, rubric: ['setup'] },
-      { step: 2, task_id: 'FEATURE-1', round: 1, rubric: [] },
-      { step: 3, task_id: 'FEATURE-2', round: 1, rubric: [] },
-      { step: 4, task_id: 'FEATURE-3', round: 1, rubric: [] },
-      { step: 5, task_id: 'FEATURE-4', round: 1, rubric: [] },
-      { step: 6, task_id: 'FEATURE-5', round: 1, rubric: [] },
-      { step: 7, task_id: 'FINAL-SUBMISSION', round: 1, rubric: [
-        'feature_1_functionality', 'feature_1_code_quality',
-        'feature_2_functionality', 'feature_2_code_quality',
-        'feature_3_functionality', 'feature_3_code_quality',
-        'feature_4_functionality', 'feature_4_code_quality',
-        'feature_5_functionality', 'feature_5_code_quality'
-      ] },
-      { step: 8, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'] },
-      { step: 9, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'] },
+      { step: 1, task_id: 'ROUND-0', round: 0, rubric: ['setup'], title: 'System Setup & Comprehension', description: 'Familiarize yourself with the development environment and project requirements.' },
+      { step: 2, task_id: 'FEATURE-1', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 1 — Core Architecture', description: 'Design and implement the foundational architecture of your application, including database schema, API structure, and core business logic.' },
+      { step: 3, task_id: 'FEATURE-2', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 2 — User Interaction', description: 'Build user-facing features including authentication, onboarding flows, and interactive UI components.' },
+      { step: 4, task_id: 'FEATURE-3', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 3 — Data Integration', description: 'Implement data processing, third-party API integrations, and real-time data synchronization.' },
+      { step: 5, task_id: 'FEATURE-4', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 4 — Advanced Capabilities', description: 'Add advanced functionality such as search, filtering, notifications, and background job processing.' },
+      { step: 6, task_id: 'FEATURE-5', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 5 — Polish & Performance', description: 'Optimize application performance, add error handling, loading states, and refine the user experience.' },
+      { step: 7, task_id: 'FINAL-FEATURE', round: 1, rubric: ['functionality', 'code_quality'], title: 'Final Feature — Complete Integration', description: 'Integrate all features into a cohesive product. Ensure all components work together seamlessly end-to-end.' },
+      { step: 8, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'], title: 'Round 2 — UX & Innovation', description: 'Elevate the user experience with polished interfaces, innovative interactions, and comprehensive error handling.' },
+      { step: 9, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'], title: 'Round 3 — Presentation & Viability', description: 'Prepare your final pitch, demo the working product, and present business viability.' },
     ],
   }
 

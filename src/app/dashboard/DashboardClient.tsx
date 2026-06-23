@@ -11,7 +11,7 @@ import MentorTeamPanel from '@/components/MentorTeamPanel'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
-  if (taskId === 'FINAL-SUBMISSION') return 'Final Submission'
+  if (taskId === 'FINAL-FEATURE') return 'Final Feature'
   if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
   if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
   return taskId
@@ -30,17 +30,13 @@ interface DashboardClientProps {
   staff?: any
 }
 
-export default function DashboardClient({ session, status, team: initialTeam, staff }: DashboardClientProps) {
-  const { data: team } = api.teams.status.useQuery(undefined, {
-    initialData: initialTeam,
-    refetchInterval: 10000,
-  })
+export default function DashboardClient({ session, status, team, staff }: DashboardClientProps) {
   const submitMutation = api.teams.submit.useMutation()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const { scrollYProgress } = useScroll()
   const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"])
-
+  
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
@@ -55,14 +51,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  // Edit Submission states
-  const [editingSubmission, setEditingSubmission] = useState<any | null>(null)
-  const [editGithubUrl, setEditGithubUrl] = useState('')
-  const [editLiveDemoUrl, setEditLiveDemoUrl] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editLoading, setEditLoading] = useState(false)
-  const [editError, setEditError] = useState<string | null>(null)
-  const [editSuccess, setEditSuccess] = useState(false)
+
 
   // Round 3 states
   const [r3Entering, setR3Entering] = useState(false)
@@ -118,7 +107,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
   // Resolve config objects based on authentication status role
   let config = {
     label: status,
-    color: 'text-primary/80',
+    color: 'text-primary/80', 
     bg: 'bg-primary/10',
     border: 'border-primary/20',
     message: 'Welcome to your event workspace nexus.'
@@ -160,10 +149,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
 
   const handleWorkSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
+    
     const isRound1 = team?.allowedRound === 1
-    if (isRound1 && (!githubUrl.trim() || !liveDemoUrl.trim())) {
-      setSubmitError('Both GitHub repository and Drive video link are mandatory for Round 1.')
+    if (isRound1 && !liveDemoUrl.trim()) {
+      setSubmitError('Drive video link is mandatory for Stage 1.')
       return
     }
 
@@ -200,48 +189,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
     }
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingSubmission) return
 
-    const isRound1 = editingSubmission.roundNumber === 1
-    if (isRound1 && (!editGithubUrl.trim() || !editLiveDemoUrl.trim())) {
-      setEditError('Both GitHub repository and Drive video link are mandatory for Round 1.')
-      return
-    }
-
-    if (!editGithubUrl.trim() && !editLiveDemoUrl.trim()) {
-      setEditError('At least one URL (GitHub or Live Demo) must be provided.')
-      return
-    }
-
-    if (editDescription.trim() && editDescription.trim().length < 20) {
-      setEditError('Description must be at least 20 characters.')
-      return
-    }
-
-    setEditLoading(true)
-    setEditError(null)
-    setEditSuccess(false)
-
-    try {
-      await submitMutation.mutateAsync({
-        githubUrl: editGithubUrl.trim(),
-        liveDemoUrl: editLiveDemoUrl.trim(),
-        description: editDescription.trim(),
-        taskId: editingSubmission.taskId,
-      })
-
-      setEditSuccess(true)
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
-    } catch (err: any) {
-      setEditError(err.message || 'An unexpected error occurred.')
-    } finally {
-      setEditLoading(false)
-    }
-  }
 
   const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -282,7 +230,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
   const hasPending = team?.submissions?.some((sub: any) => sub.status === 'PENDING')
 
   // Extract stage data from event config for roadmap
-  const stages: { stage: number; name: string; pointsRequired: number }[] = (team?.event?.config as any)?.stages || []
+  const stages: { stage: number; name: string; pointsRequired: number }[] = team?.event?.config?.stages || []
   const currentStageNum: number = team?.progressState?.current_stage !== undefined ? team.progressState.current_stage : 0
   const currentStage = stages.find(s => s.stage === currentStageNum) || null
 
@@ -481,7 +429,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       Judge <strong className="text-white/80">{demoCall.judgeName}</strong> has called your team. Join the meeting now:
                     </p>
                     <a
-                      href={demoCall.meetingLink || undefined}
+                      href={demoCall.meetingLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block w-full py-4 rounded-xl bg-emerald-500 text-black text-sm font-black uppercase tracking-wider text-center shadow-2xl shadow-emerald-500/30 hover:bg-emerald-400 hover:shadow-emerald-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -525,13 +473,14 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   </div>
                   <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
                     <span className="text-[9px] text-white/30 font-mono uppercase block">Status</span>
-                    <span className={`text-xs font-bold mt-2 block uppercase tracking-wider ${demoCall?.status === 'COMPLETED' ? 'text-emerald-400'
-                        : demoCall?.status === 'CALLED' ? 'text-emerald-400'
-                          : 'text-amber-400'
-                      }`}>
+                    <span className={`text-xs font-bold mt-2 block uppercase tracking-wider ${
+                      demoCall?.status === 'COMPLETED' ? 'text-emerald-400'
+                      : demoCall?.status === 'CALLED' ? 'text-emerald-400'
+                      : 'text-amber-400'
+                    }`}>
                       {demoCall?.status === 'COMPLETED' ? 'Finished'
                         : demoCall?.status === 'CALLED' ? 'In Call'
-                          : 'Queued'}
+                        : 'Queued'}
                     </span>
                   </div>
                 </div>
@@ -562,7 +511,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
     return (
       <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
         {/* Background Layer */}
-        <motion.div
+        <motion.div 
           style={{ y: backgroundY }}
           className="fixed inset-0 pointer-events-none z-0"
         >
@@ -623,13 +572,13 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">
-              <button
+              <button 
                 onClick={() => window.location.reload()}
                 className="btn-vibrant !py-3 !px-8 text-xs font-semibold rounded-xl"
               >
                 🔄 Refresh Status
               </button>
-              <button
+              <button 
                 onClick={handleLogout}
                 className="btn-ghost !py-3 !px-8 text-xs font-semibold rounded-xl border-white/10 hover:border-white/20"
               >
@@ -650,32 +599,13 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   <div key={sub.id} className="p-6 rounded-2xl glass-premium border border-white/5 flex flex-col justify-between gap-4 text-left">
                     <div>
                       <div className="flex justify-between items-center gap-3">
-                        <div className="flex gap-2 items-center">
-                          <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider ${
-                            sub.status === 'APPROVED'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}>
-                            {getFeatureLabel(sub.taskId)}
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider border ${sub.status === 'PENDING' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                          {getFeatureLabel(sub.taskId)}
+                        </span>
+                        {sub.status === 'PENDING' && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[8px] font-mono tracking-widest border border-amber-500/20 uppercase animate-pulse">
+                            Pending Evaluation
                           </span>
-                          {sub.status === 'PENDING' && (
-                            <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest animate-pulse">
-                              Pending Evaluation
-                            </span>
-                          )}
-                        </div>
-                        {!sub.taskId.startsWith('FEATURE-') && sub.taskId !== 'FINAL-SUBMISSION' && (
-                          <button
-                            onClick={() => {
-                              setEditingSubmission(sub)
-                              setEditGithubUrl(sub.payload?.github || '')
-                              setEditLiveDemoUrl(sub.payload?.liveDemo || '')
-                              setEditDescription(sub.payload?.description || '')
-                            }}
-                            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
-                          >
-                            ✏️ Edit Submission
-                          </button>
                         )}
                       </div>
 
@@ -684,10 +614,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         {sub.payload?.github && (
                           <div>
                             <span className="text-[9px] text-white/20 uppercase font-mono block">GitHub Repository</span>
-                            <a
-                              href={sub.payload.github}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <a 
+                              href={sub.payload.github} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
                               className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                             >
                               {sub.payload.github}
@@ -697,10 +627,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         {sub.payload?.liveDemo && (
                           <div>
                             <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Live Demo / Video</span>
-                            <a
-                              href={sub.payload.liveDemo}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <a 
+                              href={sub.payload.liveDemo} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
                               className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                             >
                               {sub.payload.liveDemo}
@@ -708,11 +638,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                           </div>
                         )}
                         {sub.payload?.description && (
-                          <div>
-                            <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Description</span>
-                            <div className="text-xs text-white/70 font-mono whitespace-pre-wrap bg-white/[0.02] border border-white/5 rounded-xl p-3 mt-1">
-                              {sub.payload.description}
-                            </div>
+                          <div className="mt-3">
+                            <span className="text-[9px] text-white/20 uppercase font-mono block">Description</span>
+                            <p className="text-xs text-white/70 mt-1 leading-relaxed">{sub.payload.description}</p>
                           </div>
                         )}
                       </div>
@@ -761,123 +689,16 @@ export default function DashboardClient({ session, status, team: initialTeam, st
           )}
         </div>
 
-        {/* Edit Submission Modal */}
-        <AnimatePresence>
-          {editingSubmission && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setEditingSubmission(null)}
-                className="absolute inset-0 bg-black/85 backdrop-blur-md"
-              />
 
-              {/* Modal Content */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="w-full max-w-lg bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 overflow-hidden text-white text-left"
-              >
-                <div className="absolute top-0 right-0 p-4">
-                  <button
-                    onClick={() => setEditingSubmission(null)}
-                    className="text-white/40 hover:text-white text-xl cursor-pointer"
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                <div>
-                  <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-mono tracking-widest uppercase">
-                    Resubmit {getFeatureLabel(editingSubmission.taskId)}
-                  </span>
-                  <h3 className="text-2xl font-display font-medium text-white mt-3 uppercase tracking-tight">
-                    Update Submission &amp; Entry Details
-                  </h3>
-                  <p className="text-[11px] text-white/50 leading-relaxed mt-1 font-mono">
-                    Modifying your submission will replace the existing one and reset any current evaluations/grades for this milestone.
-                  </p>
-                </div>
-
-                <form onSubmit={handleEditSubmit} className="space-y-4">
-                  {editError && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                      {editError}
-                    </div>
-                  )}
-                  {editSuccess && (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                      Submission updated successfully! Refreshing...
-                    </div>
-                  )}
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">
-                        GitHub Link {editingSubmission.roundNumber === 1 && <span className="text-rose-400 font-bold">*</span>}
-                      </label>
-                      <input
-                        type="url"
-                        value={editGithubUrl}
-                        onChange={(e) => setEditGithubUrl(e.target.value)}
-                        placeholder="GitHub Commit / Repository URL"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">
-                        Live Demo / Loom Link {editingSubmission.roundNumber === 1 && <span className="text-rose-400 font-bold">*</span>}
-                      </label>
-                      <input
-                        type="url"
-                        value={editLiveDemoUrl}
-                        onChange={(e) => setEditLiveDemoUrl(e.target.value)}
-                        placeholder="Loom / Google Drive Video URL"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
-                      <textarea
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        placeholder="Describe what you built and any notable features or changes"
-                        maxLength={1000}
-                        rows={3}
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white/75 placeholder:text-white/15 resize-none"
-                      />
-                      <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
-                        <span>{editDescription.length} / 1000 chars</span>
-                        {editDescription.length > 0 && editDescription.length < 20 && (
-                          <span className="text-amber-400">min 20 chars</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={editLoading}
-                    className="w-full btn-vibrant !py-3.5 text-xs font-semibold rounded-xl mt-4"
-                  >
-                    {editLoading ? 'Updating Submission...' : 'Save & Update Submission'}
-                  </button>
-                </form>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </main>
     )
   }
 
   return (
     <main className="min-h-screen bg-[oklch(var(--background))] selection:bg-primary selection:text-white overflow-x-hidden relative font-sans text-white">
-
+      
       {/* Background Layer */}
-      <motion.div
+      <motion.div 
         style={{ y: backgroundY }}
         className="fixed inset-0 pointer-events-none z-0"
       >
@@ -890,7 +711,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
       </motion.div>
 
       {/* Progress Bar */}
-      <motion.div
+      <motion.div 
         className="fixed top-0 left-0 right-0 h-[3px] bg-primary z-[100] origin-left"
         style={{ scaleX }}
       />
@@ -899,7 +720,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
       <Navbar session={session as any} />
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-28 md:pt-48 lg:pt-56 pb-16 md:pb-32 relative z-10">
-
+        
         {/* Header Section */}
         <section className="mb-16 md:mb-32">
           <motion.div
@@ -915,7 +736,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   {session.user.name?.split(' ')[0] || 'GUEST'}.
                 </span>
               </h1>
-              <button
+              <button 
                 onClick={handleLogout}
                 className="btn-ghost !py-2.5 !px-6 !rounded-full text-xs font-mono tracking-widest hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 transition-all duration-300"
               >
@@ -923,7 +744,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
               </button>
             </div>
             <p className="text-lg md:text-2xl text-editorial max-w-3xl text-white/70">
-              {team
+              {team 
                 ? `You are connected as a team member of "${team.teamName}" under event "${team.event.name}".`
                 : `You are connected to the administrator panel. Monitor the event, check entries, and execute grading protocols.`}
             </p>
@@ -951,26 +772,29 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   return (
                     <div key={stage.stage} className="flex-1 relative">
                       <div className="flex flex-col items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 ${isCompleted
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all duration-500 ${
+                          isCompleted
                             ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(52,211,153,0.3)]'
                             : isCurrent
                               ? 'bg-primary text-black shadow-[0_0_20px_rgba(109,40,217,0.4)] ring-2 ring-primary/50'
                               : 'bg-white/5 text-white/20 border border-white/10'
-                          }`}>
+                        }`}>
                           {isCompleted ? '✓' : stage.stage}
                         </div>
-                        <span className={`mt-3 text-[9px] font-black text-center uppercase tracking-[0.15em] leading-relaxed max-w-[90px] ${isCompleted
+                        <span className={`mt-3 text-[9px] font-black text-center uppercase tracking-[0.15em] leading-relaxed max-w-[90px] ${
+                          isCompleted
                             ? 'text-emerald-400/80'
                             : isCurrent
                               ? 'text-white'
                               : 'text-white/20'
-                          }`}>
+                        }`}>
                           {stage.name}
                         </span>
                       </div>
                       {idx < stages.length - 1 && (
-                        <div className={`absolute top-5 left-[60%] w-[80%] h-[2px] -translate-y-1/2 ${isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'
-                          }`} />
+                        <div className={`absolute top-5 left-[60%] w-[80%] h-[2px] -translate-y-1/2 ${
+                          isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'
+                        }`} />
                       )}
                     </div>
                   )
@@ -982,9 +806,9 @@ export default function DashboardClient({ session, status, team: initialTeam, st
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-20 md:mb-32">
-
+          
           {/* Status & Action Card */}
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
@@ -999,7 +823,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
               <h2 className={`text-6xl md:text-8xl lg:text-[90px] text-stat mb-6 ${config.color} leading-none`}>
                 {config.label}
               </h2>
-
+              
               <p className="text-lg md:text-2xl text-editorial leading-snug max-w-2xl text-white/70">
                 {config.message}
               </p>
@@ -1040,16 +864,25 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                 </div>
               ) : (
                 <>
-                  {/* Current Objective */}
-                  {team && currentStage && (
-                    <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-white/[0.03] border border-white/5">
-                      <span className="text-[9px] text-white/30 uppercase font-mono tracking-widest">Current Objective</span>
-                      <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-2">
-                        {currentStage.name}
-                      </h3>
-                      <p className="text-sm text-white/50 mt-1">
-                        Round {currentStageNum} — {currentStage.pointsRequired} points required to advance
-                      </p>
+                  {/* Dynamic Active Task Card */}
+                  {team && (
+                    <div className="mt-10 md:mt-14 space-y-4">
+                      <div className="p-6 rounded-2xl bg-primary/[0.03] border border-primary/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] pointer-events-none" />
+                        <div className="relative z-10">
+                          <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-mono tracking-widest border border-primary/20 uppercase">
+                            Active Milestone
+                          </span>
+                          <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-3">
+                            {team.allowedTaskName || 'No Active Task'}
+                          </h3>
+                          {team.allowedTaskDescription && (
+                            <p className="text-sm text-white/50 mt-2 max-w-2xl leading-relaxed">
+                              {team.allowedTaskDescription}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -1057,7 +890,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                   {team && (
                     <div className="mt-10 md:mt-14 pt-10 border-t border-white/5">
                       <h3 className="text-xl md:text-2xl font-display font-medium text-white mb-6">Submit Round Progress</h3>
-
+                      
                       {/* Rejected submission feedback + resubmit prompt */}
                       {lastRejected && lastRejected.evaluation && !hasPending && (
                         <div className="mb-6 p-5 rounded-2xl bg-rose-500/5 border border-rose-500/15">
@@ -1095,7 +928,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                               type="url"
                               value={githubUrl}
                               onChange={(e) => setGithubUrl(e.target.value)}
-                              placeholder={team?.allowedRound === 1 ? "GitHub Submission Link (Mandatory)" : "GitHub Commit / Repository URL"}
+                              placeholder={team?.allowedRound === 1 ? "GitHub Submission Link" : "GitHub Commit / Repository URL"}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
                             <input
@@ -1123,14 +956,14 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
                               type="submit"
-                              disabled={loading || (team?.allowedRound === 1 ? (!githubUrl.trim() || !liveDemoUrl.trim()) : (!githubUrl.trim() && !liveDemoUrl.trim()))}
+                              disabled={loading || (team?.allowedRound === 1 ? !liveDemoUrl.trim() : (!githubUrl.trim() && !liveDemoUrl.trim()))}
                               className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
                             >
                               {loading ? 'Submitting...' : 'Submit Entry'}
                             </button>
                             <span className="text-[10px] text-white/20 font-mono">
-                              {team?.allowedRound === 1
-                                ? "Provide your mandatory GitHub repository link and drive demo video URL"
+                              {team?.allowedRound === 1 
+                                ? "Provide your GitHub repository link and mandatory drive demo video URL" 
                                 : "Provide your code repository and working demo video URL"}
                             </span>
                           </div>
@@ -1202,7 +1035,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             {team ? (
               <>
                 {/* Event Cumulative Score */}
-                <motion.div
+                <motion.div 
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
@@ -1221,7 +1054,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                 </motion.div>
 
                 {/* Team Info Code */}
-                <motion.div
+                <motion.div 
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
@@ -1246,7 +1079,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             ) : (
               <>
                 {/* Staff metrics card */}
-                <motion.div
+                <motion.div 
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
@@ -1295,8 +1128,8 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                 if (isRejected) statusBadgeColor = 'text-rose-400 bg-rose-400/5 border-rose-400/10'
 
                 return (
-                  <div
-                    key={sub.id}
+                  <div 
+                    key={sub.id} 
                     className="p-6 rounded-2xl glass-premium border border-white/5 hover:border-white/10 transition-all duration-300 relative group overflow-hidden"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -1312,19 +1145,6 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         <span className="text-[10px] text-white/30 font-mono">
                           Submitted on {new Date(sub.submittedAt).toLocaleString()}
                         </span>
-                        {!sub.taskId.startsWith('FEATURE-') && sub.taskId !== 'FINAL-SUBMISSION' && (
-                          <button
-                            onClick={() => {
-                              setEditingSubmission(sub)
-                              setEditGithubUrl(sub.payload?.github || '')
-                              setEditLiveDemoUrl(sub.payload?.liveDemo || '')
-                              setEditDescription(sub.payload?.description || '')
-                            }}
-                            className="px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/80 hover:text-white text-[9px] font-mono tracking-wider uppercase cursor-pointer transition-all"
-                          >
-                            ✏️ Edit Submission
-                          </button>
-                        )}
                       </div>
                       {sub.evaluation && (
                         <div className="text-right">
@@ -1338,10 +1158,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       {sub.payload?.github && (
                         <>
                           <span className="text-[9px] text-white/20 uppercase font-mono block">GitHub Repository</span>
-                          <a
-                            href={sub.payload.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <a 
+                            href={sub.payload.github} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
                             className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                           >
                             {sub.payload.github}
@@ -1351,10 +1171,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                       {sub.payload?.liveDemo && (
                         <>
                           <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Live Demo</span>
-                          <a
-                            href={sub.payload.liveDemo}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <a 
+                            href={sub.payload.liveDemo} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
                             className="text-xs text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors block"
                           >
                             {sub.payload.liveDemo}
@@ -1362,12 +1182,10 @@ export default function DashboardClient({ session, status, team: initialTeam, st
                         </>
                       )}
                       {sub.payload?.description && (
-                        <>
-                          <span className="text-[9px] text-white/20 uppercase font-mono block mt-2">Description</span>
-                          <div className="text-xs text-white/70 font-mono whitespace-pre-wrap bg-white/[0.02] border border-white/5 rounded-xl p-3 mt-1">
-                            {sub.payload.description}
-                          </div>
-                        </>
+                        <div className="mt-3">
+                          <span className="text-[9px] text-white/20 uppercase font-mono block">Description</span>
+                          <p className="text-xs text-white/70 mt-1 leading-relaxed">{sub.payload.description}</p>
+                        </div>
                       )}
                       {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
@@ -1436,7 +1254,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
             <div className="flex-1 h-px bg-white/10 hidden md:block" />
             <div className="text-micro text-[10px]">Quick Links</div>
           </div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {[
               { title: 'Timeline', desc: 'View the full event schedule', href: '/schedule', icon: '⚡' },
@@ -1485,110 +1303,7 @@ export default function DashboardClient({ session, status, team: initialTeam, st
         </div>
       </footer>
 
-      {/* Edit Submission Modal */}
-      <AnimatePresence>
-        {editingSubmission && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setEditingSubmission(null)}
-              className="absolute inset-0 bg-black/85 backdrop-blur-md"
-            />
 
-            {/* Modal Content */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-lg bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 overflow-hidden text-white"
-            >
-              <div className="absolute top-0 right-0 p-4">
-                <button
-                  onClick={() => setEditingSubmission(null)}
-                  className="text-white/40 hover:text-white text-xl cursor-pointer"
-                >
-                  &times;
-                </button>
-              </div>
-
-              <div>
-                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-mono tracking-widest uppercase">
-                  Resubmit {getFeatureLabel(editingSubmission.taskId)}
-                </span>
-                <h3 className="text-2xl font-display font-medium text-white mt-3 uppercase tracking-tight">
-                  Update Submission &amp; Entry Details
-                </h3>
-                <p className="text-[11px] text-white/50 leading-relaxed mt-1 font-mono">
-                  Modifying your submission will replace the existing one and reset any current evaluations/grades for this milestone.
-                </p>
-              </div>
-
-              <form onSubmit={handleEditSubmit} className="space-y-4">
-                {editError && (
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                    {editError}
-                  </div>
-                )}
-                {editSuccess && (
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                    Submission updated successfully! Refreshing...
-                  </div>
-                )}
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">GitHub Link</label>
-                    <input
-                      type="url"
-                      value={editGithubUrl}
-                      onChange={(e) => setEditGithubUrl(e.target.value)}
-                      placeholder="GitHub Commit / Repository URL"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Live Demo / Loom Link</label>
-                    <input
-                      type="url"
-                      value={editLiveDemoUrl}
-                      onChange={(e) => setEditLiveDemoUrl(e.target.value)}
-                      placeholder="Loom / Google Drive Video URL"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
-                    <textarea
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      placeholder="Describe what you built and any notable features or changes"
-                      maxLength={1000}
-                      rows={3}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white/75 placeholder:text-white/15 resize-none"
-                    />
-                    <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
-                      <span>{editDescription.length} / 1000 chars</span>
-                      {editDescription.length > 0 && editDescription.length < 20 && (
-                        <span className="text-amber-400">min 20 chars</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="w-full btn-vibrant !py-3.5 text-xs font-semibold rounded-xl mt-4"
-                >
-                  {editLoading ? 'Updating Submission...' : 'Save & Update Submission'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </main>
   )
 }

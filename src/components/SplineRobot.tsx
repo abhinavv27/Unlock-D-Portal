@@ -26,76 +26,35 @@ export default function SplineRobot({ onLoad, onError, hideLocalLoader = false }
     if (isLoading) return;
 
     const hideSplineUI = () => {
-      const selectors = [
-        '.spline-watermark',
-        '[class*="spline-watermark"]',
-        '[data-splinetool-ui]',
-        '.spline-ui-overlay',
-        '[class*="spline-ui"]',
-        '[class*="spline-button"]',
-        '[class*="spline-cta"]',
-        '[class*="get-in-touch"]',
-        '[class*="contact-button"]',
-        '[class*="spline-contact"]',
-        'a[href*="spline.design"]',
-        '.spline-logo',
-        '[class*="watermark"]',
-      ];
-
-      selectors.forEach(selector => {
-        try {
-          const elements = document.querySelectorAll(selector);
-          elements.forEach(el => {
-            const htmlEl = el as HTMLElement;
-            htmlEl.style.display = 'none';
-            htmlEl.style.visibility = 'hidden';
-            htmlEl.style.opacity = '0';
-            htmlEl.style.pointerEvents = 'none';
-            htmlEl.setAttribute('aria-hidden', 'true');
-          });
-        } catch (e) {}
-      });
-
-      const allElements = document.querySelectorAll('div, span, a, button, p');
-      allElements.forEach(el => {
-        const text = el.textContent?.toLowerCase() || '';
-        if (
-          text.includes('get in touch') || 
-          text.includes('contact us') || 
-          text.includes('spline.design') ||
-          text.includes('powered by spline')
-        ) {
-          const htmlEl = el as HTMLElement;
-          htmlEl.style.display = 'none';
-          htmlEl.style.visibility = 'hidden';
-          htmlEl.style.opacity = '0';
-          htmlEl.style.pointerEvents = 'none';
-        }
-      });
-
-      const bottomElements = document.querySelectorAll('div[style*="bottom"], div[style*="Bottom"]');
-      bottomElements.forEach(el => {
-        const htmlEl = el as HTMLElement;
-        const rect = el.getBoundingClientRect();
-        if (rect.bottom > window.innerHeight - 100 && rect.height < 200) {
-          htmlEl.style.display = 'none';
-          htmlEl.style.visibility = 'hidden';
-          htmlEl.style.opacity = '0';
-          htmlEl.style.pointerEvents = 'none';
-        }
-      });
+      // Inject global styles to aggressively hide Spline watermarks and UI
+      if (!document.getElementById('spline-override-styles')) {
+        const style = document.createElement('style');
+        style.id = 'spline-override-styles';
+        style.textContent = `
+          .spline-watermark,
+          [class*="spline-watermark"],
+          [data-splinetool-ui],
+          .spline-ui-overlay,
+          [class*="spline-ui"],
+          [class*="spline-button"],
+          [class*="spline-cta"],
+          [class*="get-in-touch"],
+          [class*="contact-button"],
+          [class*="spline-contact"],
+          a[href*="spline.design"],
+          .spline-logo,
+          [class*="watermark"] {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
     };
 
     hideSplineUI();
-
-    const interval = setInterval(hideSplineUI, 50);
-
-    const observer = new MutationObserver(hideSplineUI);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-    });
 
     const canvas = containerRef.current?.querySelector('canvas');
     if (canvas) {
@@ -108,15 +67,15 @@ export default function SplineRobot({ onLoad, onError, hideLocalLoader = false }
     }
 
     return () => {
-      clearInterval(interval);
-      observer.disconnect();
+      const styleEl = document.getElementById('spline-override-styles');
+      if (styleEl) styleEl.remove();
     };
   }, [isLoading, isLowEnd]);
 
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 w-full h-full pointer-events-auto z-[5]"
+      className="fixed inset-0 w-full h-full pointer-events-none z-[5]"
       style={{ 
         willChange: 'transform',
         transform: 'translateZ(0)',
