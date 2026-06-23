@@ -17,6 +17,7 @@ export function Navbar({ session }: NavbarProps) {
   const pathname = usePathname()
   
   const navLinks = [
+    { label: 'Leaderboard', href: '/leaderboard' },
     { label: 'Schedule', href: '/schedule' },
     { label: 'Resources', href: 'https://www.ieeerasmuj.com/unlockd/resources', external: true },
   ]
