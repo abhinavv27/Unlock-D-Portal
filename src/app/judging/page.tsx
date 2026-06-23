@@ -9,7 +9,7 @@ import sliderStyles from './JudgeSlider.module.css'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
-  if (taskId === 'FINAL-SUBMISSION') return 'Final Submission'
+  if (taskId === 'FINAL-FEATURE') return 'Final Feature'
   if (taskId.startsWith('FEATURE-')) return `Feature ${taskId.split('-')[1]}`
   if (taskId.startsWith('ROUND-')) return `Round ${taskId.split('-')[1]}`
   return taskId
@@ -64,21 +64,11 @@ export default function JudgingPage() {
   const currentCriteria = useMemo(() => {
     if (!activeSubmission) return []
     const taskId = activeSubmission.taskId
-    if (taskId.startsWith('FEATURE-')) {
-      return []
-    }
-    if (taskId === 'FINAL-SUBMISSION') {
+    if (taskId.startsWith('FEATURE-') || taskId === 'FINAL-FEATURE') {
+      const featureNum = taskId === 'FINAL-FEATURE' ? 'final' : taskId.split('-')[1]
       return [
-        { key: 'feature_1_functionality', label: 'Feature 1 Functionality', desc: 'Functionality of Feature 1 sprint', max: 10 },
-        { key: 'feature_1_code_quality', label: 'Feature 1 Code Quality', desc: 'Code Quality of Feature 1 sprint', max: 10 },
-        { key: 'feature_2_functionality', label: 'Feature 2 Functionality', desc: 'Functionality of Feature 2 sprint', max: 10 },
-        { key: 'feature_2_code_quality', label: 'Feature 2 Code Quality', desc: 'Code Quality of Feature 2 sprint', max: 10 },
-        { key: 'feature_3_functionality', label: 'Feature 3 Functionality', desc: 'Functionality of Feature 3 sprint', max: 10 },
-        { key: 'feature_3_code_quality', label: 'Feature 3 Code Quality', desc: 'Code Quality of Feature 3 sprint', max: 10 },
-        { key: 'feature_4_functionality', label: 'Feature 4 Functionality', desc: 'Functionality of Feature 4 sprint', max: 10 },
-        { key: 'feature_4_code_quality', label: 'Feature 4 Code Quality', desc: 'Code Quality of Feature 4 sprint', max: 10 },
-        { key: 'feature_5_functionality', label: 'Feature 5 Functionality', desc: 'Functionality of Feature 5 sprint', max: 10 },
-        { key: 'feature_5_code_quality', label: 'Feature 5 Code Quality', desc: 'Code Quality of Feature 5 sprint', max: 10 },
+        { key: `feature_${featureNum}_functionality`, label: `Feature ${featureNum} Functionality`, desc: `Functionality of Feature ${featureNum} sprint`, max: 10 },
+        { key: `feature_${featureNum}_code_quality`, label: `Feature ${featureNum} Code Quality`, desc: `Code Quality of Feature ${featureNum} sprint`, max: 10 },
       ]
     }
     return [
@@ -94,21 +84,11 @@ export default function JudgingPage() {
 
   const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
     const taskId = sub.taskId
-    if (taskId.startsWith('FEATURE-')) {
-      return {}
-    }
-    if (taskId === 'FINAL-SUBMISSION') {
+    if (taskId.startsWith('FEATURE-') || taskId === 'FINAL-FEATURE') {
+      const featureNum = taskId === 'FINAL-FEATURE' ? 'final' : taskId.split('-')[1]
       return {
-        feature_1_functionality: 8,
-        feature_1_code_quality: 8,
-        feature_2_functionality: 8,
-        feature_2_code_quality: 8,
-        feature_3_functionality: 8,
-        feature_3_code_quality: 8,
-        feature_4_functionality: 8,
-        feature_4_code_quality: 8,
-        feature_5_functionality: 8,
-        feature_5_code_quality: 8,
+        [`feature_${featureNum}_functionality`]: 8,
+        [`feature_${featureNum}_code_quality`]: 8,
       }
     }
     return { ...INITIAL_SCORES }
@@ -128,18 +108,6 @@ export default function JudgingPage() {
   const [currentGlobalRound, setCurrentGlobalRound] = useState(1)
   const [teamSearch, setTeamSearch] = useState('')
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
-
-  // Filters
-  const [filterTask, setFilterTask] = useState<string>('ALL')
-  const [filterStatus, setFilterStatus] = useState<string>('ALL')
-
-  const filteredQueue = useMemo(() => {
-    return queue.filter((sub) => {
-      const matchTask = filterTask === 'ALL' || sub.taskId === filterTask
-      const matchStatus = filterStatus === 'ALL' || sub.status === filterStatus
-      return matchTask && matchStatus
-    })
-  }, [queue, filterTask, filterStatus])
 
   // Current logged in user info
   const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
@@ -269,28 +237,10 @@ export default function JudgingPage() {
   }, [currentCriteria, scores])
 
   const filteredTeams = useMemo(() => {
-    let result = teamLogs
-
-    if (teamSearch.trim()) {
-      const q = teamSearch.toLowerCase()
-      result = result.filter((t: any) => t.teamName.toLowerCase().includes(q))
-    }
-
-    if (filterTask === 'ALL' && filterStatus === 'ALL') {
-      return result
-    }
-
-    return result
-      .map((team: any) => {
-        const matchedSubs = team.submissions.filter((sub: any) => {
-          const matchTask = filterTask === 'ALL' || sub.taskId === filterTask
-          const matchStatus = filterStatus === 'ALL' || sub.status === filterStatus
-          return matchTask && matchStatus
-        })
-        return { ...team, submissions: matchedSubs }
-      })
-      .filter((team: any) => team.submissions.length > 0)
-  }, [teamLogs, teamSearch, filterTask, filterStatus])
+    if (!teamSearch.trim()) return teamLogs
+    const q = teamSearch.toLowerCase()
+    return teamLogs.filter((t: any) => t.teamName.toLowerCase().includes(q))
+  }, [teamLogs, teamSearch])
 
   // Helper: get current judge's userId
   const getStaffUserId = useCallback(() => {
@@ -316,21 +266,12 @@ export default function JudgingPage() {
     if (myEval) {
       // Pre-populate with existing evaluation
       const breakdown = myEval.scoreBreakdown || {}
-      if (sub.taskId === 'FINAL-SUBMISSION') {
+      if (sub.taskId.startsWith('FEATURE-') || sub.taskId === 'FINAL-FEATURE') {
+        const featureNum = sub.taskId === 'FINAL-FEATURE' ? 'final' : sub.taskId.split('-')[1]
         setScores({
-          feature_1_functionality: Number(breakdown.feature_1_functionality) || 0,
-          feature_1_code_quality: Number(breakdown.feature_1_code_quality) || 0,
-          feature_2_functionality: Number(breakdown.feature_2_functionality) || 0,
-          feature_2_code_quality: Number(breakdown.feature_2_code_quality) || 0,
-          feature_3_functionality: Number(breakdown.feature_3_functionality) || 0,
-          feature_3_code_quality: Number(breakdown.feature_3_code_quality) || 0,
-          feature_4_functionality: Number(breakdown.feature_4_functionality) || 0,
-          feature_4_code_quality: Number(breakdown.feature_4_code_quality) || 0,
-          feature_5_functionality: Number(breakdown.feature_5_functionality) || 0,
-          feature_5_code_quality: Number(breakdown.feature_5_code_quality) || 0,
+          [`feature_${featureNum}_functionality`]: Number(breakdown[`feature_${featureNum}_functionality`]) || 0,
+          [`feature_${featureNum}_code_quality`]: Number(breakdown[`feature_${featureNum}_code_quality`]) || 0,
         })
-      } else if (sub.taskId.startsWith('FEATURE-')) {
-        setScores({})
       } else {
         setScores({
           functionality: Number(breakdown.functionality) || 0,
@@ -392,17 +333,18 @@ export default function JudgingPage() {
 
           <div className="flex justify-between items-end">
             <p className="text-label-caps !text-[9px] text-white/30">Submission Queue</p>
-            <p className="text-value-mono !text-[10px] text-primary">{filteredQueue.length} / {queue.length}</p>
+            <p className="text-value-mono !text-[10px] text-primary">{queue.length} pending</p>
           </div>
 
           {/* View Toggle */}
           <div className="flex rounded-xl border border-white/10 overflow-hidden mt-4">
             <button
               onClick={() => setMainView('queue')}
-              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${mainView === 'queue'
+              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
+                mainView === 'queue'
                   ? 'bg-primary/10 text-primary border-r border-primary/20'
                   : 'bg-white/[0.02] text-white/40 hover:text-white/60 border-r border-white/10'
-                }`}
+              }`}
             >
               Queue
             </button>
@@ -411,48 +353,14 @@ export default function JudgingPage() {
                 setMainView('logs')
                 if (staffToken) fetchTeamLogs(staffToken)
               }}
-              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${mainView === 'logs'
+              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
+                mainView === 'logs'
                   ? 'bg-violet-500/10 text-violet-300'
                   : 'bg-white/[0.02] text-white/40 hover:text-white/60'
-                }`}
+              }`}
             >
               Logs
             </button>
-          </div>
-
-          {/* Filters Selectors */}
-          <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-white/5">
-            <div className="space-y-1">
-              <label className="text-[7px] uppercase tracking-wider font-mono text-white/40 block ml-1">Task</label>
-              <select
-                value={filterTask}
-                onChange={(e) => setFilterTask(e.target.value)}
-                className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-2 py-1.5 text-[9px] text-white font-mono focus:outline-none focus:border-primary/50 cursor-pointer"
-              >
-                <option value="ALL">All Tasks</option>
-                <option value="FEATURE-1">Feature 1</option>
-                <option value="FEATURE-2">Feature 2</option>
-                <option value="FEATURE-3">Feature 3</option>
-                <option value="FEATURE-4">Feature 4</option>
-                <option value="FEATURE-5">Feature 5</option>
-                <option value="FINAL-SUBMISSION">Final Submission</option>
-                <option value="ROUND-2">Round 2</option>
-                <option value="ROUND-3">Round 3</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[7px] uppercase tracking-wider font-mono text-white/40 block ml-1">Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-2 py-1.5 text-[9px] text-white font-mono focus:outline-none focus:border-primary/50 cursor-pointer"
-              >
-                <option value="ALL">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="APPROVED">Accepted</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -460,12 +368,12 @@ export default function JudgingPage() {
         <div className="flex-1 overflow-auto p-4 md:p-5 space-y-2 custom-scrollbar min-h-0">
           {loading ? (
             <div className="text-center py-16 text-white/20 text-xs font-mono tracking-widest">LOADING...</div>
-          ) : filteredQueue.length === 0 ? (
+          ) : queue.length === 0 ? (
             <div className="text-center py-16 text-white/20 text-xs leading-relaxed font-mono">
-              ALL CLEAR<br />No matching entries.
+              ALL CLEAR<br />No pending submissions.
             </div>
           ) : (
-            filteredQueue.map((sub, idx) => (
+            queue.map((sub, idx) => (
               <motion.button
                 key={sub.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -479,10 +387,11 @@ export default function JudgingPage() {
                   setGradeStatus('APPROVED')
                   setSidebarOpen(false)
                 }}
-                className={`w-full text-left rounded-2xl p-4 border transition-all duration-200 group ${activeSubmission?.id === sub.id
+                className={`w-full text-left rounded-2xl p-4 border transition-all duration-200 group ${
+                  activeSubmission?.id === sub.id
                     ? 'border-primary/50 bg-primary/5 shadow-lg shadow-primary/5'
                     : 'border-white/5 hover:border-white/15 hover:bg-white/[0.02]'
-                  }`}
+                }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-label-caps !text-[8px] text-white/30">
@@ -642,12 +551,13 @@ export default function JudgingPage() {
                                         <span className="text-[9px] font-mono px-2 py-0.5 rounded-md border border-white/10 bg-white/[0.03] text-white/40">
                                           R{sub.roundNumber}
                                         </span>
-                                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md border ${sub.status === 'APPROVED'
+                                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md border ${
+                                          sub.status === 'APPROVED'
                                             ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                                             : sub.status === 'REJECTED'
                                               ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
                                               : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                                          }`}>
+                                        }`}>
                                           {sub.status}
                                         </span>
                                         <span className="text-[9px] font-mono px-2 py-0.5 rounded-md border border-white/5 text-white/25 uppercase">
@@ -662,38 +572,16 @@ export default function JudgingPage() {
                                       <p className="text-[10px] text-white/25 font-mono truncate">
                                         Task: {getFeatureLabel(sub.taskId)} · {new Date(sub.submittedAt).toLocaleString()}
                                       </p>
-                                      <div className="flex flex-col gap-1 mt-1.5 text-xs text-white/60">
-                                        {sub.payload?.github && (
-                                          <div>
-                                            <span className="text-[8px] text-white/20 uppercase font-mono mr-1">Code:</span>
-                                            <a href={sub.payload.github} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline font-mono text-[10px]">
-                                              {sub.payload.github}
-                                            </a>
-                                          </div>
-                                        )}
-                                        {sub.payload?.liveDemo && (
-                                          <div>
-                                            <span className="text-[8px] text-white/20 uppercase font-mono mr-1">Demo:</span>
-                                            <a href={sub.payload.liveDemo} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline font-mono text-[10px]">
-                                              {sub.payload.liveDemo}
-                                            </a>
-                                          </div>
-                                        )}
-                                        {sub.payload?.description && (
-                                          <div className="mt-1 p-2 rounded bg-white/[0.02] border border-white/5 text-[11px] text-white/70 font-mono whitespace-pre-wrap max-w-2xl">
-                                            {sub.payload.description}
-                                          </div>
-                                        )}
-                                      </div>
                                       {sub.evaluations.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-1">
                                           {sub.evaluations.map((ev: any) => (
                                             <span
                                               key={ev.id}
-                                              className={`text-[8px] font-mono px-2 py-0.5 rounded border ${ev.judgeId === judgeId
+                                              className={`text-[8px] font-mono px-2 py-0.5 rounded border ${
+                                                ev.judgeId === judgeId
                                                   ? 'bg-primary/10 text-primary border-primary/20'
                                                   : 'bg-white/5 text-white/30 border-white/5'
-                                                }`}
+                                              }`}
                                             >
                                               {ev.judgeName}: {ev.totalScore}pts
                                             </span>
@@ -706,10 +594,11 @@ export default function JudgingPage() {
                                       {isCurrentRound ? (
                                         <button
                                           onClick={() => handleSelectTeamLogSubmission(sub, team)}
-                                          className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${myEval
+                                          className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
+                                            myEval
                                               ? 'border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20'
                                               : 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20'
-                                            }`}
+                                          }`}
                                         >
                                           {myEval ? 'Edit Grade' : 'Grade'}
                                         </button>
@@ -736,195 +625,173 @@ export default function JudgingPage() {
 
         {/* ===== GRADING QUEUE VIEW ===== */}
         {mainView === 'queue' && (
-          <AnimatePresence mode="wait">
-            {activeSubmission ? (
-              <motion.div
-                key={activeSubmission.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="max-w-4xl mx-auto p-6 md:p-8 lg:p-10 space-y-8"
-              >
-                {/* Header */}
-                <header className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-label-caps !text-[9px] border border-primary/20">
-                      {getFeatureLabel(activeSubmission.taskId)} Review
-                    </span>
-                    <span className="text-label-caps !text-[9px] text-white/20">
-                      {timeAgo(activeSubmission.submittedAt)}
-                    </span>
-                  </div>
-                  <h1 className="text-5xl md:text-7xl lg:text-8xl text-hero text-white !normal-case leading-[0.8] tracking-tight">
-                    {activeSubmission.registration.teamName}.
-                  </h1>
+        <AnimatePresence mode="wait">
+          {activeSubmission ? (
+            <motion.div
+              key={activeSubmission.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-4xl mx-auto p-6 md:p-8 lg:p-10 space-y-8"
+            >
+              {/* Header */}
+              <header className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-label-caps !text-[9px] border border-primary/20">
+                    {getFeatureLabel(activeSubmission.taskId)} Review
+                  </span>
+                  <span className="text-label-caps !text-[9px] text-white/20">
+                    {timeAgo(activeSubmission.submittedAt)}
+                  </span>
+                </div>
+                <h1 className="text-5xl md:text-7xl lg:text-8xl text-hero text-white !normal-case leading-[0.8] tracking-tight">
+                  {activeSubmission.registration.teamName}.
+                </h1>
 
-                  {/* Links */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-1.5">
-                      <span className="text-[8px] text-white/20 uppercase font-mono block">GitHub Commit Link</span>
-                      <a
-                        href={activeSubmission.payload?.github}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors"
-                      >
-                        {activeSubmission.payload?.github || 'Not provided'}
-                      </a>
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="text-[8px] text-white/20 uppercase font-mono block">Loom / Demo Video Link</span>
-                      <a
-                        href={activeSubmission.payload?.liveDemo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-sky-400 underline break-all font-mono hover:text-sky-300 transition-colors"
-                      >
-                        {activeSubmission.payload?.liveDemo || 'Not provided'}
-                      </a>
-                    </div>
+                 {/* Links */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-1.5">
+                    <span className="text-[8px] text-white/20 uppercase font-mono block">GitHub Commit Link</span>
+                    <a
+                      href={activeSubmission.payload?.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-emerald-400 underline break-all font-mono hover:text-emerald-300 transition-colors"
+                    >
+                      {activeSubmission.payload?.github || 'Not provided'}
+                    </a>
                   </div>
-
-                  {activeSubmission.payload?.description && (
-                    <div className="space-y-1.5 pt-2">
-                      <span className="text-[8px] text-white/20 uppercase font-mono block">Team Submission Description</span>
-                      <div className="text-sm text-white/80 whitespace-pre-wrap bg-white/[0.02] border border-white/5 rounded-xl p-4 font-mono">
-                        {activeSubmission.payload.description}
+                  <div className="space-y-1.5">
+                    <span className="text-[8px] text-white/20 uppercase font-mono block">Loom / Demo Video Link</span>
+                    <a
+                      href={activeSubmission.payload?.liveDemo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-sky-400 underline break-all font-mono hover:text-sky-300 transition-colors"
+                    >
+                      {activeSubmission.payload?.liveDemo || 'Not provided'}
+                    </a>
+                  </div>
+                </div>
+              </header>
+ 
+              {/* Scoring form */}
+              <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-8 md:space-y-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+                <form onSubmit={handleGradeSubmit} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                    {currentCriteria.map(({ key, label, desc, max }) => (
+                      <div key={key} className="space-y-1 group">
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <h4 className="text-label-caps !text-[10px] text-white/60 mb-0.5 group-hover:text-white transition-colors">
+                              {label}
+                            </h4>
+                            <p className="text-label-caps !text-[7px] opacity-20">{desc}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={max}
+                              value={scores[key]}
+                              onChange={(e) => {
+                                const val = Math.max(0, Math.min(max, Math.round(Number(e.target.value) || 0)))
+                                setScores((prev) => ({ ...prev, [key]: val }))
+                              }}
+                              className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-right text-lg text-primary font-mono focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                            />
+                            <span className="text-xs text-white/30 font-mono">/ {max}</span>
+                          </div>
+                        </div>
+                        <Slider.Root
+                          value={Number(scores[key]) || 0}
+                          onValueChange={(val) =>
+                            setScores((prev) => ({ ...prev, [key]: Math.round(Number(val) || 0) }))
+                          }
+                          min={0}
+                          max={max}
+                          step={1}
+                        >
+                          <Slider.Control className={sliderStyles.Control}>
+                            <Slider.Track className={sliderStyles.Track}>
+                              <Slider.Indicator className={sliderStyles.Indicator} />
+                              <Slider.Thumb aria-label={label} className={sliderStyles.Thumb} />
+                            </Slider.Track>
+                          </Slider.Control>
+                        </Slider.Root>
+                        <div className="flex justify-between text-value-mono !text-[7px] !text-white/10 font-bold">
+                          <span>0</span>
+                          <span>{max}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+ 
+                  {/* Overall Score */}
+                  {currentCriteria.length > 0 && (
+                    <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
+                      <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
+                      <div className="relative z-10">
+                        <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
+                        <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
+                      </div>
+                      <div className="relative z-10 text-right">
+                        <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
+                          {overall}
+                        </span>
+                        <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ {
+                          (activeSubmission?.taskId.startsWith('FEATURE-') || activeSubmission?.taskId === 'FINAL-FEATURE') ? currentCriteria.length * 10 : 100
+                        }</span>
                       </div>
                     </div>
                   )}
-                </header>
 
-                {/* Scoring form */}
-                <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-8 md:space-y-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
-                  <form onSubmit={handleGradeSubmit} className="space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                      {currentCriteria.map(({ key, label, desc, max }) => (
-                        <div key={key} className="space-y-1 group">
-                          <div className="flex items-end justify-between">
-                            <div>
-                              <h4 className="text-label-caps !text-[10px] text-white/60 mb-0.5 group-hover:text-white transition-colors">
-                                {label}
-                              </h4>
-                              <p className="text-label-caps !text-[7px] opacity-20">{desc}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min={0}
-                                max={max}
-                                value={scores[key]}
-                                onChange={(e) => {
-                                  const val = Math.max(0, Math.min(max, Math.round(Number(e.target.value) || 0)))
-                                  setScores((prev) => ({ ...prev, [key]: val }))
-                                }}
-                                className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-right text-lg text-primary font-mono focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-                              />
-                              <span className="text-xs text-white/30 font-mono">/ {max}</span>
-                            </div>
-                          </div>
-                          <Slider.Root
-                            value={Number(scores[key]) || 0}
-                            onValueChange={(val) =>
-                              setScores((prev) => ({ ...prev, [key]: Math.round(Number(val) || 0) }))
-                            }
-                            min={0}
-                            max={max}
-                            step={1}
-                          >
-                            <Slider.Control className={sliderStyles.Control}>
-                              <Slider.Track className={sliderStyles.Track}>
-                                <Slider.Indicator className={sliderStyles.Indicator} />
-                                <Slider.Thumb aria-label={label} className={sliderStyles.Thumb} />
-                              </Slider.Track>
-                            </Slider.Control>
-                          </Slider.Root>
-                          <div className="flex justify-between text-value-mono !text-[7px] !text-white/10 font-bold">
-                            <span>0</span>
-                            <span>{max}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Feedback */}
+                  <div className="space-y-3">
+                    <label className="text-label-caps !text-[9px] text-white/30 px-2 italic">Judge Feedback</label>
+                    <textarea
+                      required
+                      className="w-full bg-white/[0.03] border border-white/5 rounded-[1.5rem] p-5 text-sm text-editorial focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all min-h-[100px] placeholder:text-white/10 shadow-inner"
+                      placeholder="Enter technical feedback and recommendations for the team..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
 
-                    {/* Overall Score */}
-                    {currentCriteria.length > 0 && (
-                      <div className="relative overflow-hidden p-6 md:p-8 rounded-2xl md:rounded-[2rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 group transition-all hover:bg-primary/10">
-                        <div className="absolute top-0 left-0 w-full h-full neural-grid opacity-[0.05]" />
-                        <div className="relative z-10">
-                          <span className="text-label-caps !text-primary !text-[9px]">Overall Rating</span>
-                          <h3 className="text-2xl text-hero !normal-case !tracking-tight !text-white mt-1">Total Score</h3>
-                        </div>
-                        <div className="relative z-10 text-right">
-                          <span className="text-6xl text-stat !text-primary group-hover:scale-105 transition-transform block leading-none font-mono">
-                            {overall}
-                          </span>
-                          <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ 100</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Decision Selection (only for features 1-5 which are not scored) */}
-                    {currentCriteria.length === 0 && (
-                      <div className="space-y-3">
-                        <label className="text-label-caps !text-[9px] text-white/30 px-2 italic font-mono">Decision</label>
-                        <select
-                          value={gradeStatus}
-                          onChange={(e) => setGradeStatus(e.target.value as 'APPROVED' | 'REJECTED')}
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-primary/50 text-white placeholder:text-white/20 text-xs font-mono"
-                        >
-                          <option value="APPROVED" className="bg-[#050505] text-emerald-400">Approve & Advance</option>
-                          <option value="REJECTED" className="bg-[#050505] text-rose-400">Reject / Request Changes</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {/* Feedback */}
-                    <div className="space-y-3">
-                      <label className="text-label-caps !text-[9px] text-white/30 px-2 italic">Judge Feedback</label>
-                      <textarea
-                        required
-                        className="w-full bg-white/[0.03] border border-white/5 rounded-[1.5rem] p-5 text-sm text-editorial focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all min-h-[100px] placeholder:text-white/10 shadow-inner"
-                        placeholder="Enter technical feedback and recommendations for the team..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
-
-                    {/* Submit */}
-                    <div className="space-y-4 pt-2">
-                      <button
-                        type="submit"
-                        disabled={submitLoading}
-                        className="w-full py-4 rounded-[1.5rem] bg-white text-black text-label-caps !text-[11px] transition-all hover:scale-[1.01] active:scale-[0.99] shadow-2xl font-black disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:bg-primary hover:text-white"
-                      >
-                        {submitLoading ? 'SUBMITTING...' : 'SUBMIT GRADE & EVALUATION'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full flex flex-col items-center justify-center text-center p-6 md:p-12 lg:p-24"
-              >
-                <div className="w-28 h-28 rounded-[2rem] border border-white/5 flex items-center justify-center mb-8 relative group bg-white/[0.02] shadow-2xl">
-                  <div className="absolute inset-0 rounded-[2rem] bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="text-5xl grayscale group-hover:grayscale-0 transition-all scale-110">⚖️</span>
-                </div>
-                <h2 className="text-[9px] font-black text-white/20 uppercase tracking-[0.5em] mb-4">Ready to Judge</h2>
-                <h3 className="text-3xl md:text-5xl text-hero !normal-case !tracking-tight text-white leading-tight">
-                  Select a team from the queue<br />
-                  <span className="text-white/20 italic">to begin scoring.</span>
-                </h3>
-                <p className="mt-5 text-sm text-white/30 max-w-md font-medium text-editorial leading-relaxed">
-                  Review their GitHub code and demo, score across 7 criteria, then approve to unlock the next stage or request changes.
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  {/* Submit */}
+                  <div className="space-y-4 pt-2">
+                    <button
+                      type="submit"
+                      disabled={submitLoading}
+                      className="w-full py-4 rounded-[1.5rem] bg-white text-black text-label-caps !text-[11px] transition-all hover:scale-[1.01] active:scale-[0.99] shadow-2xl font-black disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:bg-primary hover:text-white"
+                    >
+                      {submitLoading ? 'SUBMITTING...' : 'SUBMIT GRADE & EVALUATION'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="h-full flex flex-col items-center justify-center text-center p-6 md:p-12 lg:p-24"
+            >
+              <div className="w-28 h-28 rounded-[2rem] border border-white/5 flex items-center justify-center mb-8 relative group bg-white/[0.02] shadow-2xl">
+                <div className="absolute inset-0 rounded-[2rem] bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-5xl grayscale group-hover:grayscale-0 transition-all scale-110">⚖️</span>
+              </div>
+              <h2 className="text-[9px] font-black text-white/20 uppercase tracking-[0.5em] mb-4">Ready to Judge</h2>
+              <h3 className="text-3xl md:text-5xl text-hero !normal-case !tracking-tight text-white leading-tight">
+                Select a team from the queue<br />
+                <span className="text-white/20 italic">to begin scoring.</span>
+              </h3>
+              <p className="mt-5 text-sm text-white/30 max-w-md font-medium text-editorial leading-relaxed">
+                Review their GitHub code and demo, score across 7 criteria, then approve to unlock the next stage or request changes.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
         )}
 
       </div>

@@ -89,7 +89,7 @@ VALUES (
     'unlockd-2024', 
     'Unlock''D', 
     'PROGRESSIVE_PRODUCT_BUILDING_EVENT', 
-    '{"total_rounds": 3, "passing_threshold": 60, "roadmap": [{"step": 1, "task_id": "FEATURE-1", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 2, "task_id": "FEATURE-2", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 3, "task_id": "FEATURE-3", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 4, "task_id": "ROUND-2", "round": 2, "rubric": ["ux", "polish", "innovation"]}, {"step": 5, "task_id": "ROUND-3", "round": 3, "rubric": ["presentation", "business_viability"]}]}'::jsonb, 
+    '{"total_rounds": 3, "passing_threshold": 60, "roadmap": [{"step": 1, "task_id": "FEATURE-1", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 2, "task_id": "FEATURE-2", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 3, "task_id": "FEATURE-3", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 4, "task_id": "FEATURE-4", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 5, "task_id": "FEATURE-5", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 6, "task_id": "FINAL-FEATURE", "round": 1, "rubric": ["functionality", "code_quality"]}, {"step": 7, "task_id": "ROUND-2", "round": 2, "rubric": ["ux", "polish", "innovation"]}, {"step": 8, "task_id": "ROUND-3", "round": 3, "rubric": ["presentation", "business_viability"]}]}'::jsonb, 
     1,
     TRUE
 )
