@@ -51,14 +51,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  // Edit Submission states
-  const [editingSubmission, setEditingSubmission] = useState<any | null>(null)
-  const [editGithubUrl, setEditGithubUrl] = useState('')
-  const [editLiveDemoUrl, setEditLiveDemoUrl] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editLoading, setEditLoading] = useState(false)
-  const [editError, setEditError] = useState<string | null>(null)
-  const [editSuccess, setEditSuccess] = useState(false)
+
 
   // Round 3 states
   const [r3Entering, setR3Entering] = useState(false)
@@ -196,48 +189,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
     }
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingSubmission) return
 
-    const isRound1 = editingSubmission.roundNumber === 1
-    if (isRound1 && !editLiveDemoUrl.trim()) {
-      setEditError('Drive video link is mandatory for Stage 1.')
-      return
-    }
-
-    if (!editGithubUrl.trim() && !editLiveDemoUrl.trim()) {
-      setEditError('At least one URL (GitHub or Live Demo) must be provided.')
-      return
-    }
-
-    if (editDescription.trim() && editDescription.trim().length < 20) {
-      setEditError('Description must be at least 20 characters.')
-      return
-    }
-
-    setEditLoading(true)
-    setEditError(null)
-    setEditSuccess(false)
-
-    try {
-      await submitMutation.mutateAsync({
-        githubUrl: editGithubUrl.trim(),
-        liveDemoUrl: editLiveDemoUrl.trim(),
-        description: editDescription.trim(),
-        taskId: editingSubmission.taskId,
-      })
-
-      setEditSuccess(true)
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
-    } catch (err: any) {
-      setEditError(err.message || 'An unexpected error occurred.')
-    } finally {
-      setEditLoading(false)
-    }
-  }
 
   const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -735,110 +687,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
           )}
         </div>
 
-        {/* Edit Submission Modal */}
-        <AnimatePresence>
-          {editingSubmission && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setEditingSubmission(null)}
-                className="absolute inset-0 bg-black/85 backdrop-blur-md"
-              />
 
-              {/* Modal Content */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="w-full max-w-lg bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 overflow-hidden text-white text-left"
-              >
-                <div className="absolute top-0 right-0 p-4">
-                  <button
-                    onClick={() => setEditingSubmission(null)}
-                    className="text-white/40 hover:text-white text-xl cursor-pointer"
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                <div>
-                  <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-mono tracking-widest uppercase">
-                    Resubmit {getFeatureLabel(editingSubmission.taskId)}
-                  </span>
-                  <h3 className="text-2xl font-display font-medium text-white mt-3 uppercase tracking-tight">
-                    Update Submission &amp; Entry Details
-                  </h3>
-                  <p className="text-[11px] text-white/50 leading-relaxed mt-1 font-mono">
-                    Modifying your submission will replace the existing one and reset any current evaluations/grades for this milestone.
-                  </p>
-                </div>
-
-                <form onSubmit={handleEditSubmit} className="space-y-4">
-                  {editError && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                      {editError}
-                    </div>
-                  )}
-                  {editSuccess && (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                      Submission updated successfully! Refreshing...
-                    </div>
-                  )}
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">GitHub Link</label>
-                      <input
-                        type="url"
-                        value={editGithubUrl}
-                        onChange={(e) => setEditGithubUrl(e.target.value)}
-                        placeholder="GitHub Commit / Repository URL"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Live Demo / Loom Link</label>
-                      <input
-                        type="url"
-                        value={editLiveDemoUrl}
-                        onChange={(e) => setEditLiveDemoUrl(e.target.value)}
-                        placeholder="Loom / Google Drive Video URL"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
-                      <textarea
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        placeholder="Describe what you built and any notable features or changes"
-                        maxLength={1000}
-                        rows={3}
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white/75 placeholder:text-white/15 resize-none"
-                      />
-                      <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
-                        <span>{editDescription.length} / 1000 chars</span>
-                        {editDescription.length > 0 && editDescription.length < 20 && (
-                          <span className="text-amber-400">min 20 chars</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={editLoading}
-                    className="w-full btn-vibrant !py-3.5 text-xs font-semibold rounded-xl mt-4"
-                  >
-                    {editLoading ? 'Updating Submission...' : 'Save & Update Submission'}
-                  </button>
-                </form>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </main>
     )
   }
@@ -1452,110 +1301,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
         </div>
       </footer>
 
-      {/* Edit Submission Modal */}
-      <AnimatePresence>
-        {editingSubmission && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setEditingSubmission(null)}
-              className="absolute inset-0 bg-black/85 backdrop-blur-md"
-            />
 
-            {/* Modal Content */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-lg bg-[#0a0a0a]/95 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 backdrop-blur-3xl shadow-2xl relative z-10 space-y-6 overflow-hidden text-white"
-            >
-              <div className="absolute top-0 right-0 p-4">
-                <button
-                  onClick={() => setEditingSubmission(null)}
-                  className="text-white/40 hover:text-white text-xl cursor-pointer"
-                >
-                  &times;
-                </button>
-              </div>
-
-              <div>
-                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-mono tracking-widest uppercase">
-                  Resubmit {getFeatureLabel(editingSubmission.taskId)}
-                </span>
-                <h3 className="text-2xl font-display font-medium text-white mt-3 uppercase tracking-tight">
-                  Update Submission &amp; Entry Details
-                </h3>
-                <p className="text-[11px] text-white/50 leading-relaxed mt-1 font-mono">
-                  Modifying your submission will replace the existing one and reset any current evaluations/grades for this milestone.
-                </p>
-              </div>
-
-              <form onSubmit={handleEditSubmit} className="space-y-4">
-                {editError && (
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                    {editError}
-                  </div>
-                )}
-                {editSuccess && (
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-                    Submission updated successfully! Refreshing...
-                  </div>
-                )}
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">GitHub Link</label>
-                    <input
-                      type="url"
-                      value={editGithubUrl}
-                      onChange={(e) => setEditGithubUrl(e.target.value)}
-                      placeholder="GitHub Commit / Repository URL"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Live Demo / Loom Link</label>
-                    <input
-                      type="url"
-                      value={editLiveDemoUrl}
-                      onChange={(e) => setEditLiveDemoUrl(e.target.value)}
-                      placeholder="Loom / Google Drive Video URL"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-white/40 font-mono uppercase ml-1 block">Description</label>
-                    <textarea
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      placeholder="Describe what you built and any notable features or changes"
-                      maxLength={1000}
-                      rows={3}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs text-white/75 placeholder:text-white/15 resize-none"
-                    />
-                    <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
-                      <span>{editDescription.length} / 1000 chars</span>
-                      {editDescription.length > 0 && editDescription.length < 20 && (
-                        <span className="text-amber-400">min 20 chars</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="w-full btn-vibrant !py-3.5 text-xs font-semibold rounded-xl mt-4"
-                >
-                  {editLoading ? 'Updating Submission...' : 'Save & Update Submission'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </main>
   )
 }

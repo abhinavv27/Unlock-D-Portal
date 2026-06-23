@@ -103,12 +103,12 @@ export default function LandingPage() {
       document.body.style.overflow = 'hidden'
       document.body.style.height = '100vh'
     } else {
-      document.body.style.overflow = 'unset'
-      document.body.style.height = 'auto'
+      document.body.style.overflow = ''
+      document.body.style.height = ''
     }
     return () => {
-      document.body.style.overflow = 'unset'
-      document.body.style.height = 'auto'
+      document.body.style.overflow = ''
+      document.body.style.height = ''
     }
   }, [showPreloader])
 
@@ -276,7 +276,10 @@ export default function LandingPage() {
           <RadarSweep />
 
       {/* Noise texture overlay */}
-      <div className="fixed inset-0 pointer-events-none z-[3] noise-overlay opacity-[0.03]" />
+      <div 
+        className="fixed inset-0 pointer-events-none z-[3] noise-overlay opacity-[0.03]" 
+        style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+      />
 
       <Navbar session={session as any} />
 

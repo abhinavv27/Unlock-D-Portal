@@ -6,7 +6,7 @@ import { Float, Stars, Octahedron } from '@react-three/drei'
 
 function FloatingShards() {
   const isLowEnd = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency <= 4 : false
-  const shardCount = isLowEnd ? 8 : 15
+  const shardCount = isLowEnd ? 4 : 8
   
   const shards = useMemo(() => {
     return Array.from({ length: shardCount }).map((_, i) => ({
@@ -52,13 +52,14 @@ function FloatingShards() {
 
 export function DeepSpaceScene() {
   const isLowEnd = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency <= 4 : false
-  const starCount = isLowEnd ? 1500 : 3000
+  const starCount = isLowEnd ? 500 : 1200
 
   return (
     <div className="fixed inset-0 w-full h-full pointer-events-none z-[0] opacity-60">
       <Canvas 
         style={{ width: '100%', height: '100%' }}
         camera={{ position: [0, 0, 8], fov: 45 }}
+        dpr={[1, 1.5]}
         gl={{ 
           antialias: !isLowEnd,
           powerPreference: 'high-performance',

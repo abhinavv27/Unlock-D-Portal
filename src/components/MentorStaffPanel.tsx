@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle2, ExternalLink, Headphones, RefreshCw, Save, Video } from 'lucide-react'
@@ -205,12 +205,12 @@ export default function MentorStaffPanel({ token }: MentorStaffPanelProps) {
               updateStatus(next)
             }}
             disabled={saving}
-            className={`relative h-7 w-12 rounded-full border transition-colors disabled:opacity-50 ${isActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
+            className={`relative h-6 w-12 rounded-full border transition-colors disabled:opacity-50 ${isActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
               }`}
             aria-label="Toggle mentor availability"
             title="Toggle mentor availability"
           >
-            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-5' : 'translate-x-1'}`} />
+            <span className={`absolute top-[1px] h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-[24px]' : 'translate-x-[2px]'}`} />
           </button>
           <span className={`text-[10px] font-mono uppercase ${isActive ? 'text-emerald-300' : 'text-white/35'}`}>
             {isActive ? 'Available' : 'Offline'}
