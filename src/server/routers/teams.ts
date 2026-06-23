@@ -51,6 +51,13 @@ export const teamsRouter = createTRPCRouter({
       })
 
       if (existingSubmission) {
+        if (targetTaskId.startsWith('FEATURE-') || targetTaskId === 'FINAL-FEATURE') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Editing is not allowed for FEATURE submissions or the FINAL-FEATURE.',
+          })
+        }
+
         const result = await ctx.db.$transaction(async (tx) => {
           // Fetch existing evaluations to archive
           const prevEvaluations = await tx.evaluation.findMany({
@@ -311,8 +318,8 @@ export const teamsRouter = createTRPCRouter({
 
     const eventConfig = (rawTeam.event.config as any) || {}
     const eventRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 0
-    const inWaitingRoom = statusResult.allowedRound > eventRound
-    const isEliminated = statusResult.allowedRound < eventRound
+    const inWaitingRoom = statusResult.inWaitingRoom
+    const isEliminated = statusResult.isEliminated
 
     const progressState = {
       ...(rawTeam.progressState as any || {}),
@@ -357,6 +364,8 @@ export const teamsRouter = createTRPCRouter({
       progressState,
       submissions: mappedSubmissions,
       allowedTaskId: statusResult.allowedTaskId,
+      allowedTaskName: statusResult.allowedTaskName,
+      allowedTaskDescription: statusResult.allowedTaskDescription,
       allowedRound: statusResult.allowedRound,
       isPending: statusResult.isPending,
       highestState: statusResult.highestState,

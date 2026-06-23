@@ -62,13 +62,6 @@ export async function POST(
     const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
     
     let rubric = stepObj?.rubric || ['functionality', 'code_quality']
-    if (submission.taskId.startsWith('FEATURE-') || submission.taskId === 'FINAL-FEATURE') {
-      const featureNum = submission.taskId === 'FINAL-FEATURE' ? 'final' : submission.taskId.split('-')[1]
-      rubric = [
-        `feature_${featureNum}_functionality`,
-        `feature_${featureNum}_code_quality`,
-      ]
-    }
     
     const maxScore = rubric.length * 10
     const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
@@ -77,7 +70,7 @@ export async function POST(
     let finalStatus: 'APPROVED' | 'REJECTED'
     let rejectionReason: string | null = null
 
-    if (submission.taskId.startsWith('FEATURE-') || submission.taskId === 'FINAL-FEATURE') {
+    if (submission.taskId.startsWith('FEATURE-')) {
       finalStatus = 'APPROVED'
     } else {
       if (averageScore >= passingThresholdScore) {

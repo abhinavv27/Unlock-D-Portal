@@ -639,17 +639,22 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
           {team.submissions && team.submissions.length > 0 && (
             <div className="w-full mt-12 space-y-6">
               <div className="flex items-center gap-4">
-                <h3 className="text-xl text-white/60 font-display uppercase tracking-wider">Approved Milestones</h3>
+                <h3 className="text-xl text-white/60 font-display uppercase tracking-wider">Milestone Submissions</h3>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {team.submissions.filter((s: any) => s.status === 'APPROVED').map((sub: any) => (
+                {team.submissions.filter((s: any) => s.status === 'APPROVED' || s.status === 'PENDING').map((sub: any) => (
                   <div key={sub.id} className="p-6 rounded-2xl glass-premium border border-white/5 flex flex-col justify-between gap-4 text-left">
                     <div>
                       <div className="flex justify-between items-center gap-3">
-                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono uppercase tracking-wider">
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider border ${sub.status === 'PENDING' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
                           {getFeatureLabel(sub.taskId)}
                         </span>
+                        {sub.status === 'PENDING' && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[8px] font-mono tracking-widest border border-amber-500/20 uppercase animate-pulse">
+                            Pending Evaluation
+                          </span>
+                        )}
                       </div>
 
                       {/* Display active links */}
@@ -1008,16 +1013,25 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                 </div>
               ) : (
                 <>
-                  {/* Current Objective */}
-                  {team && currentStage && (
-                    <div className="mt-10 md:mt-14 p-6 rounded-2xl bg-white/[0.03] border border-white/5">
-                      <span className="text-[9px] text-white/30 uppercase font-mono tracking-widest">Current Objective</span>
-                      <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-2">
-                        {currentStage.name}
-                      </h3>
-                      <p className="text-sm text-white/50 mt-1">
-                        Round {currentStageNum} — {currentStage.pointsRequired} points required to advance
-                      </p>
+                  {/* Dynamic Active Task Card */}
+                  {team && (
+                    <div className="mt-10 md:mt-14 space-y-4">
+                      <div className="p-6 rounded-2xl bg-primary/[0.03] border border-primary/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] pointer-events-none" />
+                        <div className="relative z-10">
+                          <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-mono tracking-widest border border-primary/20 uppercase">
+                            Active Milestone
+                          </span>
+                          <h3 className="text-2xl md:text-3xl font-display font-medium text-white mt-3">
+                            {team.allowedTaskName || 'No Active Task'}
+                          </h3>
+                          {team.allowedTaskDescription && (
+                            <p className="text-sm text-white/50 mt-2 max-w-2xl leading-relaxed">
+                              {team.allowedTaskDescription}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 
