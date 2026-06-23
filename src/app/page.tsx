@@ -535,11 +535,7 @@ export default function LandingPage() {
           </div>
           <span className="text-label-caps text-white/80">IEEE RAS 2026</span>
         </div>
-        <div className="flex gap-12 text-label-caps">
-          <Link href="#" className="hover:text-primary transition-colors">Manifesto</Link>
-          <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
-          <Link href="#" className="hover:text-primary transition-colors">Support</Link>
-        </div>
+
         <div className="text-micro">
           IEEE RAS 2026
         </div>
