@@ -583,12 +583,12 @@ export default function AdminMentorshipPage() {
                   <span className="text-xs font-bold text-white/95">Availability Toggle</span>
                   <div className="flex items-center gap-3">
                     <button
-                      type="button"
                       onClick={handleToggleMyActive}
-                      disabled={savingMyStatus}
-                      className={`relative h-7 w-12 rounded-full border transition-colors disabled:opacity-50 ${myActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}
+                      className={`relative w-12 h-6 rounded-full border transition-colors cursor-pointer ${
+                        myActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
+                      }`}
                     >
-                      <span className={`absolute top-1 left-0 h-5 w-5 rounded-full bg-white transition-transform ${myActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`absolute top-[1px] h-5 w-5 rounded-full bg-white transition-transform ${myActive ? 'translate-x-[24px]' : 'translate-x-[2px]'}`} />
                     </button>
                     <span className={`text-[10px] font-mono uppercase ${myActive ? 'text-emerald-300' : 'text-white/35'}`}>
                       {myActive ? 'Available' : 'Offline'}
