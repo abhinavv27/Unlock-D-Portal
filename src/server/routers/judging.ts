@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createTRPCRouter, judgeProcedure, adminProcedure } from '@/server/trpc'
+import { createTRPCRouter, judgeProcedure, adminProcedure, publicProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
 
@@ -252,5 +252,89 @@ export const judgingRouter = createTRPCRouter({
         }
       })
       .sort((a, b) => b.totalScore - a.totalScore)
+  }),
+
+  // Public: leaderboard if enabled by admin
+  publicLeaderboard: publicProcedure.query(async ({ ctx }) => {
+    // 1. Fetch current active event to check if public leaderboard is visible
+    const event = await ctx.db.event.findFirst({
+      where: { isActive: true },
+    })
+
+    if (!event || !event.isLeaderboardVisible) {
+      return { isVisible: false, data: [] }
+    }
+
+    // 2. Fetch the leaderboard exactly like the admin one
+    const registrations = await ctx.db.registration.findMany({
+      include: {
+        event: true,
+        submissions: {
+          where: { status: 'APPROVED' },
+          select: {
+            roundNumber: true,
+            evaluations: {
+              select: {
+                totalScore: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const leaderboardData = registrations
+      .map((reg) => {
+        const roundMap: Record<number, number> = {}
+        for (const sub of reg.submissions) {
+          const round = sub.roundNumber
+          if (round === undefined || round === null) continue
+          const evals = sub.evaluations
+          if (evals.length > 0) {
+            const avgScore = evals.reduce((sum, e) => sum + e.totalScore, 0) / evals.length
+            roundMap[round] = (roundMap[round] || 0) + Math.round(avgScore * 10) / 10
+          }
+        }
+
+        return {
+          id: reg.id,
+          name: reg.teamName,
+          tableNumber: reg.unstopTeamId,
+          track: { name: reg.event.name },
+          totalScore: reg.totalScore,
+          roundBreakdown: roundMap,
+        }
+      })
+      .sort((a, b) => b.totalScore - a.totalScore)
+
+    return { isVisible: true, data: leaderboardData }
+  }),
+
+  // Admin: toggle leaderboard visibility
+  toggleLeaderboardVisibility: adminProcedure
+    .input(z.object({ isVisible: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const event = await ctx.db.event.findFirst({
+        where: { isActive: true },
+      })
+
+      if (!event) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No active event found' })
+      }
+
+      await ctx.db.event.update({
+        where: { id: event.id },
+        data: { isLeaderboardVisible: input.isVisible },
+      })
+
+      return { success: true, isVisible: input.isVisible }
+    }),
+
+  // Admin: get leaderboard visibility
+  getLeaderboardVisibility: adminProcedure.query(async ({ ctx }) => {
+    const event = await ctx.db.event.findFirst({
+      where: { isActive: true },
+    })
+    return { isVisible: event?.isLeaderboardVisible ?? false }
   }),
 })

@@ -30,6 +30,7 @@ model Event {
   config             Json
   currentGlobalRound Int            @default(1) @map("current_global_round")
   isActive           Boolean        @default(true) @map("is_active")
+  isLeaderboardVisible Boolean      @default(false) @map("is_leaderboard_visible")
   registrations      Registration[]
 
   @@map("events")

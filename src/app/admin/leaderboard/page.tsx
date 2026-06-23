@@ -64,6 +64,16 @@ export default function AdminLeaderboardPage() {
 
   const sortedProjects = [...filtered].sort((a, b) => b.avgScore - a.avgScore)
 
+  const utils = api.useUtils()
+  const { data: visibilityData } = api.judging.getLeaderboardVisibility.useQuery()
+  const toggleVisibility = api.judging.toggleLeaderboardVisibility.useMutation({
+    onSuccess: () => {
+      utils.judging.getLeaderboardVisibility.invalidate()
+    }
+  })
+
+  const isPublicVisible = visibilityData?.isVisible ?? false
+
   return (
     <main className="min-h-screen flex bg-[#050505] text-white selection:bg-primary relative overflow-hidden">
       {/* Background Parallax Elements */}
@@ -163,6 +173,20 @@ export default function AdminLeaderboardPage() {
               <div className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-primary transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
+            </div>
+
+            <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-6 py-4">
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-white">Public Visibility</span>
+                <span className="text-[10px] text-white/40 uppercase tracking-widest">Toggle Leaderboard</span>
+              </div>
+              <button
+                onClick={() => toggleVisibility.mutate({ isVisible: !isPublicVisible })}
+                disabled={toggleVisibility.isPending}
+                className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ${isPublicVisible ? 'bg-primary' : 'bg-white/10'} disabled:opacity-50`}
+              >
+                <div className={`w-6 h-6 bg-white rounded-full transition-transform duration-300 ${isPublicVisible ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
             </div>
           </div>
 
