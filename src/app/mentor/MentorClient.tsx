@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -358,7 +358,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                       }`}
                       title={currentActiveSession ? "Must resolve active session before going offline." : "Toggle Availability"}
                     >
-                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-[26px]' : 'translate-x-0.5'}`} />
+                      <span className={`absolute top-[1px] h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-[24px]' : 'translate-x-[2px]'}`} />
                     </button>
                   </div>
 
