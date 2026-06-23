@@ -180,11 +180,33 @@ export default function MentorClient({ session }: MentorClientProps) {
     }
   };
 
-  // Toggle availability status quickly
+  // Toggle availability status quickly (optimistic update)
   const handleToggleActive = () => {
     const next = !isActive
     setIsActive(next)
-    handleSaveProfile(next)
+    setSavingProfile(true)
+    setError(null)
+    setMessage(null)
+    fetch('/api/mentors/me/status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: next, skills: skills.trim() }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setIsActive(Boolean(data.isActive))
+          setSkills(data.skills || '')
+          setMessage(data.isActive ? 'You are now ONLINE.' : 'You are now OFFLINE.')
+        } else {
+          throw new Error(data.error)
+        }
+      })
+      .catch((err) => {
+        setIsActive(!next)
+        setError(err.message || 'Failed to toggle status.')
+      })
+      .finally(() => setSavingProfile(false))
   }
 
   // Accept a requested session
@@ -279,8 +301,8 @@ export default function MentorClient({ session }: MentorClientProps) {
             <ChevronLeft className="w-4 h-4" /> Back to Dashboard
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/20 font-mono">ROLE:</span>
-            <span className="text-[10px] px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-mono font-bold tracking-wider">{session.user.role}</span>
+            <span className="text-xs text-white/40 font-mono">ROLE:</span>
+            <span className="text-xs px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-mono font-bold tracking-wider">{session.user.role}</span>
           </div>
         </div>
 
@@ -348,7 +370,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                   {/* Status Toggle Switch */}
                   <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5">
                     <div className="space-y-0.5">
-                      <span className="text-[10px] text-white/40 block font-mono uppercase">Availablity</span>
+                      <span className="text-xs text-white/40 block font-mono uppercase">Availability</span>
                       <span className={`text-xs font-bold uppercase ${isActive ? 'text-emerald-400' : 'text-white/30'}`}>
                         {isActive ? 'Available Online' : 'Offline Mode'}
                       </span>
@@ -356,19 +378,19 @@ export default function MentorClient({ session }: MentorClientProps) {
                     
                     <button
                       onClick={handleToggleActive}
-                      disabled={savingProfile || !!currentActiveSession}
-                      className={`relative w-12 h-7 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      disabled={!!currentActiveSession}
+                      className={`relative w-12 h-6 rounded-full border transition-colors cursor-pointer ${
                         isActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
                       }`}
                       title={currentActiveSession ? "Must resolve active session before going offline." : "Toggle Availability"}
                     >
-                      <span className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'}`} />
+                      <span className={`absolute top-[1px] h-5 w-5 rounded-full bg-white transition-transform ${isActive ? 'translate-x-[24px]' : 'translate-x-[2px]'}`} />
                     </button>
                   </div>
 
                   {/* Skills Editor */}
                   <div className="space-y-2">
-                    <label className="text-[10px] text-white/40 block font-mono uppercase pl-1">Mentor Skillset Keywords</label>
+                    <label className="text-xs text-white/40 block font-mono uppercase pl-1">Mentor Skillset Keywords</label>
                     <textarea
                       value={skills}
                       onChange={(e) => setSkills(e.target.value)}
@@ -376,7 +398,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                       rows={3}
                       className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white/80 focus:outline-none focus:border-primary/50 placeholder:text-white/15 resize-none leading-relaxed"
                     />
-                    <span className="text-[9px] text-white/20 block pl-1">Provide comma-separated keywords of technologies you can assist with.</span>
+                    <span className="text-xs text-white/40 block pl-1">Provide comma-separated keywords of technologies you can assist with.</span>
                   </div>
 
                   <button
@@ -425,24 +447,24 @@ export default function MentorClient({ session }: MentorClientProps) {
                 className="glass-premium rounded-3xl p-6 md:p-8 border-emerald-500/20 bg-emerald-500/[0.02] shadow-[0_30px_60px_-15px_rgba(16,185,129,0.15)] space-y-5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[9px] font-bold tracking-widest uppercase animate-pulse">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold tracking-widest uppercase animate-pulse">
                     ΓÜí ACTIVE TICKET ASSIGNED
                   </span>
-                  <span className="text-[10px] text-white/30 font-mono">
+                  <span className="text-xs text-white/40 font-mono">
                     Accepted at {new Date(currentActiveSession.requestedAt).toLocaleTimeString()}
                   </span>
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-[9px] text-white/20 uppercase font-mono block">TEAM IN NEED</span>
+                  <span className="text-xs text-white/40 uppercase font-mono block">TEAM IN NEED</span>
                   <h3 className="text-3xl text-white font-display uppercase tracking-tight">
                     {currentActiveSession.registration?.teamName || 'Team Name'}
                   </h3>
-                  <span className="text-[10px] text-white/40 block font-mono">Unstop Team ID: {currentActiveSession.registration?.unstopTeamId}</span>
+                  <span className="text-xs text-white/40 block font-mono">Unstop Team ID: {currentActiveSession.registration?.unstopTeamId}</span>
                 </div>
 
                 <div className="p-5 rounded-2xl bg-black/35 border border-white/5 space-y-2">
-                  <span className="text-[9px] text-emerald-400/60 uppercase font-mono font-bold block">BLOCKER DESCRIPTION</span>
+                  <span className="text-xs text-emerald-400/60 uppercase font-mono font-bold block">BLOCKER DESCRIPTION</span>
                   <p className="text-sm text-white/80 leading-relaxed font-sans font-medium whitespace-pre-wrap">
                     &ldquo;{currentActiveSession.issueDescription}&rdquo;
                   </p>
@@ -465,7 +487,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                     disabled={processingAction !== null}
                     className="btn-vibrant !py-3 !px-8 !rounded-xl !text-xs font-bold bg-emerald-500 border-emerald-600 hover:bg-emerald-600 flex items-center gap-2 ml-auto cursor-pointer"
                   >
-                    <CheckCircle2 className="w-4.5 h-4.5" />
+                    <CheckCircle2 className="w-4 h-4" />
                     {processingAction === currentActiveSession.id ? 'Resolving...' : 'Mark Session Resolved'}
                   </button>
                 </div>
@@ -513,13 +535,13 @@ export default function MentorClient({ session }: MentorClientProps) {
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="space-y-1">
-                          <span className="text-[9px] text-primary/80 font-mono tracking-widest uppercase">HELP REQUEST</span>
+                            <span className="text-xs text-primary/80 font-mono tracking-widest uppercase">HELP REQUEST</span>
                           <h4 className="text-lg font-display uppercase tracking-tight text-white/90">
                             {ticket.registration?.teamName || 'Team'}
                           </h4>
-                          <span className="text-[9px] font-mono text-white/25">Requested {new Date(ticket.requestedAt).toLocaleTimeString()}</span>
+                            <span className="text-xs font-mono text-white/40">Requested {new Date(ticket.requestedAt).toLocaleTimeString()}</span>
                         </div>
-                        <span className="text-[8px] font-mono font-bold tracking-widest px-2.5 py-1 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">
+                        <span className="text-[10px] font-mono font-bold tracking-widest px-2.5 py-1 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">
                           {ticket.status}
                         </span>
                       </div>
@@ -529,7 +551,7 @@ export default function MentorClient({ session }: MentorClientProps) {
                       </p>
 
                       <div className="space-y-3 pt-2">
-                        <span className="text-[9px] text-white/30 uppercase font-mono block pl-1">Provide Call Link to Connect (Google Meet / Zoom)</span>
+                          <span className="text-xs text-white/40 uppercase font-mono block pl-1">Provide Call Link to Connect (Google Meet / Zoom)</span>
                         <div className="flex gap-2">
                           <input
                             type="url"
