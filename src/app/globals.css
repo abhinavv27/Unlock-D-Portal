@@ -163,8 +163,7 @@
   }
 
   .text-editorial {
-    @apply font-serif italic tracking-tight text-white/90 leading-relaxed;
-    font-variation-settings: "opsz" 36, "wght" 400;
+    @apply font-sans font-medium tracking-wide text-white/80 leading-relaxed;
   }
 
   .text-label-caps {
