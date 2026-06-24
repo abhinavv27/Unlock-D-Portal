@@ -21,31 +21,6 @@ async function main() {
   await prisma.event.deleteMany()
   await prisma.user.deleteMany()
 
-  // 2. Create staff users
-  const adminPassword = hashPassword('admin123')
-  const judgePassword = hashPassword('judge123')
-
-  const admin = await prisma.user.create({
-    data: {
-      username: 'admin',
-      passwordHash: adminPassword,
-      plainPassword: 'admin123',
-      systemRole: 'ADMIN',
-    },
-  })
-
-  const judge = await prisma.user.create({
-    data: {
-      username: 'judge',
-      passwordHash: judgePassword,
-      plainPassword: 'judge123',
-      systemRole: 'JUDGE',
-    },
-  })
-
-  console.log(`Created staff users:`)
-  console.log(`- Admin: username "admin", password "admin123"`)
-  console.log(`- Judge: username "judge", password "judge123"`)
 
   const hackathonConfig = {
     currentRound: 0,
