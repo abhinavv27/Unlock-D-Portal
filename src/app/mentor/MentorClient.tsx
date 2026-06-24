@@ -48,6 +48,16 @@ interface MentorClientProps {
 }
 
 export default function MentorClient({ session }: MentorClientProps) {
+  const [token, setToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    setToken(localStorage.getItem('staff_token'))
+  }, [])
+
+  const authHeaders = useMemo(() => {
+    return token ? { Authorization: `Bearer ${token}` } : undefined
+  }, [token])
+
   const [isActive, setIsActive] = useState(false)
   const [skills, setSkills] = useState('')
   const [sessions, setSessions] = useState<MentorSession[]>([])
@@ -68,7 +78,10 @@ export default function MentorClient({ session }: MentorClientProps) {
   // Fetch current profile (status and skills)
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch('/api/mentors/me/status', { cache: 'no-store' })
+      const res = await fetch('/api/mentors/me/status', {
+        cache: 'no-store',
+        headers: authHeaders,
+      })
       const data = await res.json()
       if (res.ok && data) {
         setIsActive(Boolean(data.isActive))
@@ -79,12 +92,15 @@ export default function MentorClient({ session }: MentorClientProps) {
     } finally {
       setLoadingProfile(false)
     }
-  }, [])
+  }, [authHeaders])
 
   // Fetch active sessions queue
   const fetchSessions = useCallback(async () => {
     try {
-      const res = await fetch('/api/mentors/sessions', { cache: 'no-store' })
+      const res = await fetch('/api/mentors/sessions', {
+        cache: 'no-store',
+        headers: authHeaders,
+      })
       const data = await res.json()
       if (res.ok) {
         setSessions(data.sessions || [])
@@ -96,13 +112,16 @@ export default function MentorClient({ session }: MentorClientProps) {
     } finally {
       setLoadingSessions(false)
     }
-  }, [])
+  }, [authHeaders])
 
   // Fetch resolved sessions history
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true)
     try {
-      const res = await fetch('/api/mentors/sessions?history=true', { cache: 'no-store' })
+      const res = await fetch('/api/mentors/sessions?history=true', {
+        cache: 'no-store',
+        headers: authHeaders,
+      })
       const data = await res.json()
       if (res.ok) {
         setHistory(data.sessions || [])
@@ -112,7 +131,7 @@ export default function MentorClient({ session }: MentorClientProps) {
     } finally {
       setLoadingHistory(false)
     }
-  }, [])
+  }, [authHeaders])
 
   // Initial loads and background polling
   useEffect(() => {
@@ -142,7 +161,10 @@ export default function MentorClient({ session }: MentorClientProps) {
     try {
       const res = await fetch('/api/mentors/me/status', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeaders || {}),
+        },
         body: JSON.stringify({ isActive: nextActive, skills: skills.trim() }),
       })
       const data = await res.json()
@@ -201,7 +223,10 @@ export default function MentorClient({ session }: MentorClientProps) {
     try {
       const res = await fetch(`/api/mentors/sessions/${sessionId}/accept`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeaders || {}),
+        },
         body: JSON.stringify({ meetingLink: meetLink }),
       })
       const data = await res.json()
@@ -226,6 +251,7 @@ export default function MentorClient({ session }: MentorClientProps) {
     try {
       const res = await fetch(`/api/mentors/sessions/${sessionId}/resolve`, {
         method: 'PUT',
+        headers: authHeaders,
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to resolve session.')

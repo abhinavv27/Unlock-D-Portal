@@ -646,7 +646,9 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                       </div>
 
                       <p className="text-xs text-white/50 mt-4 font-mono">
-                        Approved on {new Date(sub.submittedAt).toLocaleDateString()}
+                        {sub.status === 'APPROVED'
+                          ? `Approved on ${new Date(sub.submittedAt).toLocaleDateString()}`
+                          : `Submitted on ${new Date(sub.submittedAt).toLocaleDateString()} (Awaiting Evaluation)`}
                       </p>
                       {sub.payload?.editHistory && sub.payload.editHistory.length > 0 && (
                         <div className="text-[9px] text-white/30 font-mono mt-2 flex items-center gap-1.5">

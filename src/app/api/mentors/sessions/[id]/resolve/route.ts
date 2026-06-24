@@ -68,9 +68,13 @@ export async function PUT(
       })
 
       if (session.mentorId) {
+        const profile = await tx.mentorProfile.findUnique({
+          where: { userId: session.mentorId },
+        })
+        const nextStatus = profile?.isActive ? 'AVAILABLE' : 'OFFLINE'
         await tx.mentorProfile.updateMany({
           where: { userId: session.mentorId },
-          data: { currentStatus: 'AVAILABLE' },
+          data: { currentStatus: nextStatus },
         })
       }
 
