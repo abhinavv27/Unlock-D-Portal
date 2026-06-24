@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 import { db } from '@/server/db'
 import { verifyJwt } from './jwt'
 
@@ -81,10 +82,17 @@ export function hashPassword(password: string): Promise<string> {
 }
 
 /**
- * Verifies a password against a stored PBKDF2 hash using a timing-safe comparison.
- * Supports legacy 1000 iteration hashes (2 parts) and modern 600000 iteration hashes (3 parts).
+ * Verifies a password against a stored hash.
+ * Supports:
+ * - bcrypt hashes ($2a$, $2b$, $2y$)
+ * - PBKDF2 hashes with dynamic iterations ({iterations}:{salt}:{hash})
+ * - Legacy PBKDF2 hashes ({salt}:{hash})
  */
 export function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (storedHash.startsWith('$2')) {
+    return bcrypt.compare(password, storedHash)
+  }
+
   return new Promise((resolve, reject) => {
     try {
       const parts = storedHash.split(':')
