@@ -65,11 +65,7 @@ export default function JudgingPage() {
     if (!activeSubmission) return []
     const taskId = activeSubmission.taskId
     if (taskId.startsWith('FEATURE-')) {
-      const featureNum = taskId.split('-')[1]
-      return [
-        { key: `feature_${featureNum}_functionality`, label: `Feature ${featureNum} Functionality`, desc: `Functionality of Feature ${featureNum} sprint`, max: 10 },
-        { key: `feature_${featureNum}_code_quality`, label: `Feature ${featureNum} Code Quality`, desc: `Code Quality of Feature ${featureNum} sprint`, max: 10 },
-      ]
+      return []
     }
     return [
       { key: 'functionality', label: 'Functionality', desc: 'Does the application work as intended?', max: 20 },
@@ -85,11 +81,7 @@ export default function JudgingPage() {
   const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
     const taskId = sub.taskId
     if (taskId.startsWith('FEATURE-')) {
-      const featureNum = taskId.split('-')[1]
-      return {
-        [`feature_${featureNum}_functionality`]: 8,
-        [`feature_${featureNum}_code_quality`]: 8,
-      }
+      return {}
     }
     return { ...INITIAL_SCORES }
   }, [])
@@ -267,11 +259,7 @@ export default function JudgingPage() {
       // Pre-populate with existing evaluation
       const breakdown = myEval.scoreBreakdown || {}
       if (sub.taskId.startsWith('FEATURE-')) {
-        const featureNum = sub.taskId.split('-')[1]
-        setScores({
-          [`feature_${featureNum}_functionality`]: Number(breakdown[`feature_${featureNum}_functionality`]) || 0,
-          [`feature_${featureNum}_code_quality`]: Number(breakdown[`feature_${featureNum}_code_quality`]) || 0,
-        })
+        setScores({})
       } else {
         setScores({
           functionality: Number(breakdown.functionality) || 0,
