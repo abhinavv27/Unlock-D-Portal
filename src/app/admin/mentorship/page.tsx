@@ -588,7 +588,7 @@ export default function AdminMentorshipPage() {
                         myActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-white/5 border-white/10'
                       }`}
                     >
-                      <span className={`absolute top-[1px] h-5 w-5 rounded-full bg-white transition-transform ${myActive ? 'translate-x-[24px]' : 'translate-x-[2px]'}`} />
+                      <span className={`absolute left-0 top-[1px] h-5 w-5 rounded-full bg-white transition-transform ${myActive ? 'translate-x-[24px]' : 'translate-x-[2px]'}`} />
                     </button>
                     <span className={`text-[10px] font-mono uppercase ${myActive ? 'text-emerald-300' : 'text-white/35'}`}>
                       {myActive ? 'Available' : 'Offline'}
