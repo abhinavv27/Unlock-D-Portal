@@ -89,6 +89,7 @@ export function hashPassword(password: string): Promise<string> {
  * - Legacy PBKDF2 hashes ({salt}:{hash})
  */
 export function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (!storedHash) return Promise.resolve(false)
   if (storedHash.startsWith('$2')) {
     return bcrypt.compare(password, storedHash)
   }
