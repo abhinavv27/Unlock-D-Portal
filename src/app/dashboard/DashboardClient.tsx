@@ -964,9 +964,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               {loading ? 'Submitting...' : 'Submit Entry'}
                             </button>
                             <span className="text-[10px] text-white/20 font-mono">
-                              {team?.allowedRound === 1 
-                                ? "Provide your GitHub repository link and mandatory drive demo video URL" 
-                                : "Provide your code repository and working demo video URL"}
+                              Provide your GitHub commit submission link (Mandatory) and drive demo video URL (Mandatory).
                             </span>
                           </div>
                         </form>
