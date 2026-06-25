@@ -22,7 +22,7 @@ async function main() {
   await prisma.user.deleteMany()
 
 
-  const hackathonConfig = {
+  const unlockdConfig = {
     currentRound: 0,
     stages: [
       { stage: 0, name: 'System Setup & Comprehension', pointsRequired: 10 },
@@ -33,15 +33,15 @@ async function main() {
     total_rounds: 3,
     passing_threshold: 60,
     roadmap: [
-      { step: 1, task_id: 'ROUND-0', round: 0, rubric: ['setup'], title: 'System Setup & Comprehension', description: 'Familiarize yourself with the development environment and project requirements.' },
-      { step: 2, task_id: 'FEATURE-1', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 1 — Core Architecture', description: 'Design and implement the foundational architecture of your application, including database schema, API structure, and core business logic.' },
-      { step: 3, task_id: 'FEATURE-2', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 2 — User Interaction', description: 'Build user-facing features including authentication, onboarding flows, and interactive UI components.' },
-      { step: 4, task_id: 'FEATURE-3', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 3 — Data Integration', description: 'Implement data processing, third-party API integrations, and real-time data synchronization.' },
-      { step: 5, task_id: 'FEATURE-4', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 4 — Advanced Capabilities', description: 'Add advanced functionality such as search, filtering, notifications, and background job processing.' },
-      { step: 6, task_id: 'FEATURE-5', round: 1, rubric: ['functionality', 'code_quality'], title: 'Feature 5 — Polish & Performance', description: 'Optimize application performance, add error handling, loading states, and refine the user experience.' },
-      { step: 7, task_id: 'FINAL-FEATURE', round: 1, rubric: ['functionality', 'code_quality'], title: 'Final Feature — Complete Integration', description: 'Integrate all features into a cohesive product. Ensure all components work together seamlessly end-to-end.' },
-      { step: 8, task_id: 'ROUND-2', round: 2, rubric: ['ux', 'polish', 'innovation'], title: 'Round 2 — UX & Innovation', description: 'Elevate the user experience with polished interfaces, innovative interactions, and comprehensive error handling.' },
-      { step: 9, task_id: 'ROUND-3', round: 3, rubric: ['presentation', 'business_viability'], title: 'Round 3 — Presentation & Viability', description: 'Prepare your final pitch, demo the working product, and present business viability.' },
+      { step: 1, task_id: 'ROUND-0', round: 0, threshold: 10, rubric: ['setup'], title: 'System Setup & Comprehension', description: 'Familiarize yourself with the development environment and project requirements.' },
+      { step: 2, task_id: 'FEATURE-1', round: 1, threshold: 0, rubric: [], title: 'Feature 1 — Core Architecture', description: 'Design and implement the foundational architecture of your application, including database schema, API structure, and core business logic.' },
+      { step: 3, task_id: 'FEATURE-2', round: 1, threshold: 0, rubric: [], title: 'Feature 2 — User Interaction', description: 'Build user-facing features including authentication, onboarding flows, and interactive UI components.' },
+      { step: 4, task_id: 'FEATURE-3', round: 1, threshold: 0, rubric: [], title: 'Feature 3 — Data Integration', description: 'Implement data processing, third-party API integrations, and real-time data synchronization.' },
+      { step: 5, task_id: 'FEATURE-4', round: 1, threshold: 0, rubric: [], title: 'Feature 4 — Advanced Capabilities', description: 'Add advanced functionality such as search, filtering, notifications, and background job processing.' },
+      { step: 6, task_id: 'FEATURE-5', round: 1, threshold: 0, rubric: [], title: 'Feature 5 — Polish & Performance', description: 'Optimize application performance, add error handling, loading states, and refine the user experience.' },
+      { step: 7, task_id: 'FINAL-FEATURE', round: 1, threshold: 60, rubric: ['functionality', 'code_quality', 'integration', 'ux', 'architecture'], title: 'Overall Submission — Complete Integration', description: 'Integrate all features into a cohesive product. Ensure all components work together seamlessly end-to-end.' },
+      { step: 8, task_id: 'ROUND-2', round: 2, threshold: 60, rubric: ['functionality', 'code_quality', 'integration', 'ux', 'architecture'], title: 'Round 2 — UX & Innovation', description: 'Elevate the user experience with polished interfaces, innovative interactions, and comprehensive error handling.' },
+      { step: 9, task_id: 'ROUND-3', round: 3, threshold: 45, rubric: ['presentation', 'e2e_functionality', 'product_flow', 'arch_understanding'], title: 'Round 3 — Presentation & Viability', description: 'Prepare your final pitch, demo the working product, and present business viability.' },
     ],
   }
 
@@ -57,8 +57,9 @@ async function main() {
     data: {
       name: 'UnlockD Progressive Hackathon',
       slug: 'unlockd-2024',
-      eventType: 'PROGRESSIVE_HACKATHON',
-      config: hackathonConfig,
+      eventType: 'PROGRESSIVE_BUILDATHON',
+      config: unlockdConfig,
+      currentGlobalRound: 1,
       isActive: true,
     },
   })
@@ -73,20 +74,9 @@ async function main() {
     },
   })
 
-  const team = await prisma.registration.create({
-    data: {
-      eventId: hackathonEvent.id,
-      unstopTeamId: 'unstop_101',
-      teamName: 'CyberTitans',
-      teamPasscodeHash: 'pass123',
-      progressState: { current_stage: 1, score: 0, penalties: 0 },
-    }
-  })
-
   console.log('Created events:')
   console.log(`- Hackathon: "${hackathonEvent.name}" (slug: "${hackathonEvent.slug}")`)
   console.log(`- CTF: "${ctfEvent.name}" (slug: "${ctfEvent.slug}")`)
-  console.log(`- Mock Team: "${team.teamName}" with passcode "pass123"`)
 
   console.log('Seed completed successfully!')
 }
