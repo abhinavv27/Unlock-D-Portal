@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
+// import { getStaffFromRequest, hashPassword } from '@/lib/auth-utils'
 import { parseUnstopCSV } from '@/lib/csv-parser'
 import { Resend } from 'resend'
 import crypto from 'crypto'
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     // 4. Parse CSV text
     const csvText = await file.text()
     let importedTeams: Array<{ teamId: string; teamName: string; email?: string }> = []
-    
+
     try {
       importedTeams = parseUnstopCSV(csvText)
     } catch {
@@ -82,9 +83,9 @@ export async function POST(request: Request) {
       initialProgress = { stage: 1, score: 0 }
     }
 
-    const generatedTeams: Array<{ 
-      teamName: string 
-      passcode: string 
+    const generatedTeams: Array<{
+      teamName: string
+      passcode: string
     }> = []
 
     // 6. Bulk insert new registrations (skipping duplicate unstopTeamIds)
@@ -100,13 +101,15 @@ export async function POST(request: Request) {
 
       if (!existing) {
         const passcode = generatePasscode()
-        
+        // const hashedPasscode = await hashPassword(passcode)
+
         await db.registration.create({
           data: {
             eventId,
             unstopTeamId: team.teamId,
             teamName: team.teamName,
             teamPasscodeHash: passcode,
+            // teamPasscodeHash: hashedPasscode,
             memberDetails: team.email ? [{ email: team.email }] : [],
             progressState: initialProgress,
           },
