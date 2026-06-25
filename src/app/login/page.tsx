@@ -191,8 +191,7 @@ export default function LoginPage() {
                     type="password"
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}
-                    placeholder="10-character passcode"
-                    maxLength={10}
+                    placeholder="Team passcode"
                     required
                     className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10 text-value-mono !text-sm"
                   />
