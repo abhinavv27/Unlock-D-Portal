@@ -71,6 +71,8 @@ export default function JudgingPage() {
   const [teamLogsLoading, setTeamLogsLoading] = useState(false)
   const [currentGlobalRound, setCurrentGlobalRound] = useState(1)
   const [teamSearch, setTeamSearch] = useState('')
+  const [queueSearch, setQueueSearch] = useState('')
+  const [queueFeatureSearch, setQueueFeatureSearch] = useState('')
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
 
   // Current logged in user info
@@ -206,6 +208,17 @@ export default function JudgingPage() {
     return teamLogs.filter((t: any) => t.teamName.toLowerCase().includes(q))
   }, [teamLogs, teamSearch])
 
+  const uniqueFeatures = useMemo(() => {
+    return [
+      'Feature 1',
+      'Feature 2',
+      'Feature 3',
+      'Feature 4',
+      'Feature 5',
+      'Final Submission'
+    ]
+  }, [])
+
   // Helper: get current judge's userId
   const getStaffUserId = useCallback(() => {
     return staffUser?.userId ?? null
@@ -306,7 +319,11 @@ export default function JudgingPage() {
           {/* View Toggle */}
           <div className="flex rounded-xl border border-white/10 overflow-hidden mt-4">
             <button
-              onClick={() => setMainView('queue')}
+              onClick={() => {
+                setMainView('queue')
+                setQueueSearch('')
+                setQueueFeatureSearch('')
+              }}
               className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
                 mainView === 'queue'
                   ? 'bg-primary/10 text-primary border-r border-primary/20'
@@ -316,7 +333,11 @@ export default function JudgingPage() {
               Queue
             </button>
             <button
-              onClick={() => setMainView('feedback')}
+              onClick={() => {
+                setMainView('feedback')
+                setQueueSearch('')
+                setQueueFeatureSearch('')
+              }}
               className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
                 mainView === 'feedback'
                   ? 'bg-sky-500/10 text-sky-400 border-r border-sky-500/20'
@@ -328,6 +349,8 @@ export default function JudgingPage() {
             <button
               onClick={() => {
                 setMainView('logs')
+                setQueueSearch('')
+                setQueueFeatureSearch('')
                 if (staffToken) fetchTeamLogs(staffToken)
               }}
               className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
@@ -339,14 +362,84 @@ export default function JudgingPage() {
               Logs
             </button>
           </div>
+
+          {/* Queue Search Input */}
+          {(mainView === 'queue' || mainView === 'feedback') && (
+            <div className="space-y-2 mt-4">
+              {/* Team Name Filter */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={queueSearch}
+                  onChange={(e) => setQueueSearch(e.target.value)}
+                  placeholder="Filter by Team Name..."
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-8 pr-8 py-2 text-[10px] text-white/75 focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/20 font-mono"
+                />
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                {queueSearch && (
+                  <button
+                    onClick={() => setQueueSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/30 hover:text-white/70 transition-colors"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Feature/Task Name Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={queueFeatureSearch}
+                  onChange={(e) => setQueueFeatureSearch(e.target.value)}
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-8 pr-10 py-2 text-[10px] text-white/75 focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all font-mono appearance-none"
+                >
+                  <option value="" className="bg-[#050505] text-white/40">All Features/Tasks</option>
+                  {uniqueFeatures.map(feat => (
+                    <option key={feat} value={feat} className="bg-[#050505] text-white">
+                      {feat}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </div>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:p-5 space-y-2 custom-scrollbar min-h-0">
           {(() => {
-            const displayQueue = queue.filter(sub => {
-              const isFeature = sub.taskId.startsWith('FEATURE-')
-              return mainView === 'feedback' ? isFeature : !isFeature
-            })
+            const displayQueue = queue
+              .filter(sub => {
+                if (queueFeatureSearch) {
+                  if (queueFeatureSearch === 'Final Submission') {
+                    return sub.taskId === 'FINAL-FEATURE'
+                  }
+                  const label = getFeatureLabel(sub.taskId)
+                  return label.toLowerCase() === queueFeatureSearch.toLowerCase()
+                }
+                const isFeature = sub.taskId.startsWith('FEATURE-')
+                return mainView === 'feedback' ? isFeature : !isFeature
+              })
+              .filter(sub => {
+                const matchTeam = !queueSearch.trim() || sub.registration.teamName.toLowerCase().includes(queueSearch.toLowerCase())
+                const featureLabel = getFeatureLabel(sub.taskId)
+                const matchFeature = !queueFeatureSearch.trim() || 
+                  (queueFeatureSearch === 'Final Submission' ? sub.taskId === 'FINAL-FEATURE' : featureLabel.toLowerCase().includes(queueFeatureSearch.toLowerCase()))
+                return matchTeam && matchFeature
+              })
             
             if (loading) {
               return <div className="text-center py-16 text-white/20 text-xs font-mono tracking-widest">LOADING...</div>
