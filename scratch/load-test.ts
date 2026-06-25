@@ -39,7 +39,7 @@ async function runLoadTest() {
   // 3. Simulate Concurrent Team Work Submissions
   console.log(`\n[Phase 2] Simulating ${CONCURRENT_TEAMS} concurrent submissions...`)
   const submissionStartTime = Date.now()
-  
+
   const submissionPromises = teams.map(async (team, index) => {
     const start = Date.now()
     try {
@@ -102,7 +102,7 @@ async function runLoadTest() {
   // Retrieve token for first judge (admin) and second judge (judge)
   console.log('\n[Phase 3] Logging in judges for grading simulation...')
   const staffTokens: string[] = []
-  
+
   const credentials = [
     { username: 'admin', password: 'admin123' },
     { username: 'judge', password: 'judge123' }
@@ -127,7 +127,7 @@ async function runLoadTest() {
 
   console.log(`✅ Logged in ${staffTokens.length} judges.`)
   console.log(`\n[Phase 4] Simulating concurrent evaluations (total ${submissionIds.length * staffTokens.length} requests)...`)
-  
+
   const gradeStartTime = Date.now()
   const gradePromises: Promise<any>[] = []
 

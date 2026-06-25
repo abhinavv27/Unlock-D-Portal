@@ -49,13 +49,7 @@ export default function AdminLeaderboardPage() {
 
   const { data: projects, isLoading } = api.judging.leaderboard.useQuery()
 
-  const mapped = projects?.map(p => {
-    const roundScores = Object.values(p.roundBreakdown || {}) as number[]
-    const avgScore = roundScores.length > 0 
-      ? Math.round((roundScores.reduce((sum, s) => sum + s, 0) / roundScores.length) * 10) / 10
-      : 0
-    return { ...p, avgScore }
-  })
+  const mapped = projects || []
 
   const filtered = mapped?.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 

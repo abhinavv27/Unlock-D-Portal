@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { createTRPCRouter, adminProcedure, strictAdminProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
+import { getMaxScoreForRubric } from '@/lib/rubric'
 
 export const applicationRouter = createTRPCRouter({
   // Admin: get all registered teams (mapped to old applications list)
@@ -108,6 +109,15 @@ export const applicationRouter = createTRPCRouter({
 
       const state = reg.progressState as any
 
+      const roundAverages: Record<number, number> = {}
+      for (const round of [0, 1, 2, 3]) {
+        const subs = reg.submissions.filter(s => s.roundNumber === round)
+        if (subs.length > 0) {
+          const avgScore = subs.reduce((sum, s) => sum + (s.averageScore || 0), 0) / subs.length
+          roundAverages[round] = Math.round(avgScore * 10) / 10
+        }
+      }
+
       return {
         id: reg.id,
         teamName: reg.teamName,
@@ -126,6 +136,7 @@ export const applicationRouter = createTRPCRouter({
           rejectionReason: sub.rejectionReason,
           payload: sub.payload,
           submittedAt: sub.submittedAt,
+          averageScore: sub.averageScore || 0,
           evaluations: sub.evaluations.map(ev => ({
             id: ev.id,
             scoreBreakdown: ev.scoreBreakdown,
@@ -136,6 +147,7 @@ export const applicationRouter = createTRPCRouter({
             judgeRole: ev.judge.systemRole,
           })),
         })),
+        roundAverages,
       }
     }),
 
@@ -143,8 +155,19 @@ export const applicationRouter = createTRPCRouter({
   pipelineStats: adminProcedure.query(async ({ ctx }) => {
     const totalEvents = await ctx.db.event.count()
     const totalTeams = await ctx.db.registration.count()
-    const totalSubmissions = await ctx.db.submission.count()
-    const pendingSubmissions = await ctx.db.submission.count({ where: { status: 'PENDING' } })
+    const EXCLUDED_TASKS = ['FEATURE-1', 'FEATURE-2', 'FEATURE-3', 'FEATURE-4', 'FEATURE-5']
+
+    const totalSubmissions = await ctx.db.submission.count({
+      where: {
+        taskId: { notIn: EXCLUDED_TASKS },
+      },
+    })
+    const pendingSubmissions = await ctx.db.submission.count({
+      where: {
+        status: 'PENDING',
+        taskId: { notIn: EXCLUDED_TASKS },
+      },
+    })
 
     return {
       total: totalTeams,
@@ -425,35 +448,22 @@ export const applicationRouter = createTRPCRouter({
             'feature_5_functionality', 'feature_5_code_quality'
           ]
         }
-        const maxScore = rubric.length * 10
+        
+        const maxScore = getMaxScoreForRubric(rubric)
         const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
         const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
         let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
         let rejectionReason: string | null = null
 
-        if (submission.taskId.startsWith('FEATURE-')) {
-          const hasRejection = evaluations.some((e) => {
-            const breakdown = e.scoreBreakdown as any
-            return breakdown?.status === 'REJECTED'
-          })
-          finalStatus = hasRejection ? 'REJECTED' : 'APPROVED'
-          if (finalStatus === 'REJECTED') {
-            rejectionReason = evaluations
-              .map((e) => e.feedback?.trim())
-              .filter(Boolean)
-              .join(' | ')
-          }
+        if (averageScore >= passingThresholdScore) {
+          finalStatus = 'APPROVED'
         } else {
-          if (averageScore >= passingThresholdScore) {
-            finalStatus = 'APPROVED'
-          } else {
-            finalStatus = 'REJECTED'
-            rejectionReason = evaluations
-              .map((e) => e.feedback?.trim())
-              .filter(Boolean)
-              .join(' | ')
-          }
+          finalStatus = 'REJECTED'
+          rejectionReason = evaluations
+            .map((e) => e.feedback?.trim())
+            .filter(Boolean)
+            .join(' | ')
         }
 
         await tx.submission.update({

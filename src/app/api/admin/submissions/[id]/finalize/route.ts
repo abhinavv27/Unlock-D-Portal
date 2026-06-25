@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { authenticateStaff } from '@/lib/jwt-auth'
 import { getTeamStatus } from '@/lib/state-engine'
+import { getMaxScoreForRubric } from '@/lib/rubric'
 
 export async function POST(
   request: Request,
@@ -63,25 +64,21 @@ export async function POST(
     
     let rubric = stepObj?.rubric || ['functionality', 'code_quality']
     
-    const maxScore = rubric.length * 10
+    const maxScore = getMaxScoreForRubric(rubric)
     const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
     const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
     let finalStatus: 'APPROVED' | 'REJECTED'
     let rejectionReason: string | null = null
 
-    if (submission.taskId.startsWith('FEATURE-')) {
+    if (averageScore >= passingThresholdScore) {
       finalStatus = 'APPROVED'
     } else {
-      if (averageScore >= passingThresholdScore) {
-        finalStatus = 'APPROVED'
-      } else {
-        finalStatus = 'REJECTED'
-        rejectionReason = evaluations
-          .map((e) => e.feedback?.trim())
-          .filter(Boolean)
-          .join(' | ')
-      }
+      finalStatus = 'REJECTED'
+      rejectionReason = evaluations
+        .map((e) => e.feedback?.trim())
+        .filter(Boolean)
+        .join(' | ')
     }
 
     // 3. Update Submission and Registration within a transaction

@@ -161,7 +161,7 @@ export default function TeamDetailPage() {
       if (sub.status === 'APPROVED' || sub.status === 'REJECTED') {
         events.push({
           date: sub.evaluations[0]?.gradedAt || sub.submittedAt,
-          label: `${getFeatureLabel(sub.taskId)} ${sub.status === 'APPROVED' ? 'approved' : 'rejected'} (score: ${sub.evaluations.reduce((s, e) => s + e.totalScore, 0)})`,
+          label: `${getFeatureLabel(sub.taskId)} ${sub.status === 'APPROVED' ? 'approved' : 'rejected'} (score: ${sub.averageScore})`,
           type: sub.status === 'APPROVED' ? 'approved' : 'rejected',
         })
       }
@@ -296,9 +296,7 @@ export default function TeamDetailPage() {
           <h2 className="text-label-caps !text-xs text-white/40">Round Breakdown</h2>
           {[0, 1, 2, 3].map((round) => {
             const subs = submissionsByRound[round] || []
-            const avgScore = subs.length > 0
-              ? subs.reduce((sum, s) => sum + s.evaluations.reduce((a, e) => a + e.totalScore, 0), 0) / subs.length
-              : null
+            const avgScore = data?.roundAverages?.[round] ?? null
             const isOpen = openRounds[round]
 
             return (
