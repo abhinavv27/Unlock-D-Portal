@@ -150,13 +150,15 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const handleWorkSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const isRound1 = team?.allowedRound === 1
-    if (isRound1 && !liveDemoUrl.trim()) {
-      setSubmitError('Drive video link is mandatory for Stage 1.')
+    if (!githubUrl.trim()) {
+      setSubmitError('GitHub Commit Submission Link is mandatory.')
       return
     }
 
-    if (!githubUrl.trim() && !liveDemoUrl.trim()) return
+    if (!liveDemoUrl.trim()) {
+      setSubmitError('Drive Video Link is mandatory.')
+      return
+    }
 
     if (description.trim() && description.trim().length < 20) {
       setSubmitError('Description must be at least 20 characters.')
@@ -928,14 +930,14 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               type="url"
                               value={githubUrl}
                               onChange={(e) => setGithubUrl(e.target.value)}
-                              placeholder={team?.allowedRound === 1 ? "GitHub Submission Link" : "GitHub Commit / Repository URL"}
+                              placeholder="GitHub Commit Submission Link (Mandatory)"
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
                             <input
                               type="url"
                               value={liveDemoUrl}
                               onChange={(e) => setLiveDemoUrl(e.target.value)}
-                              placeholder={team?.allowedRound === 1 ? "Drive Video Link (Mandatory)" : "Loom / Google Drive Video URL"}
+                              placeholder="Drive Video Link (Mandatory)"
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
                             />
                             <textarea
@@ -956,15 +958,13 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button
                               type="submit"
-                              disabled={loading || (team?.allowedRound === 1 ? !liveDemoUrl.trim() : (!githubUrl.trim() && !liveDemoUrl.trim()))}
+                              disabled={loading || !githubUrl.trim() || !liveDemoUrl.trim()}
                               className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
                             >
                               {loading ? 'Submitting...' : 'Submit Entry'}
                             </button>
                             <span className="text-[10px] text-white/20 font-mono">
-                              {team?.allowedRound === 1 
-                                ? "Provide your GitHub repository link and mandatory drive demo video URL" 
-                                : "Provide your code repository and working demo video URL"}
+                              Provide your GitHub commit submission link (Mandatory) and drive demo video URL (Mandatory).
                             </span>
                           </div>
                         </form>

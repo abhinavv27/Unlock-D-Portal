@@ -21,8 +21,8 @@ async function run() {
   });
   console.log('Admin user upserted:', admin.username);
 
-  const hackathonConfig = {
-    total_rounds: 3,
+  const unlockdConfig = {
+    currentRound: 0,
     passing_threshold: 60,
     roadmap: [
       { step: 1, task_id: 'FEATURE-1', round: 1, rubric: ['functionality', 'code_quality'] },
@@ -39,8 +39,9 @@ async function run() {
     create: {
       name: 'UnlockD Progressive Hackathon',
       slug: 'unlockd-2024',
-      eventType: 'PROGRESSIVE_HACKATHON',
-      config: hackathonConfig,
+      eventType: 'Internal Hackathon',
+      config: unlockdConfig,
+      currentGlobalRound: 1,
       isActive: true,
     },
   });

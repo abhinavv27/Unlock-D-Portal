@@ -27,25 +27,8 @@ function timeAgo(dateStr: string): string {
   return `${hrs}h ${rem}m ago`
 }
 
-const CRITERIA = [
-  { key: 'functionality' as const, label: 'Functionality', desc: 'Does the application work as intended?', max: 20 },
-  { key: 'codeQuality' as const, label: 'Code Quality', desc: 'Is the code well-structured and maintainable?', max: 15 },
-  { key: 'integration' as const, label: 'Integration', desc: 'Do components and APIs work together?', max: 15 },
-  { key: 'userExperience' as const, label: 'User Experience', desc: 'Is the interface intuitive and polished?', max: 15 },
-  { key: 'deployment' as const, label: 'Deployment', desc: 'Is the app deployed and accessible?', max: 10 },
-  { key: 'teamwork' as const, label: 'Teamwork', desc: 'Clear roles, collaboration, and presentation?', max: 15 },
-  { key: 'errorHandling' as const, label: 'Error Handling', desc: 'Are edge cases and errors managed?', max: 10 },
-]
-
-const INITIAL_SCORES = {
-  functionality: 10,
-  codeQuality: 8,
-  integration: 8,
-  userExperience: 8,
-  deployment: 5,
-  teamwork: 8,
-  errorHandling: 5,
-}
+// CRITERIA and INITIAL_SCORES have been moved to the backend.
+// The frontend dynamically uses the criteria provided in the queue API.
 
 export default function JudgingPage() {
   const router = useRouter()
@@ -59,31 +42,20 @@ export default function JudgingPage() {
 
   // Active submission
   const [activeSubmission, setActiveSubmission] = useState<any | null>(null)
-  const [scores, setScores] = useState<Record<string, number>>(INITIAL_SCORES)
+  const [scores, setScores] = useState<Record<string, number>>({})
 
   const currentCriteria = useMemo(() => {
-    if (!activeSubmission) return []
-    const taskId = activeSubmission.taskId
-    if (taskId.startsWith('FEATURE-')) {
-      return []
-    }
-    return [
-      { key: 'functionality', label: 'Functionality', desc: 'Does the application work as intended?', max: 20 },
-      { key: 'codeQuality', label: 'Code Quality', desc: 'Is the code well-structured and maintainable?', max: 15 },
-      { key: 'integration', label: 'Integration', desc: 'Do components and APIs work together?', max: 15 },
-      { key: 'userExperience', label: 'User Experience', desc: 'Is the interface intuitive and polished?', max: 15 },
-      { key: 'deployment', label: 'Deployment', desc: 'Is the app deployed and accessible?', max: 10 },
-      { key: 'teamwork', label: 'Teamwork', desc: 'Clear roles, collaboration, and presentation?', max: 15 },
-      { key: 'errorHandling', label: 'Error Handling', desc: 'Are edge cases and errors managed?', max: 10 },
-    ]
+    return activeSubmission?.criteria || []
   }, [activeSubmission])
 
   const initializeScoresForSubmission = useCallback((sub: any): Record<string, number> => {
-    const taskId = sub.taskId
-    if (taskId.startsWith('FEATURE-')) {
-      return {}
+    const initial: Record<string, number> = {}
+    if (sub?.criteria && Array.isArray(sub.criteria)) {
+      sub.criteria.forEach((c: any) => {
+        initial[c.key] = Math.max(0, Math.round((c.max || 10) / 2))
+      })
     }
-    return { ...INITIAL_SCORES }
+    return initial
   }, [])
   const [notes, setNotes] = useState('')
   const [gradeStatus, setGradeStatus] = useState<'APPROVED' | 'REJECTED'>('APPROVED')
@@ -92,7 +64,7 @@ export default function JudgingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // View toggle
-  const [mainView, setMainView] = useState<'queue' | 'logs'>('queue')
+  const [mainView, setMainView] = useState<'queue' | 'feedback' | 'logs'>('queue')
 
   // Team Logs
   const [teamLogs, setTeamLogs] = useState<any[]>([])
@@ -209,7 +181,7 @@ export default function JudgingPage() {
       setSubmitSuccess(true)
       setQueue((prev) => prev.filter((sub) => sub.id !== activeSubmission.id))
       setActiveSubmission(null)
-      setScores(INITIAL_SCORES)
+      setScores({})
       setNotes('')
       setGradeStatus('APPROVED')
       if (staffToken) {
@@ -224,7 +196,7 @@ export default function JudgingPage() {
 
   const overall = useMemo(() => {
     return (
-      currentCriteria.reduce((sum, c) => sum + (scores[c.key] || 0), 0)
+      currentCriteria.reduce((sum: number, c: any) => sum + (scores[c.key] || 0), 0)
     ).toFixed(0)
   }, [currentCriteria, scores])
 
@@ -320,8 +292,15 @@ export default function JudgingPage() {
           </Link>
 
           <div className="flex justify-between items-end">
-            <p className="text-label-caps !text-[9px] text-white/30">Submission Queue</p>
-            <p className="text-value-mono !text-[10px] text-primary">{queue.length} pending</p>
+            <p className="text-label-caps !text-[9px] text-white/30">
+              {mainView === 'feedback' ? 'Feedback Queue' : 'Submission Queue'}
+            </p>
+            <p className="text-value-mono !text-[10px] text-primary">
+              {queue.filter(sub => {
+                const isFeature = sub.taskId.startsWith('FEATURE-')
+                return mainView === 'feedback' ? isFeature : !isFeature
+              }).length} pending
+            </p>
           </div>
 
           {/* View Toggle */}
@@ -335,6 +314,16 @@ export default function JudgingPage() {
               }`}
             >
               Queue
+            </button>
+            <button
+              onClick={() => setMainView('feedback')}
+              className={`flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all ${
+                mainView === 'feedback'
+                  ? 'bg-sky-500/10 text-sky-400 border-r border-sky-500/20'
+                  : 'bg-white/[0.02] text-white/40 hover:text-white/60 border-r border-white/10'
+              }`}
+            >
+              Feedback
             </button>
             <button
               onClick={() => {
@@ -352,16 +341,24 @@ export default function JudgingPage() {
           </div>
         </div>
 
-        {/* Queue list — takes upper half */}
         <div className="flex-1 overflow-auto p-4 md:p-5 space-y-2 custom-scrollbar min-h-0">
-          {loading ? (
-            <div className="text-center py-16 text-white/20 text-xs font-mono tracking-widest">LOADING...</div>
-          ) : queue.length === 0 ? (
-            <div className="text-center py-16 text-white/20 text-xs leading-relaxed font-mono">
-              ALL CLEAR<br />No pending submissions.
-            </div>
-          ) : (
-            queue.map((sub, idx) => (
+          {(() => {
+            const displayQueue = queue.filter(sub => {
+              const isFeature = sub.taskId.startsWith('FEATURE-')
+              return mainView === 'feedback' ? isFeature : !isFeature
+            })
+            
+            if (loading) {
+              return <div className="text-center py-16 text-white/20 text-xs font-mono tracking-widest">LOADING...</div>
+            }
+            if (displayQueue.length === 0) {
+              return (
+                <div className="text-center py-16 text-white/20 text-xs leading-relaxed font-mono">
+                  ALL CLEAR<br />No pending submissions.
+                </div>
+              )
+            }
+            return displayQueue.map((sub, idx) => (
               <motion.button
                 key={sub.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -397,7 +394,7 @@ export default function JudgingPage() {
                 </p>
               </motion.button>
             ))
-          )}
+          })()}
         </div>
 
 
@@ -612,7 +609,7 @@ export default function JudgingPage() {
         )}
 
         {/* ===== GRADING QUEUE VIEW ===== */}
-        {mainView === 'queue' && (
+        {(mainView === 'queue' || mainView === 'feedback') && (
         <AnimatePresence mode="wait">
           {activeSubmission ? (
             <motion.div
@@ -667,7 +664,7 @@ export default function JudgingPage() {
               <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[3rem] border-white/5 space-y-8 md:space-y-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
                 <form onSubmit={handleGradeSubmit} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                    {currentCriteria.map(({ key, label, desc, max }) => (
+                    {currentCriteria.map(({ key, label, desc, max }: any) => (
                       <div key={key} className="space-y-1 group">
                         <div className="flex items-end justify-between">
                           <div>
@@ -728,7 +725,7 @@ export default function JudgingPage() {
                           {overall}
                         </span>
                         <span className="text-label-caps !text-[10px] opacity-40 mt-1 block">/ {
-                          activeSubmission?.taskId.startsWith('FEATURE-') ? currentCriteria.length * 10 : 100
+                          currentCriteria.reduce((sum: number, c: any) => sum + (c.max || 0), 0)
                         }</span>
                       </div>
                     </div>
@@ -753,7 +750,7 @@ export default function JudgingPage() {
                       disabled={submitLoading}
                       className="w-full py-4 rounded-[1.5rem] bg-white text-black text-label-caps !text-[11px] transition-all hover:scale-[1.01] active:scale-[0.99] shadow-2xl font-black disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:bg-primary hover:text-white"
                     >
-                      {submitLoading ? 'SUBMITTING...' : 'SUBMIT GRADE & EVALUATION'}
+                      {submitLoading ? 'SUBMITTING...' : (currentCriteria.length > 0 ? 'SUBMIT GRADE & EVALUATION' : 'SUBMIT FEEDBACK')}
                     </button>
                   </div>
                 </form>

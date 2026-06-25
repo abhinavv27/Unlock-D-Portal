@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { getTeamStatus } from '@/lib/state-engine'
+import { getMaxScoreForRubric } from '@/lib/rubric'
 import { z } from 'zod'
 
 const gradeSchema = z.object({
@@ -155,25 +156,22 @@ export async function POST(request: Request) {
       
       let rubric = stepObj?.rubric || ['functionality', 'code_quality']
       
-      const maxScore = rubric.length * 10
-      const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
-      const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
+      const maxScore = getMaxScoreForRubric(rubric)
+      const passingThresholdScore = stepObj?.threshold ?? ((eventConfig?.passing_threshold ?? 60) / 100) * maxScore
 
       let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
 
-      if (submission.taskId.startsWith('FEATURE-')) {
+      if (rubric.length === 0) {
+        finalStatus = 'APPROVED'
+      } else if (averageScore >= passingThresholdScore) {
         finalStatus = 'APPROVED'
       } else {
-        if (averageScore >= passingThresholdScore) {
-          finalStatus = 'APPROVED'
-        } else {
-          finalStatus = 'REJECTED'
-          rejectionReason = evaluations
-            .map((e) => e.feedback?.trim())
-            .filter(Boolean)
-            .join(' | ')
-        }
+        finalStatus = 'REJECTED'
+        rejectionReason = evaluations
+          .map((e) => e.feedback?.trim())
+          .filter(Boolean)
+          .join(' | ')
       }
 
       await tx.submission.update({

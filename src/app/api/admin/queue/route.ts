@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { getTeamStatus } from '@/lib/state-engine'
+import { getCriteriaForRubric } from '@/lib/rubric'
 
 export async function GET(request: Request) {
   try {
@@ -56,8 +57,15 @@ export async function GET(request: Request) {
       if (teamStatus.allowedRound >= currentRound) {
         // Map registration select properties to keep response compatibility
         const { event, ...regRest } = sub.registration
+        
+        const roadmap = eventConfig?.roadmap || []
+        const stepObj = roadmap.find((r: any) => r.task_id === sub.taskId)
+        const rubricKeys = stepObj?.rubric || ['functionality', 'code_quality']
+        const criteria = getCriteriaForRubric(rubricKeys)
+
         const mappedSub = {
           ...sub,
+          criteria,
           registration: {
             teamName: regRest.teamName,
             eventId: regRest.eventId,

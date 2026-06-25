@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { createTRPCRouter, judgeProcedure, adminProcedure, publicProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
+import { getMaxScoreForRubric } from '@/lib/rubric'
 
 export const judgingRouter = createTRPCRouter({
   // Get all projects/teams for judging
@@ -137,26 +138,22 @@ export const judgingRouter = createTRPCRouter({
       
       let rubric = stepObj?.rubric || ['functionality', 'code_quality']
       
-      const maxScore = rubric.length * 10
+      const maxScore = getMaxScoreForRubric(rubric)
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
       let finalStatus: 'APPROVED' | 'REJECTED'
       let rejectionReason: string | null = null
 
-      if (submission.taskId.startsWith('FEATURE-')) {
+      if (averageScore >= passingThresholdScore) {
         finalStatus = 'APPROVED'
       } else {
-        if (averageScore >= passingThresholdScore) {
-          finalStatus = 'APPROVED'
-        } else {
-          finalStatus = 'REJECTED'
-          // Concatenate all judge feedback into the rejectionReason
-          rejectionReason = evaluations
-            .map((e) => e.feedback?.trim())
-            .filter(Boolean)
-            .join(' | ')
-        }
+        finalStatus = 'REJECTED'
+        // Concatenate all judge feedback into the rejectionReason
+        rejectionReason = evaluations
+          .map((e) => e.feedback?.trim())
+          .filter(Boolean)
+          .join(' | ')
       }
 
       // 4. Update the submission and registration total score in a transaction
@@ -239,6 +236,11 @@ export const judgingRouter = createTRPCRouter({
           }
         }
 
+        const roundScores = Object.values(roundMap)
+        const calculatedAvgScore = roundScores.length > 0 
+          ? Math.round((roundScores.reduce((sum, s) => sum + s, 0) / roundScores.length) * 10) / 10
+          : 0
+
         return {
           id: reg.id,
           name: reg.teamName,
@@ -247,7 +249,7 @@ export const judgingRouter = createTRPCRouter({
           track: { name: reg.event.name },
           judgeCount: 0,
           totalScore: reg.totalScore,
-          avgScore: reg.totalScore,
+          avgScore: calculatedAvgScore,
           roundBreakdown: roundMap,
         }
       })
@@ -265,8 +267,7 @@ export const judgingRouter = createTRPCRouter({
       return { isVisible: false, data: [] }
     }
 
-    // 2. Fetch the leaderboard exactly like the admin one
-    const registrations = await ctx.db.registration.findMany({
+    let registrations = await ctx.db.registration.findMany({
       include: {
         event: true,
         submissions: {
@@ -283,6 +284,12 @@ export const judgingRouter = createTRPCRouter({
       },
     })
 
+    if (event.currentGlobalRound >= 3) {
+      // Only keep the top 10 teams based on their totalScore
+      registrations.sort((a, b) => b.totalScore - a.totalScore)
+      registrations = registrations.slice(0, 10)
+    }
+
     const leaderboardData = registrations
       .map((reg) => {
         const roundMap: Record<number, number> = {}
@@ -296,12 +303,18 @@ export const judgingRouter = createTRPCRouter({
           }
         }
 
+        const roundScores = Object.values(roundMap)
+        const calculatedAvgScore = roundScores.length > 0 
+          ? Math.round((roundScores.reduce((sum, s) => sum + s, 0) / roundScores.length) * 10) / 10
+          : 0
+
         return {
           id: reg.id,
           name: reg.teamName,
           tableNumber: reg.unstopTeamId,
           track: { name: reg.event.name },
           totalScore: reg.totalScore,
+          avgScore: calculatedAvgScore,
           roundBreakdown: roundMap,
         }
       })
