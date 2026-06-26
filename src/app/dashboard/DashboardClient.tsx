@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/Navbar'
+import SponsorMarquee from '@/components/SponsorMarquee'
 import SplineRobot from '@/components/SplineRobot'
 import { api } from '@/trpc/react'
 import MentorTeamPanel from '@/components/MentorTeamPanel'
@@ -301,6 +302,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               </button>
             </div>
           </motion.div>
+          <SponsorMarquee />
         </div>
       </main>
     )
@@ -504,6 +506,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               </button>
             </div>
           </motion.div>
+          <SponsorMarquee />
         </div>
       </main>
     )
@@ -689,9 +692,8 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
               </div>
             </div>
           )}
+          <SponsorMarquee />
         </div>
-
-
       </main>
     )
   }
@@ -1303,7 +1305,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
         </div>
       </footer>
 
-
+      <SponsorMarquee />
     </main>
   )
 }
