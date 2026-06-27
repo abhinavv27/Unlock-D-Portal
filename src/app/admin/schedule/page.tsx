@@ -50,7 +50,6 @@ export default function AdminSchedulePage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    location: '',
     startTime: '',
     endTime: '',
     type: 'GENERAL' as const,
@@ -60,7 +59,7 @@ export default function AdminSchedulePage() {
   const createMutation = api.schedule.createEvent.useMutation({
     onSuccess: () => {
       setShowModal(false)
-      setFormData({ title: '', description: '', location: '', startTime: '', endTime: '', type: 'GENERAL', isPublic: true, color: '' })
+      setFormData({ title: '', description: '', startTime: '', endTime: '', type: 'GENERAL', isPublic: true, color: '' })
       refetch()
     },
     onError: (err) => {
@@ -221,15 +220,6 @@ export default function AdminSchedulePage() {
                         placeholder="Event description (optional)"
                       />
                     </div>
-                    <div>
-                      <label className="text-label-caps !text-[9px] text-white/40 mb-2 block">Location</label>
-                      <input
-                        value={formData.location}
-                        onChange={e => handleChange('location', e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors placeholder:text-white/20"
-                        placeholder="Event location (optional)"
-                      />
-                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-label-caps !text-[9px] text-white/40 mb-2 block">Start Time *</label>
@@ -340,7 +330,7 @@ export default function AdminSchedulePage() {
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{event.title}</span>
-                          <span className="text-value-mono !text-white/20 !text-[9px]">{event.description || 'No description'} • {event.location || 'No location'}</span>
+                          <span className="text-value-mono !text-white/20 !text-[9px]">{event.description || 'No description'}</span>
                         </div>
                       </td>
                       <td className="p-6">
