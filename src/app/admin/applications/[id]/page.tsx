@@ -108,7 +108,7 @@ export default function TeamDetailPage() {
       void refetch()
       setIsEditingEval(false)
     },
-    onError: (err) => {
+    onError: (err: any) => {
       alert(`Error updating score: ${err.message}`)
     }
   })

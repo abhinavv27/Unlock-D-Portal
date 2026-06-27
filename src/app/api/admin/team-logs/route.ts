@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     }
 
     const activeEvent = await db.event.findFirst({
-      where: { isActive: true, eventType: 'PROGRESSIVE_HACKATHON' },
+      where: { isActive: true },
     })
 
     if (!activeEvent) {

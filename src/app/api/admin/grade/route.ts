@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { getTeamStatus } from '@/lib/state-engine'
-import { getMaxScoreForRubric } from '@/lib/rubric'
+import { getCriteriaForRubric, getMaxScoreForRubric } from '@/lib/rubric'
 import { z } from 'zod'
 
 const gradeSchema = z.object({
@@ -74,25 +74,36 @@ export async function POST(request: Request) {
       )
     }
 
-    // Fetch the active progressive hackathon event config to verify the current active round
+    // Fetch the active event config to verify the current active round
     const activeEvent = await db.event.findFirst({
-      where: { isActive: true, eventType: 'PROGRESSIVE_HACKATHON' },
+      where: { isActive: true },
     })
 
-    if (activeEvent && submission.roundNumber !== activeEvent.currentGlobalRound) {
-      return NextResponse.json(
-        { error: 'Cannot grade or modify grades for a closed round.' },
-        { status: 400 }
-      )
+    if (activeEvent) {
+      const config = activeEvent.config as any
+      const currentActiveRound = config?.currentRound ?? activeEvent.currentGlobalRound
+      if (submission.roundNumber !== currentActiveRound) {
+        return NextResponse.json(
+          { error: 'Cannot grade or modify grades for a closed round.' },
+          { status: 400 }
+        )
+      }
     }
 
-    // 4. Calculate total score
+    // 4. Validate score limits and Calculate total score
     let totalScore = 0
     if (scoreBreakdown && typeof scoreBreakdown === 'object') {
-      totalScore = Object.values(scoreBreakdown).reduce(
-        (sum: number, val: any) => sum + (Number(val) || 0),
-        0
-      )
+      for (const [key, val] of Object.entries(scoreBreakdown)) {
+        const numVal = Number(val) || 0
+        const maxAllowed = getCriteriaForRubric([key])[0]?.max || 10
+        if (numVal > maxAllowed || numVal < 0) {
+          return NextResponse.json(
+            { error: `Score for ${key} must be between 0 and ${maxAllowed}.` },
+            { status: 400 }
+          )
+        }
+        totalScore += numVal
+      }
     }
 
     // 5. Update submission and team state in a transaction

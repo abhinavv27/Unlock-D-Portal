@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { createTRPCRouter, adminProcedure, strictAdminProcedure } from '@/server/trpc'
+import { createTRPCRouter, adminProcedure, judgeProcedure, strictAdminProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
-import { getMaxScoreForRubric } from '@/lib/rubric'
+import { getMaxScoreForRubric, getCriteriaForRubric } from '@/lib/rubric'
 
 export const applicationRouter = createTRPCRouter({
   // Admin: get all registered teams (mapped to old applications list)
@@ -364,7 +364,7 @@ export const applicationRouter = createTRPCRouter({
       return { success: true }
     }),
 
-  updateEvaluation: adminProcedure
+  updateEvaluation: judgeProcedure
     .input(z.object({
       evaluationId: z.number().int(),
       scoreBreakdown: z.record(z.string(), z.number()),
@@ -393,18 +393,43 @@ export const applicationRouter = createTRPCRouter({
         })
       }
 
+      if (ctx.session!.user.role === 'JUDGE' && evaluation.judgeId !== Number(ctx.session!.user.id)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Judges can only edit their own evaluations.',
+        })
+      }
+
       const numSubId = evaluation.submissionId
       const submission = evaluation.submission
       const registrationId = submission.registrationId
 
-      // 1. Calculate total score
-      const totalScore = Object.values(input.scoreBreakdown).reduce(
-        (sum, val) => sum + (Number(val) || 0),
-        0
-      )
+      const activeEvent = submission.registration.event
+      const config = activeEvent.config as any
+      const currentActiveRound = config?.currentRound ?? activeEvent.currentGlobalRound
+      if (submission.roundNumber !== currentActiveRound) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot grade or modify grades for a closed round.',
+        })
+      }
+
+      // 1. Calculate and validate total score
+      let totalScore = 0
+      for (const [key, val] of Object.entries(input.scoreBreakdown)) {
+        const numVal = Number(val) || 0
+        const maxAllowed = getCriteriaForRubric([key])[0]?.max || 10
+        if (numVal > maxAllowed || numVal < 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Score for ${key} must be between 0 and ${maxAllowed}.`,
+          })
+        }
+        totalScore += numVal
+      }
 
       // 2. Perform updates in transaction
-      await ctx.db.$transaction(async (tx) => {
+      await ctx.db.$transaction(async (tx: any) => {
         // Log previous evaluation state to evaluation_audits
         await tx.evaluationAudit.create({
           data: {
@@ -431,7 +456,7 @@ export const applicationRouter = createTRPCRouter({
           where: { submissionId: numSubId },
         })
 
-        const totalScoreSum = evaluations.reduce((sum, e) => sum + e.totalScore, 0)
+        const totalScoreSum = evaluations.reduce((sum: number, e: any) => sum + e.totalScore, 0)
         const averageScore = Math.round((totalScoreSum / evaluations.length) * 10) / 10
 
         // Read passing_threshold from config
@@ -461,7 +486,7 @@ export const applicationRouter = createTRPCRouter({
         } else {
           finalStatus = 'REJECTED'
           rejectionReason = evaluations
-            .map((e) => e.feedback?.trim())
+            .map((e: any) => e.feedback?.trim())
             .filter(Boolean)
             .join(' | ')
         }
@@ -485,7 +510,7 @@ export const applicationRouter = createTRPCRouter({
             status: 'APPROVED',
           },
         })
-        const cumulativeScore = approvedSubs.reduce((sum, s) => sum + (s.averageScore || 0), 0)
+        const cumulativeScore = approvedSubs.reduce((sum: number, s: any) => sum + (s.averageScore || 0), 0)
         const roundedCumulative = Math.round(cumulativeScore * 10) / 10
 
         const stateObj = submission.registration.progressState as any || {}
@@ -588,14 +613,20 @@ export const applicationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const reg = await ctx.db.registration.findUniqueOrThrow({ where: { id: input.registrationId } })
       const progress = (reg.progressState as any) || {}
+      
+      const updatedProgress = {
+        ...progress,
+        presentationStatus: input.status,
+      }
+      
+      if (input.status === 'COMPLETED') {
+        delete updatedProgress.meetLink
+      }
 
       await ctx.db.registration.update({
         where: { id: input.registrationId },
         data: {
-          progressState: {
-            ...progress,
-            presentationStatus: input.status,
-          },
+          progressState: updatedProgress,
         },
       })
 
@@ -615,10 +646,13 @@ export const applicationRouter = createTRPCRouter({
     })
     if (currentActive) {
       const currentProgress = (currentActive.progressState as any) || {}
+      const updatedProgress = { ...currentProgress, presentationStatus: 'COMPLETED' }
+      delete updatedProgress.meetLink
+
       await ctx.db.registration.update({
         where: { id: currentActive.id },
         data: {
-          progressState: { ...currentProgress, presentationStatus: 'COMPLETED' },
+          progressState: updatedProgress,
         },
       })
     }
