@@ -56,7 +56,7 @@ export default function AdminLeaderboardPage() {
     p.tableNumber?.toString().toLowerCase().includes(search.toLowerCase())
   ) ?? []
 
-  const sortedProjects = [...filtered].sort((a, b) => b.avgScore - a.avgScore)
+  const sortedProjects = [...filtered].sort((a, b) => b.totalScore - a.totalScore)
 
   const utils = api.useUtils()
   const { data: visibilityData } = api.judging.getLeaderboardVisibility.useQuery()

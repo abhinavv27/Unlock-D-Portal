@@ -1,13 +1,16 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Navbar } from '@/components/Navbar'
 import { api } from '@/trpc/react'
 
 export default function PublicLeaderboardPage() {
+  const { data: session } = api.auth.getSession.useQuery()
   const { data, isLoading } = api.judging.publicLeaderboard.useQuery()
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#050505] text-white selection:bg-primary relative overflow-hidden pt-32 pb-12">
+    <main className="min-h-screen flex flex-col bg-[#050505] text-white selection:bg-primary relative overflow-hidden pb-12">
+      <Navbar session={session as any} />
       {/* Background Parallax Elements */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />

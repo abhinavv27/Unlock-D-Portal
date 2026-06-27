@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 interface NavbarProps {
   session?: {
@@ -13,14 +14,70 @@ interface NavbarProps {
   }
 }
 
+const SECTION_IDS = ['about', 'judging', 'timeline']
+
+const sectionLinks = [
+  { label: 'About', href: '/#about', sectionId: 'about' },
+  { label: 'Rules', href: '/#judging', sectionId: 'judging' },
+  { label: 'Timeline', href: '/#timeline', sectionId: 'timeline' },
+]
+
+const pageLinks = [
+  { label: 'Leaderboard', href: '/leaderboard' },
+  { label: 'Schedule', href: '/schedule' },
+  { label: 'Resources', href: 'https://www.ieeerasmuj.com/unlockd/resources', external: true },
+]
+
+function useScrollSpy(sectionIds: string[]): string | null {
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const elements = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[]
+
+    if (elements.length === 0) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+
+        if (visible.length > 0) {
+          setActiveId(visible[0].target.id)
+        }
+      },
+      { rootMargin: '-40% 0px -50% 0px', threshold: 0 }
+    )
+
+    elements.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [sectionIds])
+
+  return activeId
+}
+
 export function Navbar({ session }: NavbarProps) {
   const pathname = usePathname()
-  
-  const navLinks = [
-    { label: 'Leaderboard', href: '/leaderboard' },
-    { label: 'Schedule', href: '/schedule' },
-    { label: 'Resources', href: 'https://www.ieeerasmuj.com/unlockd/resources', external: true },
-  ]
+  const isLanding = pathname === '/'
+  const activeSection = useScrollSpy(isLanding ? SECTION_IDS : [])
+
+  const handleSectionClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    if (isLanding) {
+      e.preventDefault()
+      const el = document.getElementById(sectionId)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }
+
+  const isSectionActive = (sectionId: string) => isLanding && activeSection === sectionId
+
+  const allLinks = isLanding
+    ? [...sectionLinks, ...pageLinks]
+    : pageLinks
 
   return (
     <motion.nav 
@@ -45,9 +102,12 @@ export function Navbar({ session }: NavbarProps) {
 
         {/* Navigation Section - All items centered */}
         <div className="flex items-center gap-1 md:gap-2">
-          {navLinks.map((link) => {
-            const isActive = !link.external && pathname === link.href
-            const className = `text-label-caps !text-[10px] md:!text-[12px] px-3 md:px-5 py-2 md:py-2.5 rounded-full transition-all relative group ${isActive ? '!text-white bg-white/10' : '!text-white/40 hover:!text-white hover:bg-white/5'}`
+          {allLinks.map((link: any) => {
+            const isActive = link.sectionId
+              ? isSectionActive(link.sectionId)
+              : !link.external && pathname === link.href
+            const activeClass = isActive ? '!text-white bg-white/10' : '!text-white/40 hover:!text-white hover:bg-white/5'
+            const className = 'text-label-caps !text-[10px] md:!text-[12px] px-3 md:px-5 py-2 md:py-2.5 rounded-full transition-all relative group ' + activeClass
             const inner = (
               <>
                 <span className="hidden sm:inline">{link.label}</span>
@@ -63,6 +123,13 @@ export function Navbar({ session }: NavbarProps) {
             )
             if (link.external) {
               return <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" className={className}>{inner}</a>
+            }
+            if (link.sectionId) {
+              return (
+                <a key={link.label} href={link.href} onClick={(e) => handleSectionClick(e, link.sectionId)} className={className}>
+                  {inner}
+                </a>
+              )
             }
             return <Link key={link.label} href={link.href} className={className}>{inner}</Link>
           })}
