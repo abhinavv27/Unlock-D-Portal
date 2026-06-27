@@ -29,7 +29,7 @@ export default function PublicLeaderboardPage() {
         />
       </div>
 
-      <div className="flex-1 relative z-10 w-full max-w-5xl mx-auto px-6 lg:px-12">
+      <div className="flex-1 relative z-10 w-full max-w-5xl mx-auto px-6 lg:px-12 pt-32 md:pt-40">
         <header className="mb-12 text-center md:text-left">
           <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-label-caps !text-primary mb-4">
             Official Rankings
