@@ -21,8 +21,7 @@ export default function AdminProjectsPage() {
   const mapped = projects || []
 
   const filtered = mapped?.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.tableNumber?.toString().toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase())
   ) ?? []
 
   const sortedProjects = [...filtered].sort((a, b) => b.avgScore - a.avgScore)
@@ -118,7 +117,7 @@ export default function AdminProjectsPage() {
               <input
                 id="admin-search"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-white/20"
-                placeholder="Search by team, table..."
+                placeholder="Search by team name..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -136,7 +135,6 @@ export default function AdminProjectsPage() {
                   <tr className="border-b border-white/5 bg-white/[0.02]">
                     <th className="p-6 text-label-caps w-16">Rank</th>
                     <th className="p-6 text-label-caps">Team Name</th>
-                    <th className="p-6 text-label-caps">Table</th>
                     <th className="p-6 text-label-caps text-right">Avg Score</th>
                     <th className="p-6 text-label-caps text-right">Total Score</th>
                     <th className="p-6 text-label-caps text-right">Round Scores</th>
@@ -145,7 +143,7 @@ export default function AdminProjectsPage() {
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="p-20 text-center">
+                      <td colSpan={5} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                           <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Loading_Leaderboard...</span>
@@ -154,7 +152,7 @@ export default function AdminProjectsPage() {
                     </tr>
                   ) : sortedProjects.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-20 text-center">
+                      <td colSpan={5} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-2 opacity-20">
                           <span className="text-4xl">📁</span>
                           <span className="text-[10px] font-black uppercase tracking-[0.3em]">No_Matching_Entries</span>
@@ -177,9 +175,6 @@ export default function AdminProjectsPage() {
                           <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{project.name}</span>
                           <span className="text-value-mono !text-white/20 !text-[9px]">{project.description || 'No description'}</span>
                         </div>
-                      </td>
-                      <td className="p-6">
-                        <span className="text-xs font-bold text-white/60 tracking-tight">{project.tableNumber || 'N/A'}</span>
                       </td>
                       <td className="p-6 text-right">
                         <span className="text-sm font-black text-emerald-400">

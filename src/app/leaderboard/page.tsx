@@ -93,7 +93,6 @@ export default function PublicLeaderboardPage() {
                   <tr className="border-b border-white/5 bg-white/[0.02]">
                     <th className="p-6 text-label-caps w-16">Rank</th>
                     <th className="p-6 text-label-caps">Team Name</th>
-                    <th className="p-6 text-label-caps">Table</th>
                     <th className="p-6 text-label-caps text-right">Total Score</th>
                   </tr>
                 </thead>
@@ -111,9 +110,6 @@ export default function PublicLeaderboardPage() {
                       </td>
                       <td className="p-6">
                         <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{project.name}</span>
-                      </td>
-                      <td className="p-6">
-                        <span className="text-xs font-bold text-white/60 tracking-tight">{project.tableNumber || 'N/A'}</span>
                       </td>
                       <td className="p-6 text-right">
                         <span className={`text-sm font-black ${project.totalScore ? 'text-primary' : 'text-white/20'}`}>
