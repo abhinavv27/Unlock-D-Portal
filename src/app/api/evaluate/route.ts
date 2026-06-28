@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { authenticateStaff } from '@/lib/jwt-auth'
-import { getCriteriaForRubric } from '@/lib/rubric'
 import { z } from 'zod'
 
 const evaluateSchema = z.object({
@@ -50,21 +49,6 @@ export async function POST(request: Request) {
       )
     }
 
-    const activeEvent = await db.event.findFirst({
-      where: { isActive: true },
-    })
-
-    if (activeEvent) {
-      const config = activeEvent.config as any
-      const currentActiveRound = config?.currentRound ?? activeEvent.currentGlobalRound
-      if (submission.roundNumber !== currentActiveRound) {
-        return NextResponse.json(
-          { error: 'Cannot grade or modify grades for a closed round.' },
-          { status: 400 }
-        )
-      }
-    }
-
     const existingEvaluation = await db.evaluation.findUnique({
       where: {
         submissionId_judgeId: {
@@ -83,17 +67,10 @@ export async function POST(request: Request) {
 
     let totalScore = 0
     if (scoreBreakdown && typeof scoreBreakdown === 'object') {
-      for (const [key, val] of Object.entries(scoreBreakdown)) {
-        const numVal = Number(val) || 0
-        const maxAllowed = getCriteriaForRubric([key])[0]?.max || 10
-        if (numVal > maxAllowed || numVal < 0) {
-          return NextResponse.json(
-            { error: `Score for ${key} must be between 0 and ${maxAllowed}.` },
-            { status: 400 }
-          )
-        }
-        totalScore += numVal
-      }
+      totalScore = Object.values(scoreBreakdown).reduce(
+        (sum: number, val: any) => sum + (Number(val) || 0),
+        0
+      )
     }
 
     const evaluation = await db.evaluation.create({

@@ -138,7 +138,7 @@ export async function POST(request: Request) {
         })
 
         return updatedSub
-      })
+      }, { maxWait: 15000, timeout: 30000 })
 
       return NextResponse.json({ success: true, submission: result })
     }
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
       })
 
       return sub
-    })
+    }, { maxWait: 15000, timeout: 30000 })
 
     return NextResponse.json({ success: true, submission: newSub })
   } catch (error) {

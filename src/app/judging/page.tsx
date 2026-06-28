@@ -209,15 +209,24 @@ export default function JudgingPage() {
   }, [teamLogs, teamSearch])
 
   const uniqueFeatures = useMemo(() => {
-    return [
-      'Feature 1',
-      'Feature 2',
-      'Feature 3',
-      'Feature 4',
-      'Feature 5',
-      'Final Submission'
-    ]
-  }, [])
+    if (currentGlobalRound === 1) {
+      return [
+        'Feature 1',
+        'Feature 2',
+        'Feature 3',
+        'Feature 4',
+        'Feature 5',
+        'Final Submission'
+      ]
+    }
+    if (currentGlobalRound === 2) {
+      return ['Round 2']
+    }
+    if (currentGlobalRound === 3) {
+      return ['Round 3']
+    }
+    return []
+  }, [currentGlobalRound])
 
   // Helper: get current judge's userId
   const getStaffUserId = useCallback(() => {
@@ -394,7 +403,18 @@ export default function JudgingPage() {
               <div className="relative">
                 <select
                   value={queueFeatureSearch}
-                  onChange={(e) => setQueueFeatureSearch(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setQueueFeatureSearch(val)
+                    if (val) {
+                      const isFeedbackTask = ['Feature 1', 'Feature 2', 'Feature 3', 'Feature 4', 'Feature 5'].includes(val)
+                      if (isFeedbackTask) {
+                        setMainView('feedback')
+                      } else {
+                        setMainView('queue')
+                      }
+                    }
+                  }}
                   className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-8 pr-10 py-2 text-[10px] text-white/75 focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all font-mono appearance-none"
                 >
                   <option value="" className="bg-[#050505] text-white/40">All Features/Tasks</option>

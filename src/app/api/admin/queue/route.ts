@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
-import { getTeamStatus } from '@/lib/state-engine'
 import { getCriteriaForRubric } from '@/lib/rubric'
 
 export async function GET(request: Request) {
@@ -26,10 +25,17 @@ export async function GET(request: Request) {
       )
     }
 
+    // Fetch active event
+    const activeEvent = await db.event.findFirst({
+      where: { isActive: true },
+    })
+    const currentRound = activeEvent?.currentGlobalRound ?? 1
+
     // 2. Query submissions where status is PENDING or APPROVED, excluding those graded by the current judge
     const submissions = await db.submission.findMany({
       where: {
         status: { in: ['PENDING', 'APPROVED'] },
+        roundNumber: currentRound,
         evaluations: {
           none: {
             judgeId: staff.userId,
@@ -42,6 +48,7 @@ export async function GET(request: Request) {
             event: true,
           },
         },
+        demoCall: true,
       },
       orderBy: {
         submittedAt: 'asc', // Oldest first for fair queue processing
@@ -51,28 +58,40 @@ export async function GET(request: Request) {
     // Filter out submissions from eliminated teams
     const activeSubmissions = []
     for (const sub of submissions) {
-      const teamStatus = await getTeamStatus(sub.registration.id, db)
       const eventConfig = (sub.registration.event.config as any) || {}
-      const currentRound = eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 0
-      if (teamStatus.allowedRound >= currentRound) {
+      const currentRound = sub.registration.event.currentGlobalRound ?? (eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 1)
+      const progressState = (sub.registration.progressState as any) || {}
+      const allowedRound = progressState.current_stage ?? 1
+      if (allowedRound >= currentRound || sub.roundNumber === currentRound) {
         // Map registration select properties to keep response compatibility
         const { event, ...regRest } = sub.registration
         
         const roadmap = eventConfig?.roadmap || []
         const stepObj = roadmap.find((r: any) => r.task_id === sub.taskId)
-        const rubricKeys = stepObj?.rubric || ['functionality', 'code_quality']
-        const criteria = getCriteriaForRubric(rubricKeys)
+        const rubricKeys = stepObj?.rubric || []
+        
+        const isFeature = sub.taskId.startsWith('FEATURE-')
+        const isRound3 = sub.taskId === 'ROUND-3'
+        const isRound3Eligible = isRound3 && sub.demoCall?.status === 'COMPLETED'
 
-        const mappedSub = {
-          ...sub,
-          criteria,
-          registration: {
-            teamName: regRest.teamName,
-            eventId: regRest.eventId,
-            progressState: regRest.progressState,
+        if (rubricKeys.length > 0 || isFeature) {
+          if (isRound3 && !isRound3Eligible) {
+            continue
           }
+
+          const criteria = getCriteriaForRubric(rubricKeys)
+
+          const mappedSub = {
+            ...sub,
+            criteria,
+            registration: {
+              teamName: regRest.teamName,
+              eventId: regRest.eventId,
+              progressState: regRest.progressState,
+            }
+          }
+          activeSubmissions.push(mappedSub)
         }
-        activeSubmissions.push(mappedSub)
       }
     }
 
