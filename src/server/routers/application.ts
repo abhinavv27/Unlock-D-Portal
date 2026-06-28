@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { createTRPCRouter, adminProcedure, judgeProcedure, strictAdminProcedure } from '@/server/trpc'
+import { createTRPCRouter, adminProcedure, strictAdminProcedure } from '@/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { getTeamStatus } from '@/lib/state-engine'
-import { getMaxScoreForRubric, getCriteriaForRubric } from '@/lib/rubric'
+import { getMaxScoreForRubric } from '@/lib/rubric'
 
 export const applicationRouter = createTRPCRouter({
   // Admin: get all registered teams (mapped to old applications list)
@@ -127,6 +127,7 @@ export const applicationRouter = createTRPCRouter({
         progressState: state,
         eventName: reg.event.name,
         eventConfig: reg.event.config,
+        currentGlobalRound: reg.event.currentGlobalRound,
         isBlocked: reg.isBlocked,
         submissions: reg.submissions.map(sub => ({
           id: sub.id,
@@ -145,6 +146,7 @@ export const applicationRouter = createTRPCRouter({
             gradedAt: ev.gradedAt,
             judgeName: ev.judge.username,
             judgeRole: ev.judge.systemRole,
+            judgeId: ev.judgeId,
           })),
         })),
         roundAverages,
@@ -291,6 +293,18 @@ export const applicationRouter = createTRPCRouter({
           take: 10,
         })
         for (const team of topTeams) {
+          const progressState = (team.progressState as any) || {}
+          await ctx.db.registration.update({
+            where: { id: team.id },
+            data: {
+              progressState: {
+                ...progressState,
+                current_stage: 3,
+                updated_at: new Date().toISOString(),
+              }
+            }
+          })
+
           const existing = await ctx.db.submission.findFirst({
             where: {
               registrationId: team.id,
@@ -320,13 +334,13 @@ export const applicationRouter = createTRPCRouter({
       return { success: true, currentRound: input.round }
     }),
 
-  updateTeam: adminProcedure
+  updateTeam: strictAdminProcedure
     .input(z.object({
       id: z.string(),
       teamName: z.string().min(1),
       passcode: z.string().optional(),
       currentStage: z.number().int().min(0),
-      score: z.number(),
+      score: z.number().max(300, "Score cannot exceed 300 points"),
     }))
     .mutation(async ({ ctx, input }) => {
       const reg = await ctx.db.registration.findUnique({
@@ -364,7 +378,7 @@ export const applicationRouter = createTRPCRouter({
       return { success: true }
     }),
 
-  updateEvaluation: judgeProcedure
+  updateEvaluation: adminProcedure
     .input(z.object({
       evaluationId: z.number().int(),
       scoreBreakdown: z.record(z.string(), z.number()),
@@ -393,142 +407,132 @@ export const applicationRouter = createTRPCRouter({
         })
       }
 
-      if (ctx.session!.user.role === 'JUDGE' && evaluation.judgeId !== Number(ctx.session!.user.id)) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Judges can only edit their own evaluations.',
-        })
+      // If the current user has the JUDGE role, restrict their edits
+      if (ctx.session?.user?.role === 'JUDGE') {
+        if (evaluation.judgeId !== Number(ctx.session.user.id)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You can only edit your own grading.',
+          })
+        }
+        
+        const progressState = (evaluation.submission.registration.progressState as any) || {}
+        const currentStage = progressState.current_stage ?? 1
+        const submissionRound = evaluation.submission.roundNumber
+        if (submissionRound < currentStage) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Cannot edit grading after the round has ended.',
+          })
+        }
       }
 
       const numSubId = evaluation.submissionId
       const submission = evaluation.submission
       const registrationId = submission.registrationId
 
-      const activeEvent = submission.registration.event
-      const config = activeEvent.config as any
-      const currentActiveRound = config?.currentRound ?? activeEvent.currentGlobalRound
-      if (submission.roundNumber !== currentActiveRound) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot grade or modify grades for a closed round.',
-        })
-      }
-
-      // 1. Calculate and validate total score
-      let totalScore = 0
-      for (const [key, val] of Object.entries(input.scoreBreakdown)) {
-        const numVal = Number(val) || 0
-        const maxAllowed = getCriteriaForRubric([key])[0]?.max || 10
-        if (numVal > maxAllowed || numVal < 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Score for ${key} must be between 0 and ${maxAllowed}.`,
-          })
-        }
-        totalScore += numVal
-      }
+      // 1. Calculate total score
+      const totalScore = Object.values(input.scoreBreakdown).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0
+      )
 
       // 2. Perform updates in transaction
-      await ctx.db.$transaction(async (tx: any) => {
-        // Log previous evaluation state to evaluation_audits
-        await tx.evaluationAudit.create({
-          data: {
-            evaluationId: evaluation.id,
-            oldScoreBreakdown: evaluation.scoreBreakdown as any,
-            oldTotalScore: evaluation.totalScore,
-            oldFeedback: evaluation.feedback,
-          },
-        })
+      await ctx.db.$transaction(
+        async (tx) => {
+          // Log previous evaluation state to evaluation_audits
+          await tx.evaluationAudit.create({
+            data: {
+              evaluationId: evaluation.id,
+              oldScoreBreakdown: evaluation.scoreBreakdown as any,
+              oldTotalScore: evaluation.totalScore,
+              oldFeedback: evaluation.feedback,
+            },
+          })
 
-        // Update the evaluation record
-        await tx.evaluation.update({
-          where: { id: input.evaluationId },
-          data: {
-            scoreBreakdown: input.scoreBreakdown,
-            totalScore,
-            feedback: input.feedback,
-            gradedAt: new Date(),
-          },
-        })
+          // Update the evaluation record
+          await tx.evaluation.update({
+            where: { id: input.evaluationId },
+            data: {
+              scoreBreakdown: input.scoreBreakdown,
+              totalScore,
+              feedback: input.feedback,
+              gradedAt: new Date(),
+            },
+          })
 
-        // Fetch all evaluations for this submission to calculate average
-        const evaluations = await tx.evaluation.findMany({
-          where: { submissionId: numSubId },
-        })
+          // Fetch all evaluations for this submission to calculate average
+          const evaluations = await tx.evaluation.findMany({
+            where: { submissionId: numSubId },
+          })
 
-        const totalScoreSum = evaluations.reduce((sum: number, e: any) => sum + e.totalScore, 0)
-        const averageScore = Math.round((totalScoreSum / evaluations.length) * 10) / 10
+          const totalScoreSum = evaluations.reduce((sum, e) => sum + e.totalScore, 0)
+          const averageScore = Math.round((totalScoreSum / evaluations.length) * 10) / 10
 
-        // Read passing_threshold from config
-        const eventConfig = submission.registration.event.config as any
-        const roadmap = eventConfig?.roadmap || []
-        const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
-        let rubric = stepObj?.rubric || ['functionality', 'code_quality']
-        if (submission.taskId === 'FINAL-SUBMISSION') {
-          rubric = [
-            'feature_1_functionality', 'feature_1_code_quality',
-            'feature_2_functionality', 'feature_2_code_quality',
-            'feature_3_functionality', 'feature_3_code_quality',
-            'feature_4_functionality', 'feature_4_code_quality',
-            'feature_5_functionality', 'feature_5_code_quality'
-          ]
+          // Read passing_threshold from config
+          const eventConfig = submission.registration.event.config as any
+          const roadmap = eventConfig?.roadmap || []
+          const stepObj = roadmap.find((r: any) => r.task_id === submission.taskId)
+          let rubric = stepObj?.rubric || ['functionality', 'code_quality']
+          if (submission.taskId === 'FINAL-SUBMISSION') {
+            rubric = [
+              'feature_1_functionality', 'feature_1_code_quality',
+              'feature_2_functionality', 'feature_2_code_quality',
+              'feature_3_functionality', 'feature_3_code_quality',
+              'feature_4_functionality', 'feature_4_code_quality',
+              'feature_5_functionality', 'feature_5_code_quality'
+            ]
+          }
+          
+          const maxScore = getMaxScoreForRubric(rubric)
+          const passingThresholdScore = stepObj?.threshold ?? ((eventConfig?.passing_threshold ?? 60) / 100) * maxScore
+
+          let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
+          let rejectionReason: string | null = null
+
+          await tx.submission.update({
+            where: { id: numSubId },
+            data: {
+              status: finalStatus,
+              averageScore,
+              rejectionReason,
+            },
+          })
+
+          // Fetch new state engine status using transaction client
+          const teamStatus = await getTeamStatus(registrationId, tx as any)
+
+          // Fetch cumulative totalScore from all APPROVED submissions
+          const approvedSubs = await tx.submission.findMany({
+            where: {
+              registrationId,
+              status: 'APPROVED',
+            },
+          })
+          const cumulativeScore = approvedSubs.reduce((sum, s) => sum + (s.averageScore || 0), 0)
+          const roundedCumulative = Math.round(cumulativeScore * 10) / 10
+
+          const stateObj = submission.registration.progressState as any || {}
+          const updatedProgress = {
+            ...stateObj,
+            current_stage: teamStatus.allowedRound,
+            score: roundedCumulative,
+            updated_at: new Date().toISOString(),
+          }
+
+          await tx.registration.update({
+            where: { id: registrationId },
+            data: {
+              totalScore: roundedCumulative,
+              progressState: updatedProgress,
+            },
+          })
+        },
+        {
+          maxWait: 15000,
+          timeout: 30000,
         }
-        
-        const maxScore = getMaxScoreForRubric(rubric)
-        const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
-        const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
-
-        let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
-        let rejectionReason: string | null = null
-
-        if (averageScore >= passingThresholdScore) {
-          finalStatus = 'APPROVED'
-        } else {
-          finalStatus = 'REJECTED'
-          rejectionReason = evaluations
-            .map((e: any) => e.feedback?.trim())
-            .filter(Boolean)
-            .join(' | ')
-        }
-
-        await tx.submission.update({
-          where: { id: numSubId },
-          data: {
-            status: finalStatus,
-            averageScore,
-            rejectionReason,
-          },
-        })
-
-        // Fetch new state engine status using transaction client
-        const teamStatus = await getTeamStatus(registrationId, tx as any)
-
-        // Fetch cumulative totalScore from all APPROVED submissions
-        const approvedSubs = await tx.submission.findMany({
-          where: {
-            registrationId,
-            status: 'APPROVED',
-          },
-        })
-        const cumulativeScore = approvedSubs.reduce((sum: number, s: any) => sum + (s.averageScore || 0), 0)
-        const roundedCumulative = Math.round(cumulativeScore * 10) / 10
-
-        const stateObj = submission.registration.progressState as any || {}
-        const updatedProgress = {
-          ...stateObj,
-          current_stage: teamStatus.allowedRound,
-          score: roundedCumulative,
-          updated_at: new Date().toISOString(),
-        }
-
-        await tx.registration.update({
-          where: { id: registrationId },
-          data: {
-            totalScore: roundedCumulative,
-            progressState: updatedProgress,
-          },
-        })
-      })
+      )
 
       return { success: true }
     }),
@@ -613,20 +617,14 @@ export const applicationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const reg = await ctx.db.registration.findUniqueOrThrow({ where: { id: input.registrationId } })
       const progress = (reg.progressState as any) || {}
-      
-      const updatedProgress = {
-        ...progress,
-        presentationStatus: input.status,
-      }
-      
-      if (input.status === 'COMPLETED') {
-        delete updatedProgress.meetLink
-      }
 
       await ctx.db.registration.update({
         where: { id: input.registrationId },
         data: {
-          progressState: updatedProgress,
+          progressState: {
+            ...progress,
+            presentationStatus: input.status,
+          },
         },
       })
 
@@ -646,13 +644,10 @@ export const applicationRouter = createTRPCRouter({
     })
     if (currentActive) {
       const currentProgress = (currentActive.progressState as any) || {}
-      const updatedProgress = { ...currentProgress, presentationStatus: 'COMPLETED' }
-      delete updatedProgress.meetLink
-
       await ctx.db.registration.update({
         where: { id: currentActive.id },
         data: {
-          progressState: updatedProgress,
+          progressState: { ...currentProgress, presentationStatus: 'COMPLETED' },
         },
       })
     }

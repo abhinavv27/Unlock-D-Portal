@@ -358,7 +358,7 @@ export default function LandingPage() {
       </section>
 
       {/* About UNLOCK'D */}
-      <section id="about" className="relative z-10 max-w-7xl mx-auto px-8 pb-32 scroll-mt-32">
+      <section className="relative z-10 max-w-7xl mx-auto px-8 pb-32">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -424,7 +424,7 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Judging Criteria */}
-          <motion.div variants={itemVariants} id="judging" className="mb-32 scroll-mt-32">
+          <motion.div variants={itemVariants} className="mb-32">
             <div className="text-center mb-16">
               <span className="text-value-mono mb-6 inline-block border border-primary/30 text-primary px-3 py-1 rounded-full !text-[9px]">Judging Criteria</span>
               <h2 className="text-4xl md:text-6xl text-hero leading-[0.9]">How You&apos;ll Be Scored</h2>
@@ -464,7 +464,7 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Event Format Timeline */}
-          <motion.div variants={itemVariants} id="timeline" className="mb-32 scroll-mt-32">
+          <motion.div variants={itemVariants} className="mb-32">
             <div className="text-center mb-16">
               <span className="text-value-mono mb-6 inline-block border border-primary/30 text-primary px-3 py-1 rounded-full !text-[9px]">Timeline</span>
               <h2 className="text-4xl md:text-6xl text-hero leading-[0.9]">Event Format</h2>
@@ -589,6 +589,3 @@ function Card3D({ children, className, variants }: { children: React.ReactNode; 
     </motion.div>
   )
 }
-
-
-

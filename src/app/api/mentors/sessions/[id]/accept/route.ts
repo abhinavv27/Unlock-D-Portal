@@ -92,7 +92,7 @@ export async function PUT(
       })
 
       return updated
-    })
+    }, { maxWait: 15000, timeout: 30000 })
 
     return NextResponse.json(updatedSession)
   } catch (error) {

@@ -93,9 +93,10 @@ export default function LoginPage() {
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
   return (
-    <main className="min-h-screen bg-[oklch(var(--background))] text-white flex flex-col items-center justify-center p-4 pt-28 md:p-6 md:pt-32 relative overflow-x-hidden font-sans selection:bg-primary">
-      {/* Background decorations */}
+    <main className="min-h-screen bg-[oklch(var(--background))] text-white flex items-center justify-center p-4 md:p-6 relative overflow-x-hidden font-sans selection:bg-primary">
+      {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,oklch(var(--primary)/0.05),transparent_70%)]" />
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full" />
         <div className="absolute inset-0 neural-grid opacity-[0.03]" />
@@ -107,7 +108,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] as any }}
-        className="w-full max-w-[440px] relative z-20 my-auto"
+        className="w-full max-w-[440px] relative z-20 mt-16"
       >
         <div className="glass-premium p-6 md:p-10 lg:p-12 rounded-2xl md:rounded-[2.5rem] border-white/5 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
           <div className="flex flex-col items-center mb-8 md:mb-10 text-center">
