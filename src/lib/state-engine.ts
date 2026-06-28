@@ -37,9 +37,6 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   let highestCompletedStep = 0
   for (const sub of registration.submissions) {
     if (sub.status === 'REJECTED') continue
-    
-    // For FINAL-FEATURE, it must be explicitly APPROVED to count as completed
-    if (sub.taskId === 'FINAL-FEATURE' && sub.status !== 'APPROVED') continue
 
     const stepObj = roadmap.find((r) => r.task_id === sub.taskId)
     if (stepObj && stepObj.step > highestCompletedStep) {

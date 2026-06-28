@@ -135,7 +135,7 @@ export const teamsRouter = createTRPCRouter({
           })
 
           return updatedSub
-        })
+        }, { maxWait: 15000, timeout: 30000 })
 
         return {
           success: true,
@@ -219,7 +219,7 @@ export const teamsRouter = createTRPCRouter({
         })
 
         return sub
-      })
+      }, { maxWait: 15000, timeout: 30000 })
 
       return {
         success: true,

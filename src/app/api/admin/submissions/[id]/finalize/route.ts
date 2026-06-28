@@ -68,18 +68,8 @@ export async function POST(
     const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
     const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
-    let finalStatus: 'APPROVED' | 'REJECTED'
+    let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
     let rejectionReason: string | null = null
-
-    if (averageScore >= passingThresholdScore) {
-      finalStatus = 'APPROVED'
-    } else {
-      finalStatus = 'REJECTED'
-      rejectionReason = evaluations
-        .map((e) => e.feedback?.trim())
-        .filter(Boolean)
-        .join(' | ')
-    }
 
     // 3. Update Submission and Registration within a transaction
     await db.$transaction(async (tx) => {
@@ -120,7 +110,7 @@ export async function POST(
           progressState: updatedProgress,
         },
       })
-    })
+    }, { maxWait: 15000, timeout: 30000 })
 
     return NextResponse.json({
       success: true,

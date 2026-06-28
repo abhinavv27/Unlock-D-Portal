@@ -142,19 +142,8 @@ export const judgingRouter = createTRPCRouter({
       const passingThresholdPercent = eventConfig?.passing_threshold ?? 60
       const passingThresholdScore = (passingThresholdPercent / 100) * maxScore
 
-      let finalStatus: 'APPROVED' | 'REJECTED'
+      let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
-
-      if (averageScore >= passingThresholdScore) {
-        finalStatus = 'APPROVED'
-      } else {
-        finalStatus = 'REJECTED'
-        // Concatenate all judge feedback into the rejectionReason
-        rejectionReason = evaluations
-          .map((e) => e.feedback?.trim())
-          .filter(Boolean)
-          .join(' | ')
-      }
 
       // 4. Update the submission and registration total score in a transaction
       await ctx.db.$transaction(async (tx) => {
@@ -195,7 +184,7 @@ export const judgingRouter = createTRPCRouter({
             progressState: updatedProgress,
           },
         })
-      })
+      }, { maxWait: 15000, timeout: 30000 })
 
       return {
         success: true,

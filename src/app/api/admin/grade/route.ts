@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { getTeamStatus } from '@/lib/state-engine'
-import { getCriteriaForRubric, getMaxScoreForRubric } from '@/lib/rubric'
+import { getMaxScoreForRubric } from '@/lib/rubric'
 import { z } from 'zod'
 
 const gradeSchema = z.object({
@@ -79,31 +79,20 @@ export async function POST(request: Request) {
       where: { isActive: true },
     })
 
-    if (activeEvent) {
-      const config = activeEvent.config as any
-      const currentActiveRound = config?.currentRound ?? activeEvent.currentGlobalRound
-      if (submission.roundNumber !== currentActiveRound) {
-        return NextResponse.json(
-          { error: 'Cannot grade or modify grades for a closed round.' },
-          { status: 400 }
-        )
-      }
+    if (activeEvent && submission.roundNumber !== activeEvent.currentGlobalRound) {
+      return NextResponse.json(
+        { error: 'Cannot grade or modify grades for a closed round.' },
+        { status: 400 }
+      )
     }
 
-    // 4. Validate score limits and Calculate total score
+    // 4. Calculate total score
     let totalScore = 0
     if (scoreBreakdown && typeof scoreBreakdown === 'object') {
-      for (const [key, val] of Object.entries(scoreBreakdown)) {
-        const numVal = Number(val) || 0
-        const maxAllowed = getCriteriaForRubric([key])[0]?.max || 10
-        if (numVal > maxAllowed || numVal < 0) {
-          return NextResponse.json(
-            { error: `Score for ${key} must be between 0 and ${maxAllowed}.` },
-            { status: 400 }
-          )
-        }
-        totalScore += numVal
-      }
+      totalScore = Object.values(scoreBreakdown).reduce(
+        (sum: number, val: any) => sum + (Number(val) || 0),
+        0
+      )
     }
 
     // 5. Update submission and team state in a transaction
@@ -173,18 +162,6 @@ export async function POST(request: Request) {
       let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
 
-      if (rubric.length === 0) {
-        finalStatus = 'APPROVED'
-      } else if (averageScore >= passingThresholdScore) {
-        finalStatus = 'APPROVED'
-      } else {
-        finalStatus = 'REJECTED'
-        rejectionReason = evaluations
-          .map((e) => e.feedback?.trim())
-          .filter(Boolean)
-          .join(' | ')
-      }
-
       await tx.submission.update({
         where: { id: numSubId },
         data: {
@@ -222,7 +199,7 @@ export async function POST(request: Request) {
           progressState: updatedProgress,
         },
       })
-    })
+    }, { maxWait: 15000, timeout: 30000 })
 
     return NextResponse.json({
       message: `Submission graded successfully.`,

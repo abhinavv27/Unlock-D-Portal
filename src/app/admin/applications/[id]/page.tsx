@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '@/trpc/react'
+import { RUBRIC_DEFINITIONS } from '@/lib/rubric'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
@@ -57,8 +58,25 @@ export default function TeamDetailPage() {
   const router = useRouter()
   const id = params?.id as string
 
-  const { data, isLoading, error, refetch } = api.application.getById.useQuery({ id })
+  const { data, isLoading, error, refetch } = api.application.getById.useQuery(
+    { id: id as string },
+    { enabled: !!id }
+  )
   const [openRounds, setOpenRounds] = useState<Record<number, boolean>>({ 0: true })
+
+  const { data: session } = api.auth.getSession.useQuery()
+
+  const canEditEvaluation = (ev: any, roundNumber: number) => {
+    if (!session?.user) return false
+    if (session.user.role === 'ADMIN') return true
+    if (session.user.role === 'JUDGE') {
+      const isOwnGrading = Number(ev.judgeId) === Number(session.user.id)
+      const currentGlobalRound = (data as any)?.currentGlobalRound ?? 1
+      const isRoundActive = roundNumber >= currentGlobalRound
+      return isOwnGrading && isRoundActive
+    }
+    return false
+  }
 
   // Edit states
   const [isEditing, setIsEditing] = useState(false)
@@ -88,6 +106,10 @@ export default function TeamDetailPage() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
+    if (editScore > 300) {
+      alert('Total score cannot exceed 300 points.')
+      return
+    }
     updateTeamMutation.mutate({
       id,
       teamName: editTeamName,
@@ -100,26 +122,49 @@ export default function TeamDetailPage() {
   // Edit Evaluation states
   const [isEditingEval, setIsEditingEval] = useState(false)
   const [editingEvalId, setEditingEvalId] = useState<number | null>(null)
+  const [editingEvalTaskId, setEditingEvalTaskId] = useState<string | null>(null)
   const [editEvalScores, setEditEvalScores] = useState<Record<string, number>>({})
   const [editEvalFeedback, setEditEvalFeedback] = useState('')
+
+  const getCriteriaForTask = useCallback((taskId: string) => {
+    const roadmap = (data?.eventConfig as any)?.roadmap || []
+    const step = roadmap.find((s: any) => s.task_id === taskId)
+    const rubricKeys = step?.rubric || []
+    
+    return rubricKeys.map((key: string) => {
+      return (
+        RUBRIC_DEFINITIONS[key] || {
+          key,
+          label: key
+            .split('_')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' '),
+          max: 10,
+        }
+      )
+    })
+  }, [data])
 
   const updateEvalMutation = api.application.updateEvaluation.useMutation({
     onSuccess: () => {
       void refetch()
       setIsEditingEval(false)
     },
-    onError: (err: any) => {
+    onError: (err) => {
       alert(`Error updating score: ${err.message}`)
     }
   })
 
-  const startEditingEvaluation = (ev: any) => {
+  const startEditingEvaluation = (ev: any, taskId: string) => {
     setEditingEvalId(ev.id)
+    setEditingEvalTaskId(taskId)
     setEditEvalFeedback(ev.feedback || '')
     const breakdown = ev.scoreBreakdown as Record<string, number> || {}
     const initialScores: Record<string, number> = {}
-    Object.keys(CRITERIA_MAX).forEach(key => {
-      initialScores[key] = Number(breakdown[key]) || 0
+    
+    const criteria = getCriteriaForTask(taskId)
+    criteria.forEach((c: any) => {
+      initialScores[c.key] = Number(breakdown[c.key]) || 0
     })
     setEditEvalScores(initialScores)
     setIsEditingEval(true)
@@ -239,12 +284,14 @@ export default function TeamDetailPage() {
                   Stage {currentStage}
                 </span>
                 <span className="text-[9px] font-mono text-white/30">{data.unstopTeamId}</span>
-                <button
-                  onClick={startEditing}
-                  className="px-3.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-primary transition-all text-[8px] font-mono tracking-wider uppercase font-black cursor-pointer"
-                >
-                  Edit Details
-                </button>
+                {session?.user?.role === 'ADMIN' && (
+                  <button
+                    onClick={startEditing}
+                    className="px-3.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-primary transition-all text-[8px] font-mono tracking-wider uppercase font-black cursor-pointer"
+                  >
+                    Edit Details
+                  </button>
+                )}
               </div>
               <h1 className="text-4xl md:text-6xl text-hero leading-[0.9]">{data.teamName}</h1>
             </div>
@@ -390,12 +437,14 @@ export default function TeamDetailPage() {
                                       <div className="flex items-center justify-between">
                                         <span className="text-[9px] font-mono text-primary">Judge: {ev.judgeName}</span>
                                         <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={() => startEditingEvaluation(ev)}
-                                            className="text-[8px] font-mono text-white/40 hover:text-primary hover:border-primary/20 transition-colors cursor-pointer uppercase font-black bg-white/5 border border-white/10 px-2 py-0.5 rounded"
-                                          >
-                                            Edit Score
-                                          </button>
+                                          {canEditEvaluation(ev, sub.roundNumber) && (
+                                            <button
+                                              onClick={() => startEditingEvaluation(ev, sub.taskId)}
+                                              className="text-[8px] font-mono text-white/40 hover:text-primary hover:border-primary/20 transition-colors cursor-pointer uppercase font-black bg-white/5 border border-white/10 px-2 py-0.5 rounded"
+                                            >
+                                              Edit Score
+                                            </button>
+                                          )}
                                           <span className="text-[8px] font-mono text-white/20">{timeAgo(ev.gradedAt)}</span>
                                         </div>
                                       </div>
@@ -403,7 +452,7 @@ export default function TeamDetailPage() {
                                       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                                         {Object.entries(ev.scoreBreakdown as Record<string, number> || {}).map(([key, val]) => (
                                           <div key={key} className="flex items-center justify-between">
-                                            <span className="text-[8px] font-mono text-white/30">{CRITERIA_LABELS[key] || key}</span>
+                                            <span className="text-[8px] font-mono text-white/30">{RUBRIC_DEFINITIONS[key]?.label || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
                                             <span className="text-[9px] font-mono text-white/70">{val}</span>
                                           </div>
                                         ))}
@@ -526,13 +575,17 @@ export default function TeamDetailPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Total Score</label>
+                    <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 block">Total Score (Max 300)</label>
                     <input
                       type="number"
                       step="0.1"
                       required
+                      max={300}
                       value={editScore}
-                      onChange={e => setEditScore(Number(e.target.value) || 0)}
+                      onChange={e => {
+                        const val = Number(e.target.value) || 0
+                        setEditScore(val > 300 ? 300 : val)
+                      }}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-primary/50"
                     />
                   </div>
@@ -586,27 +639,27 @@ export default function TeamDetailPage() {
               </div>
 
               <form onSubmit={handleSaveEval} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {Object.entries(CRITERIA_MAX).map(([key, max]) => (
-                    <div key={key} className="space-y-1 group">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  {editingEvalTaskId && getCriteriaForTask(editingEvalTaskId).map((c: any) => (
+                    <div key={c.key} className="space-y-1 group">
                       <div className="flex items-center justify-between">
                         <label className="text-[8px] uppercase tracking-widest font-mono text-white/40 group-hover:text-white transition-colors">
-                          {CRITERIA_LABELS[key] || key}
+                          {c.label}
                         </label>
                         <div className="flex items-center gap-1.5">
                           <input
                             type="number"
                             min={0}
-                            max={max}
+                            max={c.max}
                             required
-                            value={editEvalScores[key] ?? 0}
+                            value={editEvalScores[c.key] ?? 0}
                             onChange={(e) => {
-                              const val = Math.max(0, Math.min(max, Math.round(Number(e.target.value) || 0)))
-                              setEditEvalScores(prev => ({ ...prev, [key]: val }))
+                              const val = Math.max(0, Math.min(c.max, Math.round(Number(e.target.value) || 0)))
+                              setEditEvalScores(prev => ({ ...prev, [c.key]: val }))
                             }}
                             className="w-12 bg-white/5 border border-white/10 rounded-lg px-1.5 py-0.5 text-right text-xs text-primary font-mono focus:outline-none focus:border-primary/50"
                           />
-                          <span className="text-[9px] text-white/20 font-mono">/ {max}</span>
+                          <span className="text-[9px] text-white/20 font-mono">/ {c.max}</span>
                         </div>
                       </div>
                     </div>

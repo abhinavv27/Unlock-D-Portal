@@ -1,16 +1,14 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Navbar } from '@/components/Navbar'
 import { api } from '@/trpc/react'
+import Link from 'next/link'
 
 export default function PublicLeaderboardPage() {
-  const { data: session } = api.auth.getSession.useQuery()
   const { data, isLoading } = api.judging.publicLeaderboard.useQuery()
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#050505] text-white selection:bg-primary relative overflow-hidden pb-12">
-      <Navbar session={session as any} />
+    <main className="min-h-screen flex flex-col bg-[#050505] text-white selection:bg-primary relative overflow-hidden pt-32 pb-12">
       {/* Background Parallax Elements */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
@@ -29,7 +27,16 @@ export default function PublicLeaderboardPage() {
         />
       </div>
 
-      <div className="flex-1 relative z-10 w-full max-w-5xl mx-auto px-6 lg:px-12 pt-32 md:pt-40">
+      <div className="flex-1 relative z-10 w-full max-w-5xl mx-auto px-6 lg:px-12">
+        <div className="mb-6 flex justify-start">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] text-white/60 hover:text-white hover:bg-white/10 transition-all font-mono"
+          >
+            ← Back to Dashboard
+          </Link>
+        </div>
+
         <header className="mb-12 text-center md:text-left">
           <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-label-caps !text-primary mb-4">
             Official Rankings
@@ -93,6 +100,7 @@ export default function PublicLeaderboardPage() {
                   <tr className="border-b border-white/5 bg-white/[0.02]">
                     <th className="p-6 text-label-caps w-16">Rank</th>
                     <th className="p-6 text-label-caps">Team Name</th>
+                    <th className="p-6 text-label-caps">Table</th>
                     <th className="p-6 text-label-caps text-right">Total Score</th>
                   </tr>
                 </thead>
@@ -110,6 +118,9 @@ export default function PublicLeaderboardPage() {
                       </td>
                       <td className="p-6">
                         <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{project.name}</span>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-xs font-bold text-white/60 tracking-tight">{project.tableNumber || 'N/A'}</span>
                       </td>
                       <td className="p-6 text-right">
                         <span className={`text-sm font-black ${project.totalScore ? 'text-primary' : 'text-white/20'}`}>
