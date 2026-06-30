@@ -52,11 +52,13 @@ export const applicationRouter = createTRPCRouter({
         registrations.map(async (reg) => {
           const state = reg.progressState as any
           const currentStage = state?.current_stage || 1
-          const score = state?.score || 0
+          const score = reg.totalScore
 
           const teamStatus = await getTeamStatus(reg.id, ctx.db)
           let teamRoundStatus = 'ACTIVE'
-          if (teamStatus.allowedRound < eventRound) {
+          if (teamStatus.allowedTaskId === 'COMPLETED') {
+            teamRoundStatus = 'COMPLETED'
+          } else if (teamStatus.allowedRound < eventRound) {
             teamRoundStatus = 'ELIMINATED'
           } else if (teamStatus.allowedRound > eventRound) {
             teamRoundStatus = 'WAITING_ROOM'
@@ -157,18 +159,10 @@ export const applicationRouter = createTRPCRouter({
   pipelineStats: adminProcedure.query(async ({ ctx }) => {
     const totalEvents = await ctx.db.event.count()
     const totalTeams = await ctx.db.registration.count()
-    const EXCLUDED_TASKS = ['FEATURE-1', 'FEATURE-2', 'FEATURE-3', 'FEATURE-4', 'FEATURE-5']
 
-    const totalSubmissions = await ctx.db.submission.count({
-      where: {
-        taskId: { notIn: EXCLUDED_TASKS },
-      },
-    })
+    const totalSubmissions = await ctx.db.submission.count()
     const pendingSubmissions = await ctx.db.submission.count({
-      where: {
-        status: 'PENDING',
-        taskId: { notIn: EXCLUDED_TASKS },
-      },
+      where: { status: 'PENDING' },
     })
 
     return {
@@ -677,4 +671,33 @@ export const applicationRouter = createTRPCRouter({
 
     return { success: true, teamName: nextQueued.teamName }
   }),
+
+  updateDemoMeetingLink: adminProcedure
+    .input(z.object({
+      submissionId: z.number().int(),
+      meetingLink: z.string().url('Must be a valid URL'),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const demoCall = await ctx.db.demoCall.findUnique({
+        where: { submissionId: input.submissionId },
+      })
+
+      if (!demoCall) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Demo call not found for this submission.',
+        })
+      }
+
+      await ctx.db.demoCall.update({
+        where: { submissionId: input.submissionId },
+        data: {
+          meetingLink: input.meetingLink,
+          status: 'CALLED',
+          calledAt: new Date(),
+        },
+      })
+
+      return { success: true }
+    }),
 })

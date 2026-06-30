@@ -145,6 +145,24 @@ export const judgingRouter = createTRPCRouter({
       let finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'
       let rejectionReason: string | null = null
 
+      // For FEATURE tasks, always approve and skip cumulative score update
+      const isFeatureTask = submission.taskId.startsWith('FEATURE-')
+      if (isFeatureTask) {
+        await ctx.db.submission.update({
+          where: { id: input.submissionId },
+          data: {
+            status: 'APPROVED',
+            averageScore,
+            rejectionReason: null,
+          },
+        })
+        return {
+          success: true,
+          status: 'APPROVED',
+          averageScore,
+        }
+      }
+
       // 4. Update the submission and registration total score in a transaction
       await ctx.db.$transaction(async (tx) => {
         await tx.submission.update({

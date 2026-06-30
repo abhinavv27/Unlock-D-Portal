@@ -7,6 +7,7 @@ const RoadmapStepSchema = z.object({
   round: z.number(),
   title: z.string().optional(),
   description: z.string().optional(),
+  threshold: z.number().optional(),
 })
 
 const EventConfigSchema = z.object({
@@ -33,14 +34,31 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   const roadmap = config.roadmap
 
   // 2. Iterate over all the team's submissions to find the highest completed step
-  // Since progression is unlocked immediately upon submission, any submission counts as completed except for REJECTED ones.
   let highestCompletedStep = 0
   for (const sub of registration.submissions) {
     if (sub.status === 'REJECTED') continue
 
     const stepObj = roadmap.find((r) => r.task_id === sub.taskId)
-    if (stepObj && stepObj.step > highestCompletedStep) {
-      highestCompletedStep = stepObj.step
+    if (!stepObj) continue
+
+    // FEATURE tasks always count as completed (no score gating)
+    if (sub.taskId.startsWith('FEATURE-')) {
+      if (stepObj.step > highestCompletedStep) {
+        highestCompletedStep = stepObj.step
+      }
+      continue
+    }
+
+    // For non-FEATURE tasks, check both threshold conditions
+    const roundThreshold = stepObj.threshold ?? 0
+    const globalMinThreshold = config.passing_threshold
+    const avgScore = sub.averageScore ?? 0
+
+    // Both conditions must be met: round-specific threshold AND global minimum
+    if (avgScore >= roundThreshold && avgScore >= globalMinThreshold) {
+      if (stepObj.step > highestCompletedStep) {
+        highestCompletedStep = stepObj.step
+      }
     }
   }
 

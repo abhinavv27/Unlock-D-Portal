@@ -16,9 +16,20 @@ export async function GET(request: Request) {
       )
     }
 
+    const topTeams = await db.registration.findMany({
+      where: { totalScore: { gt: 0 } },
+      orderBy: { totalScore: 'desc' },
+      take: 10,
+      select: { id: true }
+    });
+    const topTeamIds = topTeams.map(t => t.id);
+
     // Fetch all ROUND-3 submissions with their demo call and team info
     const submissions = await db.submission.findMany({
-      where: { taskId: 'ROUND-3' },
+      where: { 
+        taskId: 'ROUND-3',
+        registrationId: { in: topTeamIds }
+      },
       include: {
         registration: {
           select: {

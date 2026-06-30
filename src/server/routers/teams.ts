@@ -181,13 +181,12 @@ export const teamsRouter = createTRPCRouter({
       }
 
       const newSub = await ctx.db.$transaction(async (tx) => {
-        const isFeature = status.allowedTaskId.startsWith('FEATURE-')
         const sub = await tx.submission.create({
           data: {
             registrationId: ctx.team.id,
             roundNumber: status.allowedRound,
             taskId: status.allowedTaskId,
-            status: isFeature ? 'APPROVED' : 'PENDING',
+            status: 'PENDING',
             submission_type: isRound3 ? 'DEMO' : 'COMMIT',
             payload: {
               github: cleanGithub || undefined,

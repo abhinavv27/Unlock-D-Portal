@@ -206,7 +206,6 @@ export default function AdminApplicationsPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
             </div>
-
           </div>
 
           {/* Table Card */}
@@ -236,7 +235,7 @@ export default function AdminApplicationsPage() {
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="p-20 text-center">
+                      <td colSpan={7} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                           <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Synching_Records...</span>
@@ -245,7 +244,7 @@ export default function AdminApplicationsPage() {
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-20 text-center">
+                      <td colSpan={7} className="p-20 text-center">
                         <div className="flex flex-col items-center gap-2 opacity-20">
                           <span className="text-4xl">📁</span>
                           <span className="text-[10px] font-black uppercase tracking-[0.3em]">No_Matching_Entries</span>
@@ -289,6 +288,11 @@ export default function AdminApplicationsPage() {
                             {app.status === 'ACTIVE' && (
                               <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">
                                 Active
+                              </span>
+                            )}
+                            {app.status === 'COMPLETED' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-widest">
+                                Completed
                               </span>
                             )}
                             {app.isBlocked && (

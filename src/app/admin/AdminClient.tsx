@@ -104,6 +104,12 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
   useEffect(() => {
     if (staffToken && activeEvent?.currentRound === 3) {
       fetchR3Queue(staffToken)
+      
+      const intervalId = setInterval(() => {
+        fetchR3Queue(staffToken)
+      }, 10000) // Auto-refresh every 10 seconds
+      
+      return () => clearInterval(intervalId)
     }
   }, [staffToken, activeEvent?.currentRound, fetchR3Queue])
 

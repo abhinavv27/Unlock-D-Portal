@@ -33,8 +33,6 @@ export default async function AdminPage() {
     { stage: 'Queue Pending', count: pending, pct: totalSubmissionsCount ? (pending / totalSubmissionsCount) * 100 : 0, color: 'bg-amber-500' },
   ]
 
-  return (
-    <AdminClient session={session} stats={stats} funnel={funnel} activeEvent={activeEvent} />
-  )
+  return <AdminClient session={session} stats={stats} funnel={funnel} activeEvent={activeEvent} />
 }
 
