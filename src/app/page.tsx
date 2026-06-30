@@ -11,6 +11,7 @@ const DeepSpaceScene = dynamic(() => import('@/components/DeepSpaceScene').then(
 import { RadarSweep } from '@/components/RadarSweep'
 import { api } from '@/trpc/react'
 import gsap from 'gsap'
+import SponsorMarquee from '@/components/SponsorMarquee'
 
 export default function LandingPage() {
   const { data: session } = api.auth.getSession.useQuery()
@@ -521,6 +522,8 @@ export default function LandingPage() {
 
         </motion.div>
       </section>
+
+      <SponsorMarquee />
 
       {/* Footer */}
       <motion.footer 
