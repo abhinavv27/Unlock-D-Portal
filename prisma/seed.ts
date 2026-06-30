@@ -1,102 +1,84 @@
 import { PrismaClient } from '@prisma/client'
+import crypto from 'crypto'
 
 const prisma = new PrismaClient()
 
+// Standard password hashing function matching our backend auth utilities (600,000 iterations)
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.pbkdf2Sync(password, salt, 600000, 64, 'sha512').toString('hex')
+  return `600000:${salt}:${hash}`
+}
+
 async function main() {
-  // Create mock user
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@ras.test' },
-    update: {},
-    create: {
-      email: 'admin@ras.test',
-      name: 'Admin User',
-      role: 'ADMIN',
-    },
-  })
+  console.log('Seeding database...')
+  console.log('Prisma keys:', Object.keys(prisma))
 
-  const user = await prisma.user.upsert({
-    where: { email: 'hacker@ras.test' },
-    update: {},
-    create: {
-      id: 'mock-id', // Match the hardcoded session ID
-      email: 'hacker@ras.test',
-      name: 'Hacker User',
-      role: 'APPLICANT',
-    },
-  })
+  // 1. Clear existing records to ensure a fresh state
+  await prisma.evaluation.deleteMany()
+  await prisma.submission.deleteMany()
+  await prisma.registration.deleteMany()
+  await prisma.event.deleteMany()
+  await prisma.user.deleteMany()
 
-  // Create mock application
-  await prisma.application.upsert({
-    where: { userId: 'mock-id' },
-    update: {},
-    create: {
-      userId: 'mock-id',
-      firstName: 'Alan',
-      lastName: 'Turing',
-      university: 'Cambridge',
-      major: 'Computer Science',
-      graduationYear: 2025,
-      experience: 'advanced',
-      teamPreference: 'solo',
-      status: 'PENDING',
-    },
-  })
 
-  // Create some extra applications for the admin dashboard
-  const extraApplicants = [
-    { name: 'Grace Hopper', university: 'Yale', status: 'ACCEPTED' },
-    { name: 'Ada Lovelace', university: 'Oxford', status: 'UNDER_REVIEW' },
-    { name: 'Margaret Hamilton', university: 'MIT', status: 'REJECTED' },
-    { name: 'Claude Shannon', university: 'Michigan', status: 'PENDING' },
-    { name: 'John von Neumann', university: 'Princeton', status: 'ACCEPTED' },
-    { name: 'Linus Torvalds', university: 'Helsinki', status: 'ACCEPTED' },
-    { name: 'Tim Berners-Lee', university: 'Oxford', status: 'UNDER_REVIEW' },
-    { name: 'Hedy Lamarr', university: 'Vienna', status: 'WAITLISTED' },
-    { name: 'Radia Perlman', university: 'MIT', status: 'ACCEPTED' },
-    { name: 'Vint Cerf', university: 'Stanford', status: 'UNDER_REVIEW' },
-    { name: 'Bjarne Stroustrup', university: 'Aarhus', status: 'PENDING' },
-    { name: 'Guido van Rossum', university: 'Amsterdam', status: 'ACCEPTED' },
-    { name: 'James Gosling', university: 'Calgary', status: 'UNDER_REVIEW' },
-    { name: 'Anders Hejlsberg', university: 'DTU', status: 'ACCEPTED' },
-    { name: 'Brendan Eich', university: 'Santa Clara', status: 'REJECTED' },
-    { name: 'Sophie Wilson', university: 'Cambridge', status: 'ACCEPTED' },
-    { name: 'Katherine Johnson', university: 'West Virginia', status: 'WAITLISTED' },
-    { name: 'Dorothy Vaughan', university: 'Wilberforce', status: 'ACCEPTED' },
-    { name: 'Mary Jackson', university: 'Hampton', status: 'PENDING' },
-  ]
-
-  for (const applicant of extraApplicants) {
-    const [first, last] = applicant.name.split(' ')
-    const email = `${first.toLowerCase().replace(' ', '')}.${last.toLowerCase()}@ras.test`
-    
-    const u = await prisma.user.upsert({
-      where: { email },
-      update: {},
-      create: {
-        email,
-        name: applicant.name,
-        role: 'APPLICANT',
-      },
-    })
-
-    await prisma.application.upsert({
-      where: { userId: u.id },
-      update: {},
-      create: {
-        userId: u.id,
-        firstName: first,
-        lastName: last,
-        university: applicant.university,
-        major: 'Computer Science',
-        graduationYear: 2026,
-        experience: 'intermediate',
-        teamPreference: 'looking',
-        status: applicant.status as any,
-      },
-    })
+  const unlockdConfig = {
+    currentRound: 0,
+    stages: [
+      { stage: 0, name: 'System Setup & Comprehension', pointsRequired: 10 },
+      { stage: 1, name: 'Progressive Feature Sprints', pointsRequired: 20 },
+      { stage: 2, name: 'Optimisation & Open Innovation', pointsRequired: 30 },
+      { stage: 3, name: 'Final Demonstration & Evaluation', pointsRequired: 40 },
+    ],
+    total_rounds: 3,
+    passing_threshold: 60,
+    roadmap: [
+      { step: 1, task_id: 'ROUND-0', round: 0, threshold: 10, rubric: ['setup'], title: 'System Setup & Comprehension', description: 'Familiarize yourself with the development environment and project requirements.' },
+      { step: 2, task_id: 'FEATURE-1', round: 1, threshold: 0, rubric: [], title: 'Feature 1 — Core Architecture', description: 'Design and implement the foundational architecture of your application, including database schema, API structure, and core business logic.' },
+      { step: 3, task_id: 'FEATURE-2', round: 1, threshold: 0, rubric: [], title: 'Feature 2 — User Interaction', description: 'Build user-facing features including authentication, onboarding flows, and interactive UI components.' },
+      { step: 4, task_id: 'FEATURE-3', round: 1, threshold: 0, rubric: [], title: 'Feature 3 — Data Integration', description: 'Implement data processing, third-party API integrations, and real-time data synchronization.' },
+      { step: 5, task_id: 'FEATURE-4', round: 1, threshold: 0, rubric: [], title: 'Feature 4 — Advanced Capabilities', description: 'Add advanced functionality such as search, filtering, notifications, and background job processing.' },
+      { step: 6, task_id: 'FEATURE-5', round: 1, threshold: 0, rubric: [], title: 'Feature 5 — Polish & Performance', description: 'Optimize application performance, add error handling, loading states, and refine the user experience.' },
+      { step: 7, task_id: 'FINAL-FEATURE', round: 1, threshold: 60, rubric: ['functionality', 'code_quality', 'integration', 'ux', 'architecture'], title: 'Overall Submission — Complete Integration', description: 'Integrate all features into a cohesive product. Ensure all components work together seamlessly end-to-end.' },
+      { step: 8, task_id: 'ROUND-2', round: 2, threshold: 60, rubric: ['functionality', 'code_quality', 'integration', 'ux', 'architecture'], title: 'Round 2 — UX & Innovation', description: 'Elevate the user experience with polished interfaces, innovative interactions, and comprehensive error handling.' },
+      { step: 9, task_id: 'ROUND-3', round: 3, threshold: 45, rubric: ['presentation', 'e2e_functionality', 'product_flow', 'arch_understanding'], title: 'Round 3 — Presentation & Viability', description: 'Prepare your final pitch, demo the working product, and present business viability.' },
+    ],
   }
 
-  console.log('Seed completed successfully with 20+ applications.')
+  const ctfConfig = {
+    flags: [
+      { id: 'flag_1', points: 10, flag: 'IEEE{welcome_to_ras}' },
+      { id: 'flag_2', points: 20, flag: 'IEEE{scrypt_is_fun}' },
+      { id: 'flag_3', points: 30, flag: 'IEEE{jsonb_unlocks_all}' },
+    ],
+  }
+
+  const hackathonEvent = await prisma.event.create({
+    data: {
+      name: 'UnlockD Progressive Hackathon',
+      slug: 'unlockd-2024',
+      eventType: 'PROGRESSIVE_BUILDATHON',
+      config: unlockdConfig,
+      currentGlobalRound: 1,
+      isActive: true,
+    },
+  })
+
+  const ctfEvent = await prisma.event.create({
+    data: {
+      name: 'RAS Capture The Flag',
+      slug: 'ras-ctf-2024',
+      eventType: 'CTF',
+      config: ctfConfig,
+      isActive: false, // Inactive by default
+    },
+  })
+
+  console.log('Created events:')
+  console.log(`- Hackathon: "${hackathonEvent.name}" (slug: "${hackathonEvent.slug}")`)
+  console.log(`- CTF: "${ctfEvent.name}" (slug: "${ctfEvent.slug}")`)
+
+  console.log('Seed completed successfully!')
 }
 
 main()

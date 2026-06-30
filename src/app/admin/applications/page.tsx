@@ -1,42 +1,74 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { api } from '@/trpc/react'
 
-type AppStatus = 'PENDING' | 'UNDER_REVIEW' | 'ACCEPTED' | 'WAITLISTED' | 'REJECTED' | 'WITHDRAWN' | 'ALL'
-
-const BADGE_MAP: Record<string, string> = {
-  PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  UNDER_REVIEW: 'bg-primary/10 text-primary/80 border-primary/20',
-  ACCEPTED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  WAITLISTED: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
-}
-
 export default function AdminApplicationsPage() {
   const pathname = usePathname()
-  const [filter, setFilter] = useState<AppStatus>('ALL')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
+  const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
+
+  const fetchStaffUser = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/auth/staff/me', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffUser(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+    if (token) {
+      fetchStaffUser(token)
+    }
+  }, [fetchStaffUser])
+
+  const handleLogout = () => {
+    localStorage.removeItem('staff_token')
+    localStorage.removeItem('team_token')
+    window.location.href = '/api/auth/logout'
+  }
+
   const { data, isLoading, refetch } = api.application.getAll.useQuery({
-    status: filter,
+    status: 'ALL',
     search: search,
     page: 1,
     limit: 50
   })
 
-  const updateStatusMutation = api.application.updateStatus.useMutation({
+  const removeTeamMutation = api.application.removeTeam.useMutation({
     onSuccess: () => refetch(),
+    onError: (err) => alert(`Error removing team: ${err.message}`),
   })
-  const bulkUpdateMutation = api.application.bulkUpdateStatus.useMutation({
+  const bulkRemoveMutation = api.application.bulkRemoveTeams.useMutation({
     onSuccess: () => {
       setSelected(new Set())
       refetch()
     },
+    onError: (err) => alert(`Error removing teams: ${err.message}`),
+  })
+  const toggleBlockMutation = api.application.toggleBlockTeam.useMutation({
+    onSuccess: () => refetch(),
+    onError: (err) => alert(`Error toggling block status: ${err.message}`),
   })
 
   const filtered = data?.applications ?? []
@@ -77,7 +109,7 @@ export default function AdminApplicationsPage() {
         <div className="p-8 border-b border-white/5">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-label-caps !text-white/40 group-hover:!text-white transition-colors">Admin_Hub</span>
           </Link>
@@ -88,7 +120,10 @@ export default function AdminApplicationsPage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
+            ...(staffUser?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
+            { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
             const isActive = pathname === href
             return (
@@ -108,8 +143,14 @@ export default function AdminApplicationsPage() {
           })}
         </nav>
 
-        <div className="p-6 border-t border-white/5 text-center">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">IEEE RAS 2026</p>
+        <div className="p-6 border-t border-white/5 space-y-4">
+          <button
+            onClick={handleLogout}
+            className="w-full btn-ghost !py-3 rounded-xl text-[10px] font-mono tracking-wider hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-center uppercase"
+          >
+            Sign Out
+          </button>
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] text-center">IEEE RAS 2026</p>
         </div>
       </aside>
 
@@ -129,7 +170,7 @@ export default function AdminApplicationsPage() {
             </div>
 
             <AnimatePresence>
-              {selected.size > 0 && (
+              {selected.size > 0 && staffUser?.role === 'ADMIN' && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -138,15 +179,14 @@ export default function AdminApplicationsPage() {
                 >
                   <span className="px-4 text-[10px] font-black text-white/40 uppercase tracking-widest">{selected.size} SELECTED</span>
                   <button
-                    className="px-6 py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), status: 'ACCEPTED' })}
-                    disabled={bulkUpdateMutation.isPending}
-                  >ACCEPT</button>
-                  <button
-                    className="px-6 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), status: 'REJECTED' })}
-                    disabled={bulkUpdateMutation.isPending}
-                  >REJECT</button>
+                    className="px-6 py-2 bg-rose-900/60 text-rose-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-800/60 transition-colors border border-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      if (window.confirm(`Remove ${selected.size} team(s)? This cannot be undone.`)) {
+                        bulkRemoveMutation.mutate({ ids: Array.from(selected) })
+                      }
+                    }}
+                    disabled={bulkRemoveMutation.isPending}
+                  >REMOVE</button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -166,23 +206,6 @@ export default function AdminApplicationsPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              {(['ALL', 'PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'] as AppStatus[]).map(s => (
-                <button
-                  key={s}
-                  id={`filter-${s.toLowerCase()}`}
-                  onClick={() => setFilter(s)}
-                  className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                    filter === s
-                      ? 'border-primary bg-primary text-black shadow-lg shadow-primary/20'
-                      : 'border-white/5 bg-white/5 text-white/40 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {s.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Table Card */}
@@ -201,11 +224,11 @@ export default function AdminApplicationsPage() {
                         />
                       </div>
                     </th>
-                    <th className="p-6 text-label-caps">Applicant</th>
+                    <th className="p-6 text-label-caps">Team</th>
+                    <th className="p-6 text-label-caps">Passcode</th>
                     <th className="p-6 text-label-caps">University</th>
-                    <th className="p-6 text-label-caps">Major</th>
-                    <th className="p-6 text-label-caps">Status</th>
                     <th className="p-6 text-label-caps">Submitted</th>
+                    <th className="p-6 text-label-caps text-right">Score</th>
                     <th className="p-6 text-label-caps text-right">Operations</th>
                   </tr>
                 </thead>
@@ -248,20 +271,46 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-black text-white group-hover:text-primary transition-colors font-display uppercase tracking-tight">{app.firstName} {app.lastName}</span>
+                          <div className="flex items-center gap-3">
+                            <Link href={`/admin/applications/${app.id}`} className="text-sm font-black text-white hover:text-primary transition-colors font-display uppercase tracking-tight">
+                              {app.firstName}
+                            </Link>
+                            {app.status === 'ELIMINATED' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-widest">
+                                Eliminated
+                              </span>
+                            )}
+                            {app.status === 'WAITING_ROOM' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-widest">
+                                Waiting Room
+                              </span>
+                            )}
+                            {app.status === 'ACTIVE' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">
+                                Active
+                              </span>
+                            )}
+                            {app.status === 'COMPLETED' && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-widest">
+                                Completed
+                              </span>
+                            )}
+                            {app.isBlocked && (
+                              <span className="text-[8px] font-mono px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-500/20 uppercase tracking-widest">
+                                Suspended
+                              </span>
+                            )}
+                          </div>
                           <span className="text-value-mono !text-white/20 !text-[9px]">{app.user?.email}</span>
                         </div>
                       </td>
                       <td className="p-6">
-                        <span className="text-xs font-bold text-white/60 tracking-tight">{app.university}</span>
-                      </td>
-                      <td className="p-6">
-                        <span className="text-xs font-bold text-white/60 tracking-tight">{app.major}</span>
-                      </td>
-                      <td className="p-6">
-                        <span className={`inline-flex px-3 py-1 rounded-lg text-label-caps !text-[9px] border ${BADGE_MAP[app.status] || 'border-white/10 !text-white/40'}`}>
-                          {app.status.replace('_', ' ')}
+                        <span className="text-value-mono !text-primary !text-[11px] font-mono font-bold select-all">
+                          {app.lastName.replace('(Passcode: ', '').replace(')', '')}
                         </span>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-xs font-bold text-white/60 tracking-tight">{app.university}</span>
                       </td>
                       <td className="p-6">
                         <span className="text-value-mono !text-white/20">
@@ -269,26 +318,44 @@ export default function AdminApplicationsPage() {
                         </span>
                       </td>
                       <td className="p-6 text-right">
-                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <select
-                            value={app.status}
-                            onChange={(e) => updateStatusMutation.mutate({ 
-                              id: app.id, 
-                              status: e.target.value as Exclude<AppStatus, 'ALL'> 
-                            })}
-                            disabled={updateStatusMutation.isPending}
-                            className="bg-transparent border-none text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest cursor-pointer focus:ring-0 p-0 h-auto w-auto"
-                          >
-                            {['PENDING', 'UNDER_REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'].map(s => (
-                              <option key={s} value={s} className="bg-[#050505] text-white">{s.replace('_', ' ')}</option>
-                            ))}
-                          </select>
+                        <span className="text-sm font-black text-primary">{app.totalScore}</span>
+                      </td>
+                      <td className="p-6 text-right">
+                        <div className="flex items-center justify-end gap-4">
                           <Link
                             href={`/admin/applications/${app.id}`}
-                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors border-l border-white/10 pl-3"
+                            className="text-[10px] font-black text-white/40 hover:text-primary uppercase tracking-widest transition-colors cursor-pointer"
                           >
-                            View_Profile
+                            Edit
                           </Link>
+                          {staffUser?.role === 'ADMIN' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  toggleBlockMutation.mutate({ id: app.id, isBlocked: !app.isBlocked })
+                                }}
+                                disabled={toggleBlockMutation.isPending}
+                                className={`text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer ${
+                                  app.isBlocked
+                                    ? 'text-emerald-500/60 hover:text-emerald-400'
+                                    : 'text-amber-500/60 hover:text-amber-400'
+                                }`}
+                              >
+                                {app.isBlocked ? 'Unblock' : 'Block'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Remove team "${app.firstName}"? This cannot be undone.`)) {
+                                    removeTeamMutation.mutate({ id: app.id })
+                                  }
+                                }}
+                                disabled={removeTeamMutation.isPending}
+                                className="text-[10px] font-black text-rose-500/60 hover:text-rose-400 uppercase tracking-widest transition-colors cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </motion.tr>

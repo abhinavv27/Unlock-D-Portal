@@ -1,135 +1,111 @@
-# 🌌 RAS Hackathon Portal
+# ⚡ UNLOCK'D — IEEE RAS MUJ Hackathon & CTF Portal
 
-A production-grade, role-based hackathon operations platform serving as the central nervous system for hacker applications, judging, staff operations, and sponsor management.
-
----
-
-## 🏗️ Architecture & Tech Stack
-
-This repository follows a customized [T3 Stack](https://create.t3.gg/) methodology to provide a highly robust, type-safe, and rapidly iterable architecture.
-
-### **1. Core Infrastructure**
-- **Framework:** Next.js 14 (App Router)
-- **Language:** TypeScript (Strict Mode)
-- **Styling:** Tailwind CSS v3 (Customized for CSS-variable opacity modifications)
-- **Authentication:** Auth.js (NextAuth v5 Beta) — Google/GitHub OAuth + Resend Magic Links
-
-### **2. Data Layer**
-- **Database:** Supabase (Serverless PostgreSQL)
-- **ORM:** Prisma 6 with Supavisor connection pooling.
-- **API Transport:** tRPC (End-to-end type-safe API boundaries connecting React Server Components and Client Components).
-- **State Management:** React Query (Integrated with tRPC for caching, background fetching, and invalidation).
-
-### **3. Application Domains (Role-Based Workflows)**
-The platform enforces strict RBAC (Role-Based Access Control) through tRPC middlewares and NextAuth session parsing.
-
-| Domain | Route | Access Level | Description |
-|--------|-------|--------------|-------------|
-| **Applicant Gateway** | `/apply`, `/dashboard` | `APPLICANT` | Multi-step application wizard, live status tracking, and QR ticket distribution. |
-| **Command Center** | `/admin/*` | `ADMIN`, `SUPER_ADMIN` | High-level metrics, pipeline funnels, and bulk application management. |
-| **Judging Arena** | `/judging` | `JUDGE` | Dedicated iPad/mobile-friendly portal for grading projects. |
-| **Logistics/Scanner**| `/scanner` | `STAFF` | Camera-enabled QR scanner for attendee check-ins and meal tracking. |
+Unlock'D is a role-based operations platform that manages **Unlock'D**, the 24-hour progressive software development challenge and CTF events organized by **IEEE Robotics & Automation Society (RAS), MUJ**. It drives progressive team progression, enables real-time scoring and multi-judge feedback, automates roster ingestion, and features an immersive glassmorphic dark-theme UI.
 
 ---
 
-## 🎨 Design System: "Obsidian Command Center"
+## 🚀 Tech Stack
 
-The UI is built on a dark-mode-first aesthetic with deep purples, glowing accents, and glassmorphic elements. 
-
-- **Typography:** `Space Grotesk` (Headings) and `Inter` (Body).
-- **Core Tokens:** Maintained exclusively in `globals.css` using CSS variables (`--bg-base`, `--accent-primary`) to ensure seamless scaling.
-- **Components:** Custom lightweight components (animated sliders, CSS-grid data tables) replacing bloated external UI libraries.
+| Layer | Technology | Key Modules & Usage |
+| :--- | :--- | :--- |
+| **Framework** | Next.js 16 (App Router) | Server Components, Route Handlers, Turbopack |
+| **Database** | PostgreSQL (Neon / Supabase) | Serverless via connection pooling |
+| **ORM** | Prisma ORM | Schema migrations, type-safe queries |
+| **API Architecture** | tRPC (v11) + REST | End-to-end type safety, React Query |
+| **Styling** | Tailwind CSS + CSS Modules | Glassmorphism UI, fluid layouts |
+| **Animations & 3D** | Framer Motion + Spline 3D | Micro-interactions, 3D robots |
+| **Authentication** | Custom Session Tokens & JWTs | PBKDF2 hashing, AES-256-GCM cookies |
+| **Components** | Radix UI + Base UI + Lucide | Sliders, dropdowns, accessible primitives |
 
 ---
 
-## 🚀 Local Development Setup
+## 🗺️ Architecture & Event Lifecycle
+
+Unlock'D runs on a **Progressive Hackathon Roadmap Engine**.
+
+```mermaid
+graph TD
+    A[Roster Ingestion via Admin Panel] -->|CSV Upload| B(Generate Passcodes & Create Teams)
+    B --> C{Event Round Status}
+    C -->|Round 0| D[Stand-by Landing Page]
+    C -->|Round 1| E[Team Submission Active]
+    E -->|GitHub/Demo Submission| F[Judge Evaluation Queue]
+    F -->|Fail / Rejection| E
+    F -->|Pass / Approval| G{All Tasks Complete?}
+    G -->|No| E
+    G -->|Yes| H[Synchronized Waiting Room]
+    I[Admin advances Global Ceiling to Round 2] --> H
+    H -->|CEILING LIFTED| J[Unlock Round 2 Submissions]
+```
+
+### Progressive State Engine
+- **Round 0 (Setup)**: Submissions disabled. Teams see a stand-by page.
+- **Round 1+ (Sprints)**: Teams submit tasks with GitHub URL, demo URL, and descriptions.
+- **Synchronized Waiting Room**: Teams that finish all milestones wait until the admin advances the global round ceiling.
+
+### Multi-Judge Grading
+- Real-time dashboard ordered chronologically with a time-ago counter.
+- Judges grade across **7 criteria** (max 100) using Base UI Sliders.
+- Consolidated multi-judge feedback and live leaderboards.
+
+---
+
+## 🔒 Security
+
+- **Rate Limiting**: Sliding window — max 5 login requests/min/IP on auth routes.
+- **PBKDF2 Hashing**: 600,000 iterations (HMAC-SHA512) with unique salts.
+- **AES-256-GCM**: Staff session tokens encrypted via `NEXTAUTH_SECRET`.
+- **Timing Attack Defenses**: `crypto.timingSafeEqual` for password comparison.
+- **HTTP-Only Cookies**: JWTs and session UUIDs via Secure, SameSite cookies.
+
+---
+
+## 💻 Local Setup
 
 ### Prerequisites
 - Node.js 18+
-- Git
-- Supabase Account
+- PostgreSQL instance (local or Neon/Supabase)
 
 ### Installation
 
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-2. **Environment Setup**
-   Create a `.env` file from the connection strings in your Supabase Dashboard:
-   ```bash
-   DATABASE_URL="postgresql://postgres.[REF]:[PW]@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-   DIRECT_URL="postgresql://postgres.[REF]:[PW]@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres"
-   ```
+### Database
 
-3. **Database Initialization & Seeding**
-   Push the schema to Supabase and seed it with test data:
-   ```bash
-   npx prisma db push
-   npm run db:seed
-   ```
+```bash
+npx prisma db push
+npm run db:seed
+```
 
-4. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-   The portal will be live at `http://localhost:3000`. (If port 3000 is taken, Next.js will use `3001`).
+### Development
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`.
 
 ---
 
-## 🛡️ GitHub Workflow & Contribution Guide
+## 📁 Project Structure
 
-To maintain a clean and structured codebase, we use a **Feature Branch Workflow**. This ensures `main` is always stable and ready for production deployment.
-
-### **Initial Setup (Your First Push)**
-If you haven't pushed the repository to GitHub yet, run these commands:
-```bash
-git init
-git add .
-git commit -m "Initial commit: Platform scaffolding and local environment setup"
-git branch -M main
-git remote add origin https://github.com/your-username/ras-portal.git
-git push -u origin main
+```
+src/
+├── app/            # App Router: admin, api, dashboard, judging
+├── components/     # Navbar, layouts, SplineRobot 3D canvas
+├── lib/            # auth-utils, csv-parser, state-engine
+├── server/         # tRPC routers, db client, middleware
+└── proxy.ts        # Rate limiting middleware
 ```
 
-### **Standard Development Workflow (How to work on new features)**
+### Team Roster CSV Format (For Ingestion)
 
-**NEVER PUSH DIRECTLY TO `main`!** Always follow these steps:
+```csv
+Team Id,Team Name,Email
+unstop_101,CyberTitans,cyber.titans@test.com
+unstop_102,DeltaForce,delta.force@test.com
+```
 
-1. **Ensure your local `main` is up to date:**
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-
-2. **Create a new branch for your task:**
-   Use a descriptive prefix like `feat/`, `fix/`, `chore/`, or `refactor/`.
-   ```bash
-   git checkout -b feat/judging-dashboard
-   ```
-
-3. **Write code and commit your changes:**
-   We recommend writing clear, atomic commits using semantic messages.
-   ```bash
-   git add .
-   git commit -m "feat: implement sliding judging scale component"
-   ```
-
-4. **Push your branch to GitHub:**
-   ```bash
-   git push -u origin feat/judging-dashboard
-   ```
-
-5. **Open a Pull Request (PR):**
-   - Go to the repository on GitHub.
-   - Click **"Compare & pull request"**.
-   - Add a brief description of what you changed.
-   - Once reviewed and approved (or if you're a solo dev, once you've verified it works), **Squash and Merge** the PR into `main`.
-
-6. **Cleanup:**
-   ```bash
-   git checkout main
-   git pull origin main
-   git branch -d feat/judging-dashboard  # Deletes the local branch
-   ```
+Passcodes are generated once and shown as plain text upon successful upload.

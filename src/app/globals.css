@@ -163,8 +163,7 @@
   }
 
   .text-editorial {
-    @apply font-serif italic tracking-tight text-white/90 leading-relaxed;
-    font-variation-settings: "opsz" 36, "wght" 400;
+    @apply font-sans font-medium tracking-wide text-white/80 leading-relaxed;
   }
 
   .text-label-caps {
@@ -177,5 +176,50 @@
 
   .text-micro {
     @apply font-mono text-[8px] tracking-[0.2em] uppercase opacity-20;
+  }
+
+  /* Hide Spline UI overlays (Get in Touch button, watermark) */
+  .spline-watermark,
+  [class*="spline-watermark"],
+  [data-splinetool-ui],
+  .spline-ui-overlay,
+  [class*="spline-ui"],
+  [class*="spline-button"],
+  [class*="spline-cta"],
+  [class*="get-in-touch"],
+  [class*="contact-button"],
+  [class*="spline-contact"],
+  .spline-logo,
+  [class*="watermark"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Hide Spline injected elements at bottom of screen */
+  div[style*="position: absolute"][style*="bottom"]:not(.noise-overlay):not([class*="hero"]):not([class*="footer"]),
+  div[style*="position: fixed"][style*="bottom"]:not(.noise-overlay):not([class*="hero"]):not([class*="footer"]) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Hide all anchor links to spline.design */
+  a[href*="spline.design"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Spline canvas performance optimizations */
+  canvas[data-splinetool],
+  canvas.spline-canvas {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -9,6 +9,43 @@ import { api } from '@/trpc/react'
 export default function AdminSchedulePage() {
   const pathname = usePathname()
   const { data: events, isLoading, refetch } = api.schedule.getAllEvents.useQuery()
+
+  const [staffUser, setStaffUser] = useState<{ userId: number; username: string; role: string } | null>(null)
+
+  const fetchStaffUser = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/auth/staff/me', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffUser(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch staff details:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    let token = localStorage.getItem('staff_token')
+    if (!token) {
+      const match = document.cookie.match(/staff_token=([^;]+)/)
+      if (match) {
+        token = decodeURIComponent(match[1])
+        localStorage.setItem('staff_token', token)
+      }
+    }
+    if (token) {
+      fetchStaffUser(token)
+    }
+  }, [fetchStaffUser])
+
+  const handleLogout = () => {
+    localStorage.removeItem('staff_token')
+    localStorage.removeItem('team_token')
+    window.location.href = '/api/auth/logout'
+  }
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -26,6 +63,9 @@ export default function AdminSchedulePage() {
       setFormData({ title: '', description: '', location: '', startTime: '', endTime: '', type: 'GENERAL', isPublic: true, color: '' })
       refetch()
     },
+    onError: (err) => {
+      alert(`Error creating event: ${err.message}`)
+    }
   })
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -67,7 +107,7 @@ export default function AdminSchedulePage() {
         <div className="p-8 border-b border-white/5">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center group-hover:scale-110 transition-transform border border-white/10">
-              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-label-caps !text-white/40 group-hover:!text-white transition-colors">Admin_Hub</span>
           </Link>
@@ -78,7 +118,10 @@ export default function AdminSchedulePage() {
             { href: '/admin', label: 'Overview', icon: '📊' },
             { href: '/admin/applications', label: 'Applications', icon: '📋' },
             { href: '/admin/schedule', label: 'Schedule', icon: '📅' },
-            { href: '/admin/projects', label: 'Projects', icon: '🚀' },
+            { href: '/admin/leaderboard', label: 'Leaderboard', icon: '🏆' },
+            { href: '/admin/mentorship', label: 'Mentorship', icon: '🤝' },
+            ...(staffUser?.role !== 'JUDGE' ? [{ href: '/admin/import', label: 'Roster Ingestion', icon: '📥' }] : []),
+            { href: '/judging', label: 'Grading Queue', icon: '⚖️' },
           ].map(({ href, label, icon }) => {
             const isActive = pathname === href
             return (
@@ -98,8 +141,14 @@ export default function AdminSchedulePage() {
           })}
         </nav>
 
-        <div className="p-6 border-t border-white/5 text-center">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">IEEE RAS 2026</p>
+        <div className="p-6 border-t border-white/5 space-y-4">
+          <button
+            onClick={handleLogout}
+            className="w-full btn-ghost !py-3 rounded-xl text-[10px] font-mono tracking-wider hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-center uppercase"
+          >
+            Sign Out
+          </button>
+          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] text-center">IEEE RAS 2026</p>
         </div>
       </aside>
 

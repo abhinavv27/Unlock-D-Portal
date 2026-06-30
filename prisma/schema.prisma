@@ -1,269 +1,157 @@
-// RAS Portal — Prisma Schema
-// Database: CockroachDB (PostgreSQL wire protocol)
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// ─── ENUMS ────────────────────────────────────────────────────────────────
+model User {
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  passwordHash   String          @map("password_hash")
+  plainPassword  String?         @map("plain_password")
+  systemRole     String          @map("system_role")
+  evaluations    Evaluation[]
+  mentorProfile  MentorProfile?
+  mentorSessions MentorSession[]
+  demoCalls      DemoCall[]
 
-enum Role {
-  APPLICANT
-  ATTENDEE
-  ADMIN
-  JUDGE
-  SPONSOR
-  STAFF
-  SUPER_ADMIN
+  @@map("users")
 }
 
-enum AppStatus {
-  PENDING
-  UNDER_REVIEW
-  ACCEPTED
-  WAITLISTED
-  REJECTED
-  WITHDRAWN
+model Event {
+  id                 Int            @id @default(autoincrement())
+  slug               String         @unique
+  name               String
+  eventType          String         @map("event_type")
+  config             Json
+  currentGlobalRound Int            @default(1) @map("current_global_round")
+  isActive           Boolean        @default(true) @map("is_active")
+  isLeaderboardVisible Boolean      @default(false) @map("is_leaderboard_visible")
+  registrations      Registration[]
+
+  @@map("events")
 }
 
-enum MealType {
-  FRIDAY_DINNER
-  SATURDAY_BREAKFAST
-  SATURDAY_LUNCH
-  SATURDAY_DINNER
-  SUNDAY_BREAKFAST
-  SUNDAY_LUNCH
+model Registration {
+  id               String          @id @default(uuid()) @db.Uuid
+  eventId          Int             @map("event_id")
+  unstopTeamId     String          @map("unstop_team_id")
+  teamName         String          @map("team_name")
+  teamPasscodeHash String          @map("team_passcode_hash")
+  memberDetails    Json?           @map("member_details")
+  progressState    Json            @default("{}") @map("progress_state")
+  totalScore       Float           @default(0.0) @map("total_score")
+  registeredAt     DateTime        @default(now()) @map("registered_at")
+  isBlocked        Boolean         @default(false) @map("is_blocked")
+  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessions         Session[]
+  submissions      Submission[]
+  mentorSessions   MentorSession[]
+
+  @@unique([eventId, unstopTeamId])
+  @@map("registrations")
 }
 
-enum EventType {
-  GENERAL
-  WORKSHOP
-  MEAL
-  JUDGING
-  CEREMONY
-  SPONSOR
+model Submission {
+  id              Int            @id @default(autoincrement())
+  registrationId  String         @map("registration_id") @db.Uuid
+  roundNumber     Int            @map("round_number")
+  taskId          String         @map("task_id")
+  rejectionReason String?        @map("rejection_reason")
+  payload         Json
+  status          String         @default("PENDING")
+  averageScore    Float?         @map("average_score")
+  submittedAt     DateTime       @default(now()) @map("submitted_at")
+  submission_type SubmissionType @default(COMMIT)
+  evaluations     Evaluation[]
+  registration    Registration   @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  demoCall        DemoCall?
+
+  @@map("submissions")
 }
 
-enum SponsorTier {
-  BRONZE
-  SILVER
-  GOLD
-  PLATINUM
+model Evaluation {
+  id             Int               @id @default(autoincrement())
+  submissionId   Int               @map("submission_id")
+  judgeId        Int               @map("judge_id")
+  scoreBreakdown Json              @map("score_breakdown")
+  totalScore     Int               @map("total_score")
+  feedback       String
+  gradedAt       DateTime          @default(now()) @map("graded_at")
+  judge          User              @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  submission     Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  audits         EvaluationAudit[]
+
+  @@unique([submissionId, judgeId])
+  @@map("evaluations")
 }
 
-// ─── AUTH MODELS (NextAuth) ───────────────────────────────────────────────
+model EvaluationAudit {
+  id                Int        @id @default(autoincrement())
+  evaluationId      Int        @map("evaluation_id")
+  oldScoreBreakdown Json       @map("old_score_breakdown")
+  oldTotalScore     Int        @map("old_total_score")
+  oldFeedback       String?    @map("old_feedback")
+  changedAt         DateTime   @default(now()) @map("changed_at")
+  evaluation        Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? 
-  access_token      String? 
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? 
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  @@map("evaluation_audits")
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(uuid()) @db.Uuid
+  registrationId String       @map("registration_id") @db.Uuid
+  expiresAt      DateTime     @map("expires_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+enum SubmissionType {
+  COMMIT
+  DEMO
 }
 
-// ─── CORE USER MODEL ──────────────────────────────────────────────────────
+model MentorProfile {
+  userId        Int             @id @map("user_id")
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills        String?
+  isActive      Boolean         @default(true) @map("is_active")
+  currentStatus String          @default("AVAILABLE") @map("current_status")
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(APPLICANT)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  accounts      Account[]
-  sessions      Session[]
-  application   Application?
-  judgingScores JudgingScore[]
-  scanEvents    ScanEvent[]
-  sponsorProfile Sponsor?
+  @@map("mentor_profiles")
 }
 
-// ─── APPLICATION ──────────────────────────────────────────────────────────
+model MentorSession {
+  id               Int          @id @default(autoincrement())
+  registrationId   String       @map("registration_id") @db.Uuid
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  mentorId         Int?         @map("mentor_id")
+  mentor           User?        @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  issueDescription String       @map("issue_description")
+  meetingLink      String?      @map("meeting_link")
+  status           String       @default("REQUESTED")
+  requestedAt      DateTime     @default(now()) @map("requested_at")
+  resolvedAt       DateTime?    @map("resolved_at")
 
-model Application {
-  id     String    @id @default(cuid())
-  userId String    @unique
-  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status AppStatus @default(PENDING)
-
-  // Personal Info
-  firstName      String
-  lastName       String
-  phone          String?
-  university     String
-  graduationYear Int
-  major          String
-  country        String?
-
-  // Hackathon Info
-  experience     String  // beginner | intermediate | advanced
-  teamPreference String  // solo | have-team | looking
-  projectIdea    String? 
-  dietaryRestrictions String?
-  tShirtSize     String? // XS S M L XL XXL
-  needsHardware  Boolean @default(false)
-
-  // Social Links
-  githubUrl     String?
-  linkedinUrl   String?
-  portfolioUrl  String?
-  resumeUrl     String? // S3 presigned URL
-
-  // QR / Check-in
-  qrCode      String?   @unique @default(cuid())
-  checkedIn   Boolean   @default(false)
-  checkedInAt DateTime?
-
-  // Admin fields
-  submittedAt DateTime  @default(now())
-  reviewedAt  DateTime?
-  reviewedBy  String?
-  adminNotes  String?   
-
-  // Relations
-  mealTickets MealTicket[]
+  @@map("mentor_sessions")
 }
 
-// ─── MEAL TICKETS ─────────────────────────────────────────────────────────
+model DemoCall {
+  id           Int       @id @default(autoincrement())
+  submissionId Int       @unique @map("submission_id")
+  judgeId      Int       @map("judge_id")
+  meetingLink  String?   @map("meeting_link")
+  status       String    @default("QUEUED") // QUEUED → CALLED → COMPLETED
+  calledAt     DateTime? @map("called_at")
+  completedAt  DateTime? @map("completed_at")
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  judge        User       @relation(fields: [judgeId], references: [id], onDelete: Cascade)
 
-model MealTicket {
-  id            String      @id @default(cuid())
-  applicationId String
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  mealType      MealType
-  redeemedAt    DateTime?
-  redeemedBy    String?     // staff user ID
-
-  @@unique([applicationId, mealType])
-}
-
-// ─── PROJECTS & JUDGING ───────────────────────────────────────────────────
-
-model Track {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  description String?
-  prize       String?
-  projects    Project[]
-}
-
-model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String   
-  tableNumber Int?
-  trackId     String?
-  track       Track?   @relation(fields: [trackId], references: [id])
-  teamMembers String[] // user IDs (denormalized for simplicity)
-  repoUrl     String?
-  demoUrl     String?
-  devpostUrl  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  scores JudgingScore[]
-}
-
-model JudgingScore {
-  id        String  @id @default(cuid())
-  judgeId   String
-  judge     User    @relation(fields: [judgeId], references: [id])
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  // Scoring rubric (1-10 each)
-  innovation   Int
-  technical    Int
-  presentation Int
-  impact       Int
-
-  // Computed: stored for fast queries
-  overall Float
-
-  notes     String?  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([judgeId, projectId])
-}
-
-// ─── SCHEDULE ─────────────────────────────────────────────────────────────
-
-model ScheduleEvent {
-  id          String    @id @default(cuid())
-  title       String
-  description String?   
-  location    String?
-  startTime   DateTime
-  endTime     DateTime
-  type        EventType @default(GENERAL)
-  isPublic    Boolean   @default(true)
-  color       String?   // hex override for calendar
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-// ─── SPONSORS ─────────────────────────────────────────────────────────────
-
-model Sponsor {
-  id          String      @id @default(cuid())
-  userId      String      @unique
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName String
-  tier        SponsorTier @default(BRONZE)
-  logoUrl     String?
-  website     String?
-  description String?     
-  contactName String?
-  prizeTrack  String?     // which track they sponsor
-  createdAt   DateTime    @default(now())
-}
-
-// ─── SCAN EVENTS (audit log) ──────────────────────────────────────────────
-
-model ScanEvent {
-  id        String   @id @default(cuid())
-  staffId   String
-  staff     User     @relation(fields: [staffId], references: [id])
-  qrCode    String
-  action    String   // CHECK_IN | MEAL_FRIDAY_DINNER | MEAL_SATURDAY_BREAKFAST | etc.
-  success   Boolean
-  message   String?
-  createdAt DateTime @default(now())
+  @@map("demo_calls")
 }

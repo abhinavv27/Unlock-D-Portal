@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { api } from '@/trpc/react'
-import { useSession } from 'next-auth/react'
+import { Scanner } from '@yudiel/react-qr-scanner'
 
 type ScanResult = {
   success: boolean
@@ -26,14 +26,16 @@ const ACTIONS: { value: ScanAction; label: string }[] = [
 ]
 
 export default function ScannerPage() {
-  const { data: session } = useSession()
+  const { data: session } = api.auth.getSession.useQuery()
   const [action, setAction] = useState<ScanAction>('CHECK_IN')
   const [manualCode, setManualCode] = useState('')
   const [results, setResults] = useState<ScanResult[]>([])
   const [lastResult, setLastResult] = useState<ScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const scannerRef = useRef<HTMLDivElement>(null)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const lastScanRef = useRef<string>('')
+  const scanCooldownRef = useRef(false)
 
   const scanMutation = api.scanner.scan.useMutation()
 
@@ -41,9 +43,14 @@ export default function ScannerPage() {
     setMounted(true)
   }, [])
 
-  const handleScan = async (code: string) => {
-    if (!code || !session?.user) return
+  const processScan = useCallback(async (code: string) => {
+    if (!code || !session?.user || scanning || scanCooldownRef.current) return
+    if (code === lastScanRef.current) return
+
+    scanCooldownRef.current = true
+    lastScanRef.current = code
     setScanning(true)
+
     try {
       const result = await scanMutation.mutateAsync({
         qrCode: code,
@@ -71,46 +78,50 @@ export default function ScannerPage() {
       setResults(prev => [scanResult, ...prev].slice(0, 20))
     } finally {
       setScanning(false)
+      setTimeout(() => {
+        scanCooldownRef.current = false
+      }, 3000)
     }
+  }, [session?.user, scanning, action, scanMutation])
+
+  const handleScan = async (code: string) => {
+    await processScan(code)
   }
 
   if (!mounted) return <div className="min-h-screen bg-[#050505]" />
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white p-8 md:p-16 font-sans relative overflow-hidden selection:bg-primary">
-      {/* Background Decor */}
+    <main className="min-h-screen bg-[#050505] text-white p-4 md:p-8 lg:p-16 font-sans relative overflow-hidden selection:bg-primary">
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1a1a,transparent_70%)]" />
         <div className="absolute inset-0 neural-grid opacity-[0.03]" />
       </div>
 
       <div className="max-w-2xl mx-auto space-y-12 relative z-10">
-        {/* Header */}
-        <header className="flex items-center justify-between border-b border-white/5 pb-10">
+        <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-white/5 pb-6 md:pb-10 gap-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center hover:scale-110 transition-transform shadow-2xl shadow-white/5 border border-white/10">
-              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-cover" />
+              <img src="/ras-logo.png" alt="RAS Logo" className="w-full h-full object-contain" />
             </Link>
             <div>
-              <h1 className="text-4xl text-hero text-white !normal-case leading-none">Security_Scanner</h1>
-              <p className="text-value-mono !text-[10px] text-white/30 mt-2 uppercase tracking-[0.2em]">Operations_Terminal // Staff_Access</p>
+              <h1 className="text-4xl md:text-5xl text-hero text-white !normal-case leading-none">Scanner</h1>
+              <p className="text-value-mono !text-[10px] text-white/30 mt-2 uppercase tracking-[0.2em]">Staff Portal</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-label-caps !text-[8px] text-primary">LIVE_LINK</span>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/20 bg-emerald-500/5">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-label-caps !text-[8px] text-emerald-400">Scanner Active</span>
           </div>
         </header>
 
-        {/* Action selector */}
-        <section className="space-y-6">
-          <h2 className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-1 italic">Active_Operation_Mode</h2>
-          <div className="flex flex-wrap gap-3">
+        <section className="space-y-4 md:space-y-6">
+          <h2 className="text-label-caps !text-[9px] md:!text-[10px] text-white/30 uppercase tracking-[0.3em] px-1 italic">Action Type</h2>
+          <div className="flex flex-wrap gap-2">
             {ACTIONS.map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => setAction(value)}
-                className={`px-6 py-3 rounded-xl text-label-caps !text-[10px] transition-all duration-300 border font-bold ${
+                className={`px-3 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl text-label-caps !text-[8px] md:!text-[10px] transition-all duration-300 border font-bold ${
                   action === value
                     ? 'border-primary bg-primary text-white shadow-xl shadow-primary/20 scale-[1.05]'
                     : 'border-white/5 text-white/30 hover:text-white hover:border-white/20 hover:bg-white/[0.03]'
@@ -122,13 +133,29 @@ export default function ScannerPage() {
           </div>
         </section>
 
-        {/* Camera scanner frame */}
-        <div className="aspect-video bg-black/40 backdrop-blur-3xl rounded-[2.5rem] flex items-center justify-center relative border border-white/5 overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] group">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40 pointer-events-none" />
+        <div className="aspect-video bg-black rounded-2xl md:rounded-[2.5rem] relative border border-white/5 overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] group">
+          <Scanner
+            onScan={(result) => {
+              if (result?.[0]?.rawValue) {
+                console.log('QR Detected:', result[0].rawValue)
+                processScan(result[0].rawValue)
+              }
+            }}
+            onError={(error) => {
+              console.error('Scanner error:', error)
+              setCameraError(error?.message || 'Camera error')
+            }}
+            constraints={{ facingMode: 'environment' }}
+            formats={['qr_code']}
+            sound={false}
+            styles={{
+              container: { width: '100%', height: '100%', borderRadius: '1.5rem', overflow: 'hidden' },
+              video: { objectFit: 'cover', width: '100%', height: '100%' },
+            }}
+          />
           
-          {/* Corner guides */}
           {['top-10 left-10', 'top-10 right-10', 'bottom-10 left-10', 'bottom-10 right-10'].map(pos => (
-            <div key={pos} className={`absolute ${pos} w-16 h-16 border-2 border-primary/30 rounded-2xl group-hover:border-primary transition-colors duration-500`}
+            <div key={pos} className={`absolute ${pos} w-16 h-16 border-2 border-primary/30 rounded-2xl group-hover:border-primary transition-colors duration-500 z-10 pointer-events-none`}
               style={{
                 borderRight: pos.includes('right') ? `2px solid` : 'none',
                 borderLeft: pos.includes('left') ? `2px solid` : 'none',
@@ -138,34 +165,34 @@ export default function ScannerPage() {
             />
           ))}
           
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-10 text-center">
-            <div className="w-24 h-24 rounded-full border border-white/5 flex items-center justify-center mb-6 bg-white/[0.02] shadow-inner">
-               <svg className="w-10 h-10 text-white/10 group-hover:text-primary transition-colors duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <p className="text-xl text-white/20 font-medium text-editorial italic">Neural_Optics_Offline</p>
-            <p className="text-label-caps !text-[8px] text-white/10 mt-3 tracking-[0.3em]">ENABLE_CAMERA_PERMISSIONS.EXE</p>
-          </div>
+          <motion.div 
+            animate={{ y: ['-50%', '50%'] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="absolute left-0 right-0 h-0.5 bg-primary/60 shadow-[0_0_20px_#8b5cf6] z-10 pointer-events-none"
+          />
           
-          <div className="absolute bottom-0 left-0 w-full h-1 bg-primary/20 overflow-hidden">
-            <motion.div 
-              animate={{ x: ['-100%', '100%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              className="w-1/2 h-full bg-primary shadow-[0_0_20px_#00E5FF]"
-            />
-          </div>
+          {cameraError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-10 text-center bg-black/60">
+              <div className="w-24 h-24 rounded-full border border-white/5 flex items-center justify-center mb-6 bg-white/[0.02] shadow-inner">
+                <svg className="w-10 h-10 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <p className="text-xl text-white/20 font-medium text-editorial italic">Camera Error</p>
+              <p className="text-label-caps !text-[8px] text-white/10 mt-3 tracking-[0.3em]">Use manual entry below</p>
+              <p className="text-xs text-red-400/60 mt-2">{cameraError}</p>
+            </div>
+          )}
         </div>
 
-        {/* Last scan result */}
         <AnimatePresence mode="wait">
           {lastResult && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              className={`rounded-[2rem] p-10 flex flex-col items-center justify-center text-center border shadow-2xl transition-all duration-300 ${
+              className={`rounded-2xl md:rounded-[2rem] p-6 md:p-10 flex flex-col items-center justify-center text-center border shadow-2xl transition-all duration-300 ${
                 lastResult.success 
                   ? 'bg-emerald-500/5 border-emerald-500/20 shadow-emerald-500/5' 
                   : 'bg-red-500/5 border-red-500/20 shadow-red-500/5'
@@ -186,14 +213,13 @@ export default function ScannerPage() {
           )}
         </AnimatePresence>
 
-        {/* Manual entry */}
         <div className="space-y-6">
-          <label className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-2 italic">Manual_Code_Entry</label>
-          <div className="flex gap-4">
+          <label className="text-label-caps !text-[10px] text-white/30 uppercase tracking-[0.3em] px-2 italic">Manual Input</label>
+          <div className="flex flex-col md:flex-row gap-4">
             <input
               id="input-qr-code"
               className="flex-1 bg-white/[0.03] border border-white/5 rounded-2xl px-8 py-5 text-value-mono !text-[12px] focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all placeholder:text-white/10 shadow-inner"
-              placeholder="ENTER_PARTICIPANT_ID..."
+              placeholder="Enter participant ID..."
               value={manualCode}
               onChange={e => setManualCode(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleScan(manualCode)}
@@ -202,22 +228,21 @@ export default function ScannerPage() {
               id="btn-manual-scan"
               onClick={() => handleScan(manualCode)}
               disabled={!manualCode || scanning}
-              className="btn-accent !px-10 !py-5 text-label-caps !text-[10px] shadow-2xl shadow-primary/20"
+              className="btn-accent !px-10 !py-5 text-label-caps !text-[10px] shadow-2xl shadow-primary/20 w-full md:w-auto"
             >
-              {scanning ? 'PROCESSING...' : 'SUBMIT_ID'}
+              {scanning ? 'Processing...' : 'Submit'}
             </button>
           </div>
         </div>
 
-        {/* Scan log */}
         {results.length > 0 && (
-          <div className="glass-premium rounded-[2.5rem] overflow-hidden border-white/5 shadow-2xl">
-            <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02]">
-              <h3 className="text-label-caps !text-[10px] text-white/40 tracking-[0.2em] italic">Operation_Log_History</h3>
+          <div className="glass-premium rounded-2xl md:rounded-[2.5rem] overflow-hidden border-white/5 shadow-2xl">
+            <div className="px-4 md:px-8 py-4 md:py-6 border-b border-white/5 bg-white/[0.02]">
+              <h3 className="text-label-caps !text-[10px] text-white/40 tracking-[0.2em] italic">Recent Scans</h3>
             </div>
             <div className="divide-y divide-white/5">
               {results.map((r, i) => (
-                <div key={i} className="flex items-center justify-between px-8 py-5 hover:bg-white/[0.03] transition-colors group">
+                <div key={i} className="flex items-center justify-between px-4 md:px-8 py-3 md:py-5 hover:bg-white/[0.03] transition-colors group">
                   <div className="flex items-center gap-6">
                     <div className={`w-2 h-2 rounded-full ${r.success ? 'bg-emerald-400 shadow-[0_0_10px_#4ade80]' : 'bg-red-400 shadow-[0_0_10px_#f87171]'}`} />
                     <span className="text-value-mono !text-[10px] text-white/40 group-hover:text-white transition-colors">{r.message}</span>

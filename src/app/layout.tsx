@@ -4,7 +4,6 @@ import { Plus_Jakarta_Sans, Space_Grotesk, Fraunces, JetBrains_Mono } from 'next
 import { cn } from '@/lib/utils'
 import GlobalBackground from '@/components/GlobalBackground'
 import { TRPCReactProvider } from '@/trpc/react'
-import SessionProvider from '@/components/SessionProvider'
 
 const plusJakartaSans = Plus_Jakarta_Sans({ 
   subsets: ['latin'], 
@@ -58,10 +57,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('dark', plusJakartaSans.variable, spaceGrotesk.variable, fraunces.variable, jetbrainsMono.variable)} suppressHydrationWarning>
       <body className="bg-[oklch(var(--background))] text-white font-sans antialiased selection:bg-primary selection:text-white" suppressHydrationWarning>
-        <SessionProvider>
-          <GlobalBackground />
-          <TRPCReactProvider>{children}</TRPCReactProvider>
-        </SessionProvider>
+        <GlobalBackground />
+        <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>
   )

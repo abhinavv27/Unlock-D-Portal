@@ -8,23 +8,19 @@ export function HeroBackground() {
   useEffect(() => {
     const canvas = canvasRef.current!
     const ctx = canvas.getContext('2d')!
+
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+
     const mouse = { x: -9999, y: -9999 }
     let raf: number
     let tick = 0
 
-    const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
-    resize()
-    window.addEventListener('resize', resize)
-    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY })
-
-    // ── Node setup ─────────────────────────────────────────
-    const N = 55
-    const DIST = 185
-    const P = '139, 92, 246'   // purple-500
-    const L = '216, 180, 254'  // purple-200
+    const isLowEnd = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency <= 4 : false
+    const N = isLowEnd ? 30 : 55
+    const DIST = isLowEnd ? 150 : 185
+    const P = '139, 92, 246'
+    const L = '216, 180, 254'
 
     type Node = { x: number; y: number; vx: number; vy: number; r: number; phase: number; spd: number }
     type Pkt  = { ax: number; ay: number; bx: number; by: number; t: number; spd: number }
@@ -39,8 +35,8 @@ export function HeroBackground() {
       spd:   0.5 + Math.random() * 1.5,
     }))
 
-    const pkts: Pkt[] = []
-    const MAX_PKTS = 20
+    const pkts: any[] = []
+    const MAX_PKTS = isLowEnd ? 10 : 20
 
     const spawnPkt = () => {
       if (pkts.length >= MAX_PKTS) return
@@ -57,13 +53,52 @@ export function HeroBackground() {
     }
     for (let i = 0; i < MAX_PKTS; i++) spawnPkt()
 
-    // ── Render loop ─────────────────────────────────────────
-    const draw = () => {
+    let lastW = canvas.width
+    let lastH = canvas.height
+
+    const resize = () => {
+      const newW = window.innerWidth
+      const newH = window.innerHeight
+      canvas.width = newW
+      canvas.height = newH
+      
+      if (lastW > 50 && lastH > 50) {
+        for (const n of nodes) {
+          n.x = (n.x / lastW) * newW
+          n.y = (n.y / lastH) * newH
+        }
+      } else {
+        for (const n of nodes) {
+          n.x = Math.random() * newW
+          n.y = Math.random() * newH
+        }
+      }
+
+      // Reset active packets to prevent visually disconnected lines on resize
+      pkts.length = 0
+      for (let i = 0; i < MAX_PKTS; i++) spawnPkt()
+
+      lastW = newW
+      lastH = newH
+    }
+
+    window.addEventListener('resize', resize)
+    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY })
+
+    let lastTime = 0
+    const targetFPS = isLowEnd ? 30 : 60
+    const frameInterval = 1000 / targetFPS
+
+    const draw = (time: number) => {
+      raf = requestAnimationFrame(draw)
+      
+      if (time - lastTime < frameInterval) return
+      lastTime = time
+
       tick++
       const W = canvas.width, H = canvas.height
       ctx.clearRect(0, 0, W, H)
 
-      // Subtle depth glow (radial, not blob)
       const glo = ctx.createRadialGradient(W * 0.5, H * 0.38, 0, W * 0.5, H * 0.38, Math.min(W, H) * 0.65)
       glo.addColorStop(0,   'rgba(76, 29, 149, 0.20)')
       glo.addColorStop(0.5, 'rgba(45, 0, 90,  0.07)')
@@ -71,7 +106,6 @@ export function HeroBackground() {
       ctx.fillStyle = glo
       ctx.fillRect(0, 0, W, H)
 
-      // Move nodes
       for (const n of nodes) {
         n.x += n.vx; n.y += n.vy
         if (n.x < 0 || n.x > W) n.vx *= -1
@@ -80,7 +114,6 @@ export function HeroBackground() {
         n.y = Math.max(0, Math.min(H, n.y))
       }
 
-      // Edges between nearby nodes
       ctx.lineWidth = 0.5
       for (let i = 0; i < N; i++) {
         for (let j = i + 1; j < N; j++) {
@@ -97,7 +130,6 @@ export function HeroBackground() {
         }
       }
 
-      // Mouse proximity connections
       for (const n of nodes) {
         const dx = n.x - mouse.x, dy = n.y - mouse.y
         const d = Math.sqrt(dx * dx + dy * dy)
@@ -113,7 +145,6 @@ export function HeroBackground() {
         }
       }
 
-      // Data packets
       for (let i = pkts.length - 1; i >= 0; i--) {
         const p = pkts[i]
         p.t += p.spd
@@ -135,7 +166,6 @@ export function HeroBackground() {
         ctx.lineWidth = 1.5
         ctx.stroke()
 
-        // Head dot with glow
         const hg = ctx.createRadialGradient(x, y, 0, x, y, 6)
         hg.addColorStop(0, `rgba(${L}, 0.9)`)
         hg.addColorStop(1, `rgba(${P}, 0)`)
@@ -149,13 +179,11 @@ export function HeroBackground() {
         ctx.fill()
       }
 
-      // Nodes
       for (const n of nodes) {
         const pulse = Math.sin(tick * 0.012 * n.spd + n.phase) * 0.5 + 0.5
         const md = Math.sqrt((n.x - mouse.x) ** 2 + (n.y - mouse.y) ** 2)
         const mb = Math.max(0, 1 - md / 160)
 
-        // Outer glow
         const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, (n.r + 4) * (1 + mb * 1.8))
         ng.addColorStop(0, `rgba(${P}, ${0.35 + mb * 0.4})`)
         ng.addColorStop(1, `rgba(${P}, 0)`)
@@ -164,14 +192,12 @@ export function HeroBackground() {
         ctx.fillStyle = ng
         ctx.fill()
 
-        // Core
         ctx.beginPath()
         ctx.arc(n.x, n.y, n.r + pulse * 0.8, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${L}, ${0.35 + pulse * 0.4 + mb * 0.4})`
         ctx.fill()
       }
 
-      // Scanning beam — thin horizontal gradient sweeping down every ~6s
       const beamY = ((tick * 0.8) % (H + 60)) - 30
       const beam = ctx.createLinearGradient(0, beamY - 20, 0, beamY + 20)
       beam.addColorStop(0,   'rgba(139, 92, 246, 0)')
@@ -179,11 +205,9 @@ export function HeroBackground() {
       beam.addColorStop(1,   'rgba(139, 92, 246, 0)')
       ctx.fillStyle = beam
       ctx.fillRect(0, beamY - 20, W, 40)
-
-      raf = requestAnimationFrame(draw)
     }
 
-    draw()
+    raf = requestAnimationFrame(draw)
 
     return () => {
       cancelAnimationFrame(raf)
@@ -195,7 +219,11 @@ export function HeroBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 z-0 pointer-events-none"
-      style={{ opacity: 0.85 }}
+      style={{ 
+        opacity: 0.85,
+        willChange: 'transform',
+        transform: 'translateZ(0)',
+      }}
     />
   )
 }

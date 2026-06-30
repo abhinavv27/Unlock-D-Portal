@@ -1,36 +1,52 @@
-import { auth } from '@/server/auth'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { api } from '@/trpc/server'
 import DashboardClient from './DashboardClient'
+import { auth } from '@/server/auth'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  try {
-    const session = await auth()
-    if (!session?.user) redirect('/login')
+  const session = await auth()
 
-    const application = await api.application.getMine()
-    const status = application?.status ?? 'PENDING'
+  if (!session?.user) {
+    const cookieStore = await cookies()
+    const teamToken = cookieStore.get('team_token')?.value
+    const staffToken = cookieStore.get('staff_token')?.value
+    if (teamToken || staffToken) {
+      redirect('/api/auth/logout')
+    } else {
+      redirect('/login')
+    }
+  }
+
+  if (session.user.role === 'TEAM') {
+    const team = await api.teams.status()
+    const state = team.progressState as any
+    const currentStage = state?.current_stage !== undefined ? state.current_stage : 0
+
+    // Construct session payload for front-end compatibility
+    const mockSession = {
+      user: {
+        id: team.id,
+        name: team.teamName,
+        image: 'https://github.com/shadcn.png',
+      },
+    }
 
     return (
-      <DashboardClient 
-        session={session} 
-        status={status} 
-        application={application} 
+      <DashboardClient
+        session={mockSession}
+        status={`STAGE ${currentStage}`}
+        team={team}
       />
     )
-  } catch (error) {
-    console.error('Dashboard Error:', error)
-    return (
-      <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <h1 className="text-hero !text-2xl mb-3">Something went wrong</h1>
-          <p className="text-editorial !text-sm mb-6 text-white/60">We couldn't load your dashboard data. Please try refreshing the page.</p>
-          <pre className="p-4 bg-[var(--bg-elevated)] rounded-lg text-xs text-red-400 text-left overflow-auto">
-            {String(error)}
-          </pre>
-        </div>
-      </div>
-    )
+  }
+
+  // Staff Login Session
+  if (['ADMIN', 'JUDGE'].includes(session.user.role as string)) {
+    redirect('/admin')
+  } else {
+    redirect('/judging')
   }
 }
-
