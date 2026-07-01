@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/server/db'
 import { getStaffFromRequest } from '@/lib/auth-utils'
 import { getCriteriaForRubric } from '@/lib/rubric'
+import { getTeamStatus } from '@/lib/state-engine'
 
 export async function GET(request: Request) {
   try {
@@ -58,6 +59,11 @@ export async function GET(request: Request) {
     // Filter out submissions from eliminated teams
     const activeSubmissions = []
     for (const sub of submissions) {
+      const statusResult = await getTeamStatus(sub.registrationId, db)
+      if (statusResult.isEliminated) {
+        continue
+      }
+
       const eventConfig = (sub.registration.event.config as any) || {}
       const currentRound = sub.registration.event.currentGlobalRound ?? (eventConfig.currentRound !== undefined ? Number(eventConfig.currentRound) : 1)
       const progressState = (sub.registration.progressState as any) || {}

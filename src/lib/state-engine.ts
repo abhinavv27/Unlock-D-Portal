@@ -33,90 +33,150 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
   const config = EventConfigSchema.parse(event.config || {})
   const roadmap = config.roadmap
 
-  // 2. Iterate over all the team's submissions to find the highest completed step
-  let highestCompletedStep = 0
-  for (const sub of registration.submissions) {
-    if (sub.status === 'REJECTED') continue
+  // Find non-rejected submissions for round milestones
+  const finalFeatureSub = registration.submissions.find(s => s.taskId === 'FINAL-FEATURE' && s.status !== 'REJECTED')
+  const round2Sub = registration.submissions.find(s => s.taskId === 'ROUND-2' && s.status !== 'REJECTED')
+  const round3Sub = registration.submissions.find(s => s.taskId === 'ROUND-3' && s.status !== 'REJECTED')
 
-    const stepObj = roadmap.find((r) => r.task_id === sub.taskId)
-    if (!stepObj) continue
+  // 2. Determine highest completed step
+  // ROUND-0 is always completed (Step 1)
+  let highestCompletedStep = 1
 
-    // FEATURE tasks always count as completed (no score gating)
-    if (sub.taskId.startsWith('FEATURE-')) {
-      if (stepObj.step > highestCompletedStep) {
-        highestCompletedStep = stepObj.step
+  // Feature sprints (Steps 2 to 6: FEATURE-1 to FEATURE-5) are unlocked immediately upon submission
+  for (let step = 2; step <= 6; step++) {
+    const taskObj = roadmap.find((r) => r.step === step)
+    if (taskObj) {
+      const sub = registration.submissions.find((s) => s.taskId === taskObj.task_id && s.status !== 'REJECTED')
+      if (sub) {
+        highestCompletedStep = step
       }
-      continue
     }
+  }
 
-    // For non-FEATURE tasks, check both threshold conditions
-    const roundThreshold = stepObj.threshold ?? 0
-    const globalMinThreshold = config.passing_threshold
-    const avgScore = sub.averageScore ?? 0
+  let isEliminated = false
+  let eliminationReason: string | undefined = undefined
+  let round1Score: number | undefined = undefined
+  let round2Score: number | undefined = undefined
 
-    // Both conditions must be met: round-specific threshold AND global minimum
-    if (avgScore >= roundThreshold && avgScore >= globalMinThreshold) {
-      if (stepObj.step > highestCompletedStep) {
-        highestCompletedStep = stepObj.step
+  // Check FINAL-FEATURE (step 7)
+  if (finalFeatureSub) {
+    if (finalFeatureSub.status === 'APPROVED') {
+      const score = finalFeatureSub.averageScore ?? 0
+      round1Score = score
+      if (score >= 60) {
+        highestCompletedStep = 7
+      } else {
+        isEliminated = true
+        eliminationReason = 'FAILED_ROUND_1_CUTOFF'
       }
+    }
+  }
+
+  // Check ROUND-2 (step 8)
+  if (highestCompletedStep === 7 && round2Sub) {
+    if (round2Sub.status === 'APPROVED') {
+      const score = round2Sub.averageScore ?? 0
+      round2Score = score
+      if (score >= 60) {
+        // Enforce top 10 qualification for Round 3
+        const topTeams = await db.registration.findMany({
+          where: { eventId: event.id },
+          orderBy: { totalScore: 'desc' },
+          take: 10,
+          select: { id: true }
+        })
+        const topTeamIds = new Set(topTeams.map(t => t.id))
+        if (topTeamIds.has(teamId)) {
+          highestCompletedStep = 8
+        } else {
+          isEliminated = true
+          eliminationReason = 'NOT_IN_TOP_10'
+        }
+      } else {
+        isEliminated = true
+        eliminationReason = 'FAILED_ROUND_2_CUTOFF'
+      }
+    }
+  }
+
+  // Check ROUND-3 (step 9)
+  if (highestCompletedStep === 8 && round3Sub) {
+    if (round3Sub.status === 'APPROVED') {
+      highestCompletedStep = 9
     }
   }
 
   // 3. Determine the allowed step attributes
-  // ROUND-0 has no submissions — auto-skip it so teams unlock FEATURE-1 immediately
-  const NO_SUBMISSION_TASKS = ['ROUND-0']
-  let nextStep = highestCompletedStep + 1
-  let nextStepObj = roadmap.find((r) => r.step === nextStep)
-
-  while (nextStepObj && NO_SUBMISSION_TASKS.includes(nextStepObj.task_id)) {
-    nextStep += 1
-    nextStepObj = roadmap.find((r) => r.step === nextStep)
-  }
-
   let allowedTaskId: string
   let allowedRound: number
 
-  if (nextStepObj) {
-    allowedTaskId = nextStepObj.task_id
-    allowedRound = nextStepObj.round
+  if (isEliminated) {
+    allowedTaskId = 'ELIMINATED'
+    allowedRound = eliminationReason === 'FAILED_ROUND_1_CUTOFF' ? 1 : 2
   } else {
-    // If all steps in the roadmap are completed
-    allowedTaskId = 'COMPLETED'
-    allowedRound = event.currentGlobalRound
-  }
+    let nextStep = highestCompletedStep + 1
+    let nextStepObj = roadmap.find((r) => r.step === nextStep)
 
-  // Enforce top 10 qualification for Round 3
-  if (allowedRound === 3 && event.currentGlobalRound >= 3) {
-    const topTeams = await db.registration.findMany({
-      where: { eventId: event.id },
-      orderBy: { totalScore: 'desc' },
-      take: 10,
-      select: { id: true }
-    })
-    const topTeamIds = new Set(topTeams.map(t => t.id))
-    
-    if (!topTeamIds.has(teamId)) {
-      // Capped at Round 2, they cannot advance to Round 3 tasks
-      allowedTaskId = 'WAITING_ROOM'
-      allowedRound = 2
+    if (nextStepObj) {
+      allowedTaskId = nextStepObj.task_id
+      allowedRound = nextStepObj.round
+    } else {
+      allowedTaskId = 'COMPLETED'
+      allowedRound = event.currentGlobalRound
     }
   }
 
-  // 4. THE GLOBAL CEILING: Check if allowed round exceeds the current global ceiling
-  const originalAllowedRound = allowedRound
-  if (allowedRound > event.currentGlobalRound) {
-    allowedTaskId = 'WAITING_ROOM'
-    allowedRound = event.currentGlobalRound
+  // 4. Determine if they are in the waiting room
+  let inWaitingRoom = false
+  if (!isEliminated) {
+    const hasSubmittedRound1Final = !!finalFeatureSub
+    const hasSubmittedRound2Final = !!round2Sub
+
+    if (allowedRound === 2 && allowedTaskId === 'ROUND-2' && !hasSubmittedRound2Final && event.currentGlobalRound < 2) {
+      allowedTaskId = 'WAITING_ROOM'
+      allowedRound = 1
+      inWaitingRoom = true
+    } else if (allowedRound === 3 && allowedTaskId === 'ROUND-3' && event.currentGlobalRound < 3) {
+      allowedTaskId = 'WAITING_ROOM'
+      allowedRound = 2
+      inWaitingRoom = true
+    } else if (allowedRound > event.currentGlobalRound) {
+      allowedTaskId = 'WAITING_ROOM'
+      allowedRound = event.currentGlobalRound
+      inWaitingRoom = true
+    }
   }
 
-  // 5. Calculate waiting room and elimination metrics
-  const inWaitingRoom = originalAllowedRound > event.currentGlobalRound
-  const isEliminated = originalAllowedRound < event.currentGlobalRound
+  // 5. Lagging behind check: if they have not submitted the final task of a closed round, they are eliminated
+  if (!isEliminated && !inWaitingRoom && allowedTaskId !== 'COMPLETED') {
+    if (allowedRound < event.currentGlobalRound) {
+      const hasSubmittedRound1Final = !!finalFeatureSub
+      const hasSubmittedRound2Final = !!round2Sub
+
+      if (allowedRound === 1 && hasSubmittedRound1Final) {
+        allowedTaskId = 'WAITING_ROOM'
+        allowedRound = 1
+        inWaitingRoom = true
+      } else if (allowedRound === 2 && hasSubmittedRound2Final) {
+        allowedTaskId = 'WAITING_ROOM'
+        allowedRound = 2
+        inWaitingRoom = true
+      } else {
+        isEliminated = true
+        eliminationReason = 'LAGGING_BEHIND'
+      }
+    }
+  }
 
   // 6. Determine task name and description from the roadmap
   let allowedTaskName = ''
   let allowedTaskDescription = ''
-  if (allowedTaskId === 'WAITING_ROOM') {
+  let nextStepObj = roadmap.find((r) => r.step === (highestCompletedStep + 1))
+
+  if (isEliminated) {
+    allowedTaskName = 'Not Selected'
+    allowedTaskDescription = 'Your team did not meet the progression requirements for the next round.'
+  } else if (allowedTaskId === 'WAITING_ROOM') {
     allowedTaskName = 'Waiting for Next Round'
     allowedTaskDescription = 'All milestones submitted. Awaiting admin unlock to proceed.'
   } else if (allowedTaskId === 'COMPLETED') {
@@ -131,7 +191,6 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
     allowedTaskDescription = nextStepObj.description || ''
   }
 
-  // 7. Determine isPending: Set to false so teams can proceed immediately
   const isPending = false
 
   return {
@@ -141,6 +200,9 @@ export async function getTeamStatus(teamId: string, db: PrismaClient) {
     highestState: highestCompletedStep,
     inWaitingRoom,
     isEliminated,
+    eliminationReason,
+    round1Score,
+    round2Score,
     allowedTaskName,
     allowedTaskDescription,
   }

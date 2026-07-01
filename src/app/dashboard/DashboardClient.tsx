@@ -58,12 +58,6 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   const [r3Entering, setR3Entering] = useState(false)
   const [r3EntryError, setR3EntryError] = useState<string | null>(null)
 
-  // Demo submission form states
-  const [demoUrl, setDemoUrl] = useState('')
-  const [demoLoading, setDemoLoading] = useState(false)
-  const [demoError, setDemoError] = useState<string | null>(null)
-  const [demoSuccess, setDemoSuccess] = useState(false)
-
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -194,32 +188,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
 
 
-  const handleDemoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!demoUrl.trim()) return
 
-    setDemoLoading(true)
-    setDemoError(null)
-    setDemoSuccess(false)
-
-    try {
-      await submitMutation.mutateAsync({
-        liveDemoUrl: demoUrl.trim(),
-        description: 'Demo / Documentation submission for Round 2',
-      })
-
-      setDemoSuccess(true)
-      setDemoUrl('')
-
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
-    } catch (err: any) {
-      setDemoError(err.message || 'An unexpected error occurred.')
-    } finally {
-      setDemoLoading(false)
-    }
-  }
 
   const handleLogout = () => {
     localStorage.removeItem('team_token')
@@ -229,8 +198,8 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
 
   if (!mounted) return null
 
-  // Check if team has an active pending submission
-  const hasPending = team?.submissions?.some((sub: any) => sub.status === 'PENDING')
+  // Check if team has an active pending submission for the current active task
+  const hasPending = team?.submissions?.some((sub: any) => sub.status === 'PENDING' && sub.taskId === team.allowedTaskId)
 
   // Extract stage data from event config for roadmap
   const stages: { stage: number; name: string; pointsRequired: number }[] = team?.event?.config?.stages || []
@@ -309,7 +278,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
   }
 
   // Round 3: Final Demo & Evaluation landing page
-  if (team?.allowedTaskId === 'ROUND-3' || team?.submissions?.some((s: any) => s.taskId === 'ROUND-3')) {
+  if (!team?.isEliminated && (team?.allowedTaskId === 'ROUND-3' || team?.submissions?.some((s: any) => s.taskId === 'ROUND-3'))) {
     const hasR3Submission = team.submissions?.some((s: any) => s.taskId === 'ROUND-3')
     const demoCall = team.demoCall
 
@@ -838,7 +807,15 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     Not Selected
                   </h3>
                   <p className="text-sm text-rose-200/80 leading-relaxed font-mono max-w-md">
-                    The next round has started, but unfortunately your team was not selected to advance. Thank you for participating!
+                    {team.eliminationReason === 'FAILED_ROUND_1_CUTOFF' ? (
+                      `Your team did not qualify for Round 2 because your Round 1 final score was ${team.round1Score ?? 0} points, which is below the cutoff of 60 points.`
+                    ) : team.eliminationReason === 'FAILED_ROUND_2_CUTOFF' ? (
+                      `Your team did not qualify for Round 3 because your Round 2 score was ${team.round2Score ?? 0} points, which is below the cutoff of 60 points.`
+                    ) : team.eliminationReason === 'NOT_IN_TOP_10' ? (
+                      `Your team did not qualify for Round 3 because you were not in the top 10 teams on the leaderboard.`
+                    ) : (
+                      "The next round has started, but unfortunately your team did not meet the requirements to advance. Thank you for participating!"
+                    )}
                   </p>
                 </div>
               ) : team && team.allowedTaskId === 'WAITING_ROOM' ? (
@@ -974,39 +951,6 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
                   )}
                 </>
-              )}
-
-              {/* DEMO SUBMISSION FORM (Round 2 only) */}
-              {team && team.eventRound === 2 && !team.submissions?.some((s: any) => s.submissionType === 'DEMO' && (s.status === 'PENDING' || s.status === 'APPROVED')) && (
-                <div className="mt-6 pt-6 border-t border-white/5">
-                  <h4 className="text-lg font-display font-medium text-white mb-3">Submit Project Demo / Documentation</h4>
-                  <p className="text-xs text-white/40 mb-4">Submit a video demo or documentation URL for final evaluation.</p>
-                  <form onSubmit={handleDemoSubmit} className="max-w-xl space-y-4">
-                    {demoError && (
-                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">{demoError}</div>
-                    )}
-                    {demoSuccess && (
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Demo submitted! Refreshing dashboard...</div>
-                    )}
-                    <input
-                      type="url"
-                      value={demoUrl}
-                      onChange={(e) => setDemoUrl(e.target.value)}
-                      placeholder="Loom / YouTube / Google Drive / Documentation URL"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs"
-                    />
-                    <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-                      <button
-                        type="submit"
-                        disabled={demoLoading || !demoUrl.trim()}
-                        className="btn-vibrant !py-3.5 !px-8 text-xs font-semibold rounded-xl"
-                      >
-                        {demoLoading ? 'Submitting...' : 'Submit Demo'}
-                      </button>
-                      <span className="text-[10px] text-white/20 font-mono">Upload a video walkthrough or project documentation</span>
-                    </div>
-                  </form>
-                </div>
               )}
 
               {/* STAFF LINKS */}

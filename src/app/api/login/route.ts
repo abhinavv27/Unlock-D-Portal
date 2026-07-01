@@ -60,11 +60,44 @@ export async function POST(request: Request) {
       )
     }
 
+    // Limit sessions to 1: check if there's an existing session and delete/log logout
+    const existingSession = await db.session.findFirst({
+      where: { registrationId: registration.id }
+    })
+    if (existingSession) {
+      await db.session.deleteMany({
+        where: { registrationId: registration.id }
+      })
+      await db.teamSessionLog.create({
+        data: {
+          registrationId: registration.id,
+          action: 'LOGOUT',
+        }
+      })
+    }
+
+    // Create a new session
+    const sessionRecord = await db.session.create({
+      data: {
+        registrationId: registration.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 1 week
+      }
+    })
+
+    // Log the successful login
+    await db.teamSessionLog.create({
+      data: {
+        registrationId: registration.id,
+        action: 'LOGIN',
+      }
+    })
+
     const token = signJwt({
       type: 'team',
       id: registration.id,
       teamName: registration.teamName,
       eventId: registration.eventId,
+      sessionId: sessionRecord.id,
     })
 
     // Save team session token in secure HTTP-only cookie

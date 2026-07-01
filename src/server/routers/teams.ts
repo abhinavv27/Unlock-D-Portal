@@ -159,7 +159,7 @@ export const teamsRouter = createTRPCRouter({
       }
 
       const isRound1 = status.allowedRound === 1
-      const isRound3 = status.allowedTaskId === 'ROUND-3'
+      const isRound3 = targetTaskId === 'ROUND-3'
 
       // Round 3 is a demo-only round — no URLs required
       if (!isRound3) {
@@ -370,6 +370,9 @@ export const teamsRouter = createTRPCRouter({
       highestState: statusResult.highestState,
       inWaitingRoom,
       isEliminated,
+      eliminationReason: statusResult.eliminationReason,
+      round1Score: statusResult.round1Score,
+      round2Score: statusResult.round2Score,
       eventRound,
       demoCall,
     }

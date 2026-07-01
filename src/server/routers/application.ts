@@ -700,4 +700,20 @@ export const applicationRouter = createTRPCRouter({
 
       return { success: true }
     }),
+
+  getTeamActivityLogs: strictAdminProcedure
+    .query(async ({ ctx }) => {
+      const logs = await ctx.db.teamSessionLog.findMany({
+        orderBy: { timestamp: 'desc' },
+        include: {
+          registration: {
+            select: {
+              teamName: true,
+            }
+          }
+        },
+        take: 100,
+      })
+      return logs
+    }),
 })

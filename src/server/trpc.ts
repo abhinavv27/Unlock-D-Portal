@@ -77,19 +77,24 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     }
   } else if (teamToken) {
     const decoded = verifyJwt(teamToken)
-    if (decoded?.type === 'team' && decoded.id) {
-      const team = await db.registration.findUnique({
-        where: { id: decoded.id }
+    if (decoded?.type === 'team' && decoded.id && decoded.sessionId) {
+      const dbSession = await db.session.findUnique({
+        where: { id: decoded.sessionId }
       })
-      if (team && !team.isBlocked) {
-        session = {
-          user: {
-            id: team.id,
-            name: team.teamName,
-            email: '',
-            role: 'TEAM',
-          },
-          expires: new Date(decoded.exp * 1000).toISOString(),
+      if (dbSession && dbSession.expiresAt >= new Date()) {
+        const team = await db.registration.findUnique({
+          where: { id: decoded.id }
+        })
+        if (team && !team.isBlocked) {
+          session = {
+            user: {
+              id: team.id,
+              name: team.teamName,
+              email: '',
+              role: 'TEAM',
+            },
+            expires: new Date(decoded.exp * 1000).toISOString(),
+          }
         }
       }
     }
