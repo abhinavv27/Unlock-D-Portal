@@ -27,7 +27,7 @@ export function Navbar({ session }: NavbarProps) {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as any }}
-      className="fixed top-0 left-0 w-full z-50 p-6 flex justify-center pointer-events-none"
+      className="absolute top-0 left-0 w-full z-50 p-6 flex justify-center pointer-events-none"
     >
       <div className="glass-premium rounded-full p-1.5 md:p-2 flex items-center gap-2 md:gap-6 border-white/10 bg-black/60 backdrop-blur-3xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] pointer-events-auto">
         {/* Logo Section */}

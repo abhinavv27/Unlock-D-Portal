@@ -771,6 +771,16 @@ export default function JudgingPage() {
                     </a>
                   </div>
                 </div>
+
+                {/* Description */}
+                {activeSubmission.payload?.description && (
+                  <div className="space-y-1.5 pt-4">
+                    <span className="text-[8px] text-white/20 uppercase font-mono block">Description</span>
+                    <p className="text-sm text-editorial text-white/70 whitespace-pre-wrap">
+                      {activeSubmission.payload.description}
+                    </p>
+                  </div>
+                )}
               </header>
  
               {/* Scoring form */}
