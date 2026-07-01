@@ -73,6 +73,15 @@ export async function authenticateTeam(request: Request) {
 
   const decoded = verifyJwt(token)
   if (decoded?.type === 'team' && decoded.id) {
+    if (!decoded.sessionId) return null
+
+    const dbSession = await db.session.findUnique({
+      where: { id: decoded.sessionId }
+    })
+    if (!dbSession || dbSession.expiresAt < new Date()) {
+      return null
+    }
+
     const registration = await db.registration.findUnique({
       where: { id: decoded.id },
       include: { event: true },

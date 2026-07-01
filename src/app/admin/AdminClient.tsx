@@ -25,6 +25,11 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
 
   const startRoundMutation = api.application.startRound.useMutation()
 
+  const { data: activityLogs, refetch: refetchLogs } = api.application.getTeamActivityLogs.useQuery(undefined, {
+    enabled: session?.user?.role === 'ADMIN',
+    refetchInterval: 30000,
+  })
+
   // Round 3 States & Functions
   const [staffToken, setStaffToken] = useState<string | null>(null)
   const [r3Queue, setR3Queue] = useState<any[]>([])
@@ -442,6 +447,70 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                           </div>
                         </div>
                       </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Team Activity Logs (Visible only to Admin) */}
+          {session?.user?.role === 'ADMIN' && (
+            <div className="glass-premium p-8 rounded-3xl border-white/5 relative overflow-hidden bg-black/30 backdrop-blur-xl space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1.5 rounded-full bg-violet-500/10 text-violet-300 text-[9px] font-bold uppercase tracking-wider border border-violet-500/20">
+                      👥 Access logs
+                    </span>
+                    <h3 className="text-2xl font-display font-medium text-white">Team Activity Logs</h3>
+                  </div>
+                  <p className="text-xs text-white/40 font-mono">
+                    Audit trail of team logins and logouts across the platform.
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                  <button
+                    onClick={() => refetchLogs()}
+                    className="text-[9px] font-black text-white/30 hover:text-white uppercase tracking-[0.15em] transition-colors"
+                  >
+                    ↻ Refresh Logs
+                  </button>
+                  <span className="text-[10px] font-mono text-white/20">
+                    {activityLogs?.length || 0} entries
+                  </span>
+                </div>
+              </div>
+
+              {!activityLogs ? (
+                <div className="text-center py-8 text-white/20 text-xs font-mono animate-pulse tracking-widest">LOADING LOGS...</div>
+              ) : activityLogs.length === 0 ? (
+                <div className="text-center py-8 text-white/20 text-xs font-mono">No login/logout activity recorded yet.</div>
+              ) : (
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                  {activityLogs.map((log) => {
+                    const isLogin = log.action === 'LOGIN'
+                    const actionBadgeColor = isLogin
+                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between p-3.5 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`text-[8px] font-mono px-2.5 py-1 rounded border uppercase ${actionBadgeColor}`}>
+                            {log.action}
+                          </span>
+                          <span className="text-xs font-semibold text-white uppercase tracking-tight">
+                            {log.registration?.teamName || 'Unknown Team'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-white/30">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </span>
+                      </div>
                     )
                   })}
                 </div>
