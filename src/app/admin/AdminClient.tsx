@@ -433,12 +433,23 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                                 📞 Call Team
                               </button>
                             ) : dc.status === 'CALLED' ? (
-                              <button
-                                onClick={() => handleCompleteDemo(dc.id)}
-                                className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-500/20 transition-all cursor-pointer"
-                              >
-                                ✓ Mark Complete
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setR3CallModal(sub)
+                                    setR3MeetingLink(dc.meetingLink || '')
+                                  }}
+                                  className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[9px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all cursor-pointer"
+                                >
+                                  ✎ Edit Link
+                                </button>
+                                <button
+                                  onClick={() => handleCompleteDemo(dc.id)}
+                                  className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-500/20 transition-all cursor-pointer"
+                                >
+                                  ✓ Mark Complete
+                                </button>
+                              </div>
                             ) : (
                               <span className="px-4 py-2 rounded-xl text-[9px] font-mono text-white/15 border border-white/5 bg-white/[0.01]">
                                 Finished
@@ -629,13 +640,16 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
             >
               <div>
                 <span className="px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300 text-[9px] font-mono tracking-widest uppercase">
-                  📞 Call Team
+                  {r3CallModal.demoCall?.status === 'CALLED' ? '✎ Edit Meeting Link' : '📞 Call Team'}
                 </span>
                 <h3 className="text-xl font-display font-medium text-white mt-3 uppercase tracking-tight">
                   {r3CallModal.registration?.teamName}
                 </h3>
                 <p className="text-[11px] text-white/40 leading-relaxed mt-1 font-mono">
-                  Enter a meeting link below. The team will see it on their dashboard and can join immediately.
+                  {r3CallModal.demoCall?.status === 'CALLED' 
+                    ? 'Modify the meeting link below. The team will see the updated link immediately.'
+                    : 'Enter a meeting link below. The team will see it on their dashboard and can join immediately.'
+                  }
                 </p>
               </div>
 
@@ -657,7 +671,7 @@ export default function AdminClient({ session, stats, funnel, activeEvent: initi
                   disabled={r3CallLoading || !r3MeetingLink.trim()}
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white text-[10px] font-black uppercase tracking-wider shadow-lg hover:shadow-fuchsia-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {r3CallLoading ? 'Sending...' : 'Send Meeting Link'}
+                  {r3CallLoading ? 'Sending...' : (r3CallModal.demoCall?.status === 'CALLED' ? 'Update Meeting Link' : 'Send Meeting Link')}
                 </button>
                 <button
                   onClick={() => setR3CallModal(null)}
