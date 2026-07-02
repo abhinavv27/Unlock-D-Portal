@@ -64,10 +64,11 @@ export const applicationRouter = createTRPCRouter({
             teamRoundStatus = 'WAITING_ROOM'
           }
 
+          const isJudge = ctx.session?.user?.role === 'JUDGE'
           return {
             id: reg.id,
             firstName: reg.teamName,
-            lastName: `(Passcode: ${reg.teamPasscodeHash})`,
+            lastName: isJudge ? `(Passcode: REDACTED)` : `(Passcode: ${reg.teamPasscodeHash})`,
             university: reg.event.name,
             major: `Stage ${currentStage}`,
             totalScore: score,
@@ -120,11 +121,12 @@ export const applicationRouter = createTRPCRouter({
         }
       }
 
+      const isJudge = ctx.session?.user?.role === 'JUDGE'
       return {
         id: reg.id,
         teamName: reg.teamName,
         unstopTeamId: reg.unstopTeamId,
-        teamPasscode: reg.teamPasscodeHash,
+        teamPasscode: isJudge ? 'REDACTED' : reg.teamPasscodeHash,
         memberDetails: reg.memberDetails,
         progressState: state,
         eventName: reg.event.name,

@@ -59,15 +59,15 @@ export default function PublicLeaderboardPage() {
             className="flex flex-col items-center justify-center py-20 px-6 glass-premium rounded-3xl border-white/5 text-center gap-8"
           >
             <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-              <span className="text-4xl">🏆</span>
+              <span className="text-4xl animate-bounce">🏆</span>
             </div>
             
-            <h2 className="text-2xl md:text-3xl font-display font-bold tracking-tight max-w-xl">
-              The results and leaderboard are currently visible on the official page of IEEE RAS MUJ.
+            <h2 className="text-2xl md:text-3xl font-display font-bold tracking-tight max-w-xl uppercase">
+              Please wait while the results are being announced.
             </h2>
             
-            <p className="text-white/40 max-w-lg text-sm">
-              Head over to our official Instagram handle to stay updated with the latest announcements, rankings, and event coverage!
+            <p className="text-white/45 max-w-lg text-sm leading-relaxed">
+              Visit the official Instagram handle of IEEE RAS MUJ for more updates!
             </p>
 
             <a 

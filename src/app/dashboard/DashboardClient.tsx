@@ -633,10 +633,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     </div>
                     {sub.evaluation && (
                       <div className="pt-2 border-t border-white/5 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-white/40 font-mono">Judge Score</span>
-                          <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
-                        </div>
+                        {!sub.taskId.startsWith('FEATURE-') && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-white/40 font-mono">Judge Score</span>
+                            <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
+                          </div>
+                        )}
                         {sub.evaluation.feedback && (
                           <div className="pt-2 border-t border-white/5">
                             <span className="text-[9px] text-white/20 uppercase font-mono block">Evaluations Feedback</span>
@@ -645,7 +647,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                             </p>
                           </div>
                         )}
-                        {sub.evaluation.scoreBreakdown && (
+                        {sub.evaluation.scoreBreakdown && !sub.taskId.startsWith('FEATURE-') && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {Object.entries(sub.evaluation.scoreBreakdown).map(([key, val]: any) => (
                               <div key={key} className="bg-white/5 px-2.5 py-0.5 rounded-lg border border-white/5 text-[9px] font-mono">
@@ -1094,8 +1096,12 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                       </div>
                       {sub.evaluation && (
                         <div className="text-right">
-                          <span className="text-xs text-white/40 font-mono">Score Acquired: </span>
-                          <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
+                          {!sub.taskId.startsWith('FEATURE-') && (
+                            <>
+                              <span className="text-xs text-white/40 font-mono">Score Acquired: </span>
+                              <span className="text-sm font-bold text-primary font-mono">{sub.evaluation.totalScore} Points</span>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1151,10 +1157,10 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                                     )}
                                     {historyItem.previousEvaluations && historyItem.previousEvaluations.length > 0 && (
                                       <div className="mt-1 space-y-1">
-                                        <span className="text-[8px] text-white/25 uppercase font-mono block">Previous Scores</span>
+                                        {!sub.taskId.startsWith('FEATURE-') && <span className="text-[8px] text-white/25 uppercase font-mono block">Previous Scores</span>}
                                         {historyItem.previousEvaluations.map((pe: any, peIdx: number) => (
                                           <div key={peIdx} className="bg-white/5 px-2 py-1 rounded border border-white/5 text-[9px] text-white/40">
-                                            <span>Score: <strong className="text-primary">{pe.totalScore} pts</strong></span>
+                                            {!sub.taskId.startsWith('FEATURE-') && <span>Score: <strong className="text-primary">{pe.totalScore} pts</strong></span>}
                                             {pe.feedback && <p className="italic text-[8px] text-white/30 mt-0.5">"{pe.feedback}"</p>}
                                           </div>
                                         ))}
@@ -1175,7 +1181,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                         <p className="text-xs text-white/70 italic leading-relaxed">
                           "{sub.evaluation.feedback}"
                         </p>
-                        {sub.evaluation.scoreBreakdown && (
+                        {sub.evaluation.scoreBreakdown && !sub.taskId.startsWith('FEATURE-') && (
                           <div className="flex flex-wrap gap-4 mt-2">
                             {Object.entries(sub.evaluation.scoreBreakdown).map(([key, val]: any) => (
                               <div key={key} className="bg-white/5 px-3 py-1 rounded-lg border border-white/5 text-[10px] font-mono">

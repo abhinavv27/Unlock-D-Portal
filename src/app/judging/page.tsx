@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Slider } from '@base-ui/react/slider'
 import sliderStyles from './JudgeSlider.module.css'
+import { api } from '@/trpc/react'
 
 function getFeatureLabel(taskId: string): string {
   if (!taskId) return ''
@@ -65,6 +66,18 @@ export default function JudgingPage() {
 
   // View toggle
   const [mainView, setMainView] = useState<'queue' | 'feedback' | 'logs'>('queue')
+
+  // Leaderboard visibility state and actions
+  const utils = api.useUtils()
+  const { data: visibilityData } = api.judging.getLeaderboardVisibility.useQuery(undefined, {
+    enabled: mounted && !!staffToken
+  })
+  const toggleVisibility = api.judging.toggleLeaderboardVisibility.useMutation({
+    onSuccess: () => {
+      void utils.judging.getLeaderboardVisibility.invalidate()
+    }
+  })
+  const isPublicVisible = visibilityData?.isVisible ?? false
 
   // Team Logs
   const [teamLogs, setTeamLogs] = useState<any[]>([])
@@ -534,12 +547,29 @@ export default function JudgingPage() {
             <span className="text-[7px] font-mono text-white/10 uppercase">Panel Active</span>
           </div>
           {(staffUser?.role === 'ADMIN' || staffUser?.role === 'JUDGE') && (
-            <Link
-              href="/admin"
-              className="w-full btn-ghost py-2 rounded-xl text-[8px] font-mono tracking-wider hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-center uppercase block"
-            >
-              Admin Dashboard
-            </Link>
+            <>
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-2 mt-1 mb-1">
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">Public Leaderboard</span>
+                  <span className="text-[7px] text-white/40 uppercase tracking-widest">
+                    {isPublicVisible ? 'Visible' : 'Hidden'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => toggleVisibility.mutate({ isVisible: !isPublicVisible })}
+                  disabled={toggleVisibility.isPending}
+                  className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-300 ${isPublicVisible ? 'bg-primary' : 'bg-white/10'} disabled:opacity-50 cursor-pointer`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-300 ${isPublicVisible ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              <Link
+                href="/admin"
+                className="w-full btn-ghost py-2 rounded-xl text-[8px] font-mono tracking-wider hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-center uppercase block"
+              >
+                Admin Dashboard
+              </Link>
+            </>
           )}
           <button
             onClick={() => {
