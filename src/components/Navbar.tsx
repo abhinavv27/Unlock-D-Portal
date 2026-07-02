@@ -19,7 +19,7 @@ export function Navbar({ session }: NavbarProps) {
   const navLinks = [
     { label: 'Leaderboard', href: '/leaderboard' },
     { label: 'Schedule', href: '/schedule' },
-    { label: 'Resources', href: 'https://www.ieeerasmuj.com/unlockd/resources', external: true },
+    { label: 'Resources', href: 'https://ieee-ras-ruby.vercel.app/unlockd/resources', external: true },
   ]
 
   return (

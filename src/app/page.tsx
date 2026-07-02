@@ -454,7 +454,7 @@ export default function LandingPage() {
           {/* External overview link */}
           <motion.div variants={itemVariants} className="text-center mb-32">
             <a
-              href="https://www.ieeerasmuj.com/unlockd#overview"
+              href="https://ieee-ras-ruby.vercel.app/unlockd#overview"
               target="_blank"
               rel="noopener noreferrer"
               className="px-10 py-4 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 transition-all duration-300 inline-flex items-center gap-3 text-white/70 hover:text-white"
