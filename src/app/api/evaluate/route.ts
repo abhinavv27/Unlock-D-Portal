@@ -6,7 +6,7 @@ import { z } from 'zod'
 const evaluateSchema = z.object({
   submissionId: z.union([z.number(), z.string().transform(Number)]),
   scoreBreakdown: z.record(z.string(), z.union([z.number(), z.string()])),
-  feedback: z.string().max(2000),
+  feedback: z.string(),
 })
 
 export async function POST(request: Request) {

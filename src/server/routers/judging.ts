@@ -42,7 +42,7 @@ export const judgingRouter = createTRPCRouter({
     .input(z.object({
       submissionId: z.number().int(),
       scoreBreakdown: z.record(z.string(), z.number()),
-      feedback: z.string().max(2000),
+      feedback: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
       // 1. Fetch targeted submission

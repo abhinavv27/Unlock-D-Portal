@@ -378,7 +378,7 @@ export const applicationRouter = createTRPCRouter({
     .input(z.object({
       evaluationId: z.number().int(),
       scoreBreakdown: z.record(z.string(), z.number()),
-      feedback: z.string().max(2000),
+      feedback: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
       const evaluation = await ctx.db.evaluation.findUnique({
