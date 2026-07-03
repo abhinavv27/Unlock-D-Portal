@@ -10,7 +10,7 @@ export const teamsRouter = createTRPCRouter({
       z.object({
         githubUrl: z.string().optional().or(z.literal('')),
         liveDemoUrl: z.string().optional().or(z.literal('')),
-        description: z.string().max(1000).optional().default(''),
+        description: z.string().optional().default(''),
         taskId: z.string().optional(),
       })
     )

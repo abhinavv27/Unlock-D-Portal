@@ -1572,16 +1572,9 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               value={description}
                               onChange={(e) => setDescription(e.target.value)}
                               placeholder="Describe what you built and any notable features or changes"
-                              maxLength={1000}
                               rows={3}
                               className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary/50 text-value-mono !text-xs resize-none text-white/75 placeholder:text-white/15"
                             />
-                            <div className="flex justify-between text-[9px] font-mono text-white/25 px-1">
-                              <span>{description.length} / 1000 chars</span>
-                              {description.length > 0 && description.length < 20 && (
-                                <span className="text-amber-400">min 20 chars</span>
-                              )}
-                            </div>
                           </div>
                           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                             <button

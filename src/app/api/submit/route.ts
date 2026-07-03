@@ -9,7 +9,7 @@ const submitSchema = z.object({
   roundNumber: z.number().int().optional(),
   githubUrl: z.string().optional().or(z.literal('')),
   liveDemoUrl: z.string().optional().or(z.literal('')),
-  description: z.string().max(1000).optional().default(''),
+  description: z.string().optional().default(''),
 })
 
 export async function POST(request: Request) {
