@@ -394,7 +394,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     <ExternalLink className="w-3.5 h-3.5 text-white/40 group-hover:text-white" />
                   </a>
                   <a
-                    href="https://drive.google.com/file/d/1_osKsAPZ2Q6owf21A-iA8himYX7TUUqH/view?usp=sharing"
+                    href="https://drive.google.com/file/d/1LftP8NmepTI_3p2EvS88-ivtz7dNEAbh/view?usp=sharing"
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.04] transition-all text-xs group"
@@ -777,7 +777,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                         <div className="space-y-4">
                           <div className="relative w-full aspect-video rounded-2xl border border-white/10 bg-black/60 shadow-2xl overflow-hidden">
                             <iframe
-                              src="https://drive.google.com/file/d/1_osKsAPZ2Q6owf21A-iA8himYX7TUUqH/preview"
+                              src="https://drive.google.com/file/d/1LftP8NmepTI_3p2EvS88-ivtz7dNEAbh/preview"
                               width="100%"
                               height="100%"
                               className="w-full h-full"
@@ -792,7 +792,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                               <p className="text-xs text-white/50">Watch or download the video directly via Google Drive.</p>
                             </div>
                             <a
-                              href="https://drive.google.com/file/d/1_osKsAPZ2Q6owf21A-iA8himYX7TUUqH/view?usp=sharing"
+                              href="https://drive.google.com/file/d/1LftP8NmepTI_3p2EvS88-ivtz7dNEAbh/view?usp=sharing"
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition-all text-xs font-semibold text-violet-300 cursor-pointer"

@@ -16,10 +16,10 @@ interface NavbarProps {
 export function Navbar({ session }: NavbarProps) {
   const pathname = usePathname()
   
-  const navLinks = [
+  const navLinks: { label: string; href: string; external?: boolean }[] = [
     { label: 'Leaderboard', href: '/leaderboard' },
     { label: 'Schedule', href: '/schedule' },
-    { label: 'Resources', href: 'https://ieee-ras-ruby.vercel.app/unlockd/resources', external: true },
+    { label: 'Resources', href: '/resources' },
   ]
 
   return (
