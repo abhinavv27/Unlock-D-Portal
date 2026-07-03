@@ -1210,7 +1210,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {[
               { title: 'Timeline', desc: 'View the full event schedule', href: '/schedule', icon: '⚡' },
-              { title: 'Protocols', desc: 'Rules and documentation', href: 'https://www.ieeerasmuj.com/unlockd#overview', external: true, icon: '📑' },
+              { title: 'Protocols', desc: 'Rules and documentation', href: 'https://ieee-ras-ruby.vercel.app/unlockd#overview', external: true, icon: '📑' },
             ].map((item, i) => (
               <motion.div
                 key={item.title}
