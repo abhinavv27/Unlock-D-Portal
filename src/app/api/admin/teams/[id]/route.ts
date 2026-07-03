@@ -39,11 +39,12 @@ export async function GET(
       )
     }
 
+    const isJudge = staff.role === 'JUDGE'
     return NextResponse.json({
       id: registration.id,
       unstopTeamId: registration.unstopTeamId,
       teamName: registration.teamName,
-      teamPasscodeHash: registration.teamPasscodeHash,
+      teamPasscodeHash: isJudge ? 'REDACTED' : registration.teamPasscodeHash,
       memberDetails: registration.memberDetails,
       progressState: registration.progressState,
       totalScore: registration.totalScore,
