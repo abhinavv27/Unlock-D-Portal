@@ -40,6 +40,117 @@ function getFeatureLabel(taskId: string): string {
   return taskId
 }
 
+interface ParsedFeedbackItem {
+  header?: string
+  body: string
+}
+
+function parseFeedbackText(text: string): ParsedFeedbackItem[] {
+  if (!text) return []
+  
+  const pipeBlocks = text.split('|').map(b => b.trim()).filter(Boolean)
+  const items: ParsedFeedbackItem[] = []
+  
+  for (const block of pipeBlocks) {
+    const regex = /([A-Z][a-zA-Z0-9\s&()\-']{2,60}):/g
+    let match
+    const matches: { header: string; index: number; length: number }[] = []
+    
+    while ((match = regex.exec(block)) !== null) {
+      const matchedHeader = match[1]
+      const matchIndex = match.index
+      const isUrl = block.slice(matchIndex, matchIndex + 20).includes('://')
+      if (!isUrl) {
+        matches.push({
+          header: matchedHeader.trim(),
+          index: matchIndex,
+          length: match[0].length
+        })
+      }
+    }
+    
+    if (matches.length === 0) {
+      items.push({ body: block })
+    } else {
+      if (matches[0].index > 0) {
+        const leadText = block.slice(0, matches[0].index).trim()
+        if (leadText) {
+          items.push({ body: leadText })
+        }
+      }
+      
+      for (let i = 0; i < matches.length; i++) {
+        const current = matches[i]
+        const next = matches[i + 1]
+        const startPos = current.index + current.length
+        const endPos = next ? next.index : block.length
+        const bodyText = block.slice(startPos, endPos).trim()
+        items.push({
+          header: current.header,
+          body: bodyText
+        })
+      }
+    }
+  }
+  
+  return items
+}
+
+function renderFeedbackList(feedbackText: string, theme: 'default' | 'rose' = 'default') {
+  if (!feedbackText) return null
+  
+  const items = parseFeedbackText(feedbackText)
+  
+  return (
+    <div className="space-y-3 mt-2">
+      {items.map((item, index) => {
+        if (item.header) {
+          return (
+            <div 
+              key={index} 
+              className={`p-4 rounded-xl border transition-all text-left space-y-1.5 ${
+                theme === 'rose' 
+                  ? 'bg-rose-500/[0.02] border-rose-500/10 hover:border-rose-500/20' 
+                  : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${theme === 'rose' ? 'bg-rose-400' : 'bg-primary'}`} />
+                <h5 className={`text-[10px] md:text-xs font-bold uppercase tracking-wider font-display ${theme === 'rose' ? 'text-rose-300' : 'text-white'}`}>
+                  {item.header}
+                </h5>
+              </div>
+              <p className={`text-xs leading-relaxed pl-3.5 ${theme === 'rose' ? 'text-rose-200/70' : 'text-white/60'}`}>
+                {item.body}
+              </p>
+            </div>
+          )
+        }
+        
+        return (
+          <div 
+            key={index} 
+            className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${
+              theme === 'rose'
+                ? 'bg-rose-500/5 border-rose-500/10 hover:border-rose-500/25'
+                : 'bg-violet-500/5 border-violet-500/10 hover:border-violet-500/20'
+            }`}
+          >
+            <div className={`absolute top-0 right-0 w-32 h-32 blur-xl pointer-events-none ${theme === 'rose' ? 'bg-rose-500/[0.02]' : 'bg-violet-500/[0.02]'}`} />
+            <p className={`text-xs leading-relaxed italic pl-2 border-l ${
+              theme === 'rose' 
+                ? 'text-rose-300 border-rose-500/30' 
+                : 'text-violet-300 border-violet-500/30'
+            }`}>
+              &ldquo;{item.body}&rdquo;
+            </p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 interface DashboardClientProps {
   session: {
     user: {
@@ -1182,9 +1293,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                         {sub.evaluation.feedback && (
                           <div className="pt-2 border-t border-white/5">
                             <span className="text-[9px] text-white/20 uppercase font-mono block">Evaluations Feedback</span>
-                            <p className="text-xs text-white/70 italic leading-relaxed mt-1">
-                              "{sub.evaluation.feedback}"
-                            </p>
+                            {renderFeedbackList(sub.evaluation.feedback)}
                           </div>
                         )}
                         {sub.evaluation.scoreBreakdown && !sub.taskId.startsWith('FEATURE-') && (
@@ -1420,11 +1529,9 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                           <div className="flex items-start gap-3">
                             <span className="text-rose-400 text-sm mt-0.5">!</span>
                             <div className="flex-1">
-                              <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Submission Rejected</span>
-                              <p className="text-xs text-rose-300/80 mt-1 leading-relaxed">
-                                &ldquo;{lastRejected.evaluation.feedback}&rdquo;
-                              </p>
-                              <p className="text-[10px] text-white/40 mt-2">Fix the issues below and resubmit to advance.</p>
+                              <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block">Submission Rejected</span>
+                              {renderFeedbackList(lastRejected.evaluation.feedback, 'rose')}
+                              <p className="text-[10px] text-white/40 mt-3">Fix the issues below and resubmit to advance.</p>
                             </div>
                           </div>
                         </div>
@@ -1718,9 +1825,7 @@ export default function DashboardClient({ session, status, team, staff }: Dashbo
                     {sub.evaluation && (
                       <div className="mt-6 pt-4 border-t border-white/5 space-y-3">
                         <span className="text-[9px] text-white/20 uppercase font-mono block">Evaluations Feedback</span>
-                        <p className="text-xs text-white/70 italic leading-relaxed">
-                          "{sub.evaluation.feedback}"
-                        </p>
+                        {renderFeedbackList(sub.evaluation.feedback)}
                         {sub.evaluation.scoreBreakdown && !sub.taskId.startsWith('FEATURE-') && (
                           <div className="flex flex-wrap gap-4 mt-2">
                             {Object.entries(sub.evaluation.scoreBreakdown).map(([key, val]: any) => (
