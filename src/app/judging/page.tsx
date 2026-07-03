@@ -154,6 +154,16 @@ export default function JudgingPage() {
     fetchStaffUser(token)
   }, [router, fetchQueue, fetchTeamLogs, fetchStaffUser])
 
+  // Auto-refresh review queue & team logs every 30 seconds
+  useEffect(() => {
+    if (!staffToken) return
+    const interval = setInterval(() => {
+      fetchQueue(staffToken)
+      fetchTeamLogs(staffToken)
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [staffToken, fetchQueue, fetchTeamLogs])
+
   const handleGradeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!activeSubmission || !staffToken) return
@@ -771,12 +781,10 @@ export default function JudgingPage() {
                     </a>
                   </div>
                 </div>
-
-                {/* Description */}
                 {activeSubmission.payload?.description && (
-                  <div className="space-y-1.5 pt-4">
-                    <span className="text-[8px] text-white/20 uppercase font-mono block">Description</span>
-                    <p className="text-sm text-editorial text-white/70 whitespace-pre-wrap">
+                  <div className="space-y-1.5 pt-4 border-t border-white/5 mt-4">
+                    <span className="text-[8px] text-white/20 uppercase font-mono block">Team Description / Notes</span>
+                    <p className="text-xs text-white/70 leading-relaxed bg-white/[0.02] border border-white/5 rounded-xl p-4 font-mono whitespace-pre-wrap">
                       {activeSubmission.payload.description}
                     </p>
                   </div>

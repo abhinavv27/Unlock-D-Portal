@@ -51,6 +51,7 @@ model Registration {
   sessions         Session[]
   submissions      Submission[]
   mentorSessions   MentorSession[]
+  sessionLogs      TeamSessionLog[]
 
   @@unique([eventId, unstopTeamId])
   @@map("registrations")
@@ -155,3 +156,14 @@ model DemoCall {
 
   @@map("demo_calls")
 }
+
+model TeamSessionLog {
+  id             Int          @id @default(autoincrement())
+  registrationId String       @map("registration_id") @db.Uuid
+  action         String       // "LOGIN" or "LOGOUT"
+  timestamp      DateTime     @default(now()) @map("timestamp")
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@map("team_session_logs")
+}
+
