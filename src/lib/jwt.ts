@@ -1,6 +1,11 @@
 import crypto from 'crypto'
 
-const SECRET = process.env.NEXTAUTH_SECRET || 'unlockd-secret-default-key-for-jwt-signing'
+const SECRET = (() => {
+  if (!process.env.NEXTAUTH_SECRET) {
+    throw new Error('NEXTAUTH_SECRET environment variable is not set.')
+  }
+  return process.env.NEXTAUTH_SECRET
+})()
 
 export function signJwt(payload: object, expiresInDays: number = 7): string {
   const header = { alg: 'HS256', typ: 'JWT' }

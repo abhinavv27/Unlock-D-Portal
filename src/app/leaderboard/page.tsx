@@ -49,8 +49,7 @@ export default function PublicLeaderboardPage() {
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-6 glass-premium rounded-3xl border-white/5">
-            <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-            <span className="text-[12px] font-black text-white/20 uppercase tracking-[0.3em]">Syncing_Data...</span>
+            <WifiLoader text="Syncing_Data..." />
           </div>
         ) : !data?.isVisible ? (
           <motion.div 

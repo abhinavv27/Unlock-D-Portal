@@ -78,6 +78,29 @@ async function main() {
   console.log(`- Hackathon: "${hackathonEvent.name}" (slug: "${hackathonEvent.slug}")`)
   console.log(`- CTF: "${ctfEvent.name}" (slug: "${ctfEvent.slug}")`)
 
+  // Create admin user from env vars
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+
+  const existingAdmin = await prisma.user.findUnique({
+    where: { username: adminUsername }
+  })
+
+  if (!existingAdmin) {
+    const adminPasswordHash = hashPassword(adminPassword)
+    await prisma.user.create({
+      data: {
+        username: adminUsername,
+        passwordHash: adminPasswordHash,
+        plainPassword: adminPassword,
+        systemRole: 'ADMIN',
+      },
+    })
+    console.log(`Created admin user: "${adminUsername}"`)
+  } else {
+    console.log(`Admin user "${adminUsername}" already exists, skipping.`)
+  }
+
   console.log('Seed completed successfully!')
 }
 
